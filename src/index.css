@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* La Salle color scheme */
+    --lasalle-blue: 205 100% 34%;          /* #005bac */
+    --lasalle-gold: 45 75% 60%;            /* #e9b741 */
+    --lasalle-red: 350 79% 52%;            /* #e60727 */
+    --lasalle-gray: 30 7% 51%;             /* #837e7b */
+
+    --background: 0 0% 100%;
+    --foreground: 205 100% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 205 100% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 205 100% 15%;
+
+    --primary: 205 100% 34%;               /* La Salle Blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 75% 60%;               /* La Salle Gold */
+    --secondary-foreground: 205 100% 15%;
+
+    --muted: 205 15% 95%;
+    --muted-foreground: 30 7% 40%;         /* La Salle Gray - Darkened for WCAG AA contrast */
+
+    --accent: 45 75% 85%;                  /* Lighter Gold */
+    --accent-foreground: 205 100% 25%;
+
+    --destructive: 350 79% 52%;            /* La Salle Red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 205 20% 90%;
+    --input: 205 20% 96%;
+    --ring: 205 100% 34%;                  /* La Salle Blue */
+
+    --radius: 0.75rem;
+
+    /* Success colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning colors */
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 0%;
+
+    /* Chart colors */
+    --chart-1: 142 76% 36%;                /* Green for active/success */
+    --chart-2: 350 79% 52%;                /* Red for defective */
+    --chart-3: 205 100% 34%;               /* La Salle Blue */
+    --chart-4: 45 75% 60%;                 /* La Salle Gold */
+    --chart-5: 30 7% 51%;                  /* La Salle Gray */
+
+    --sidebar-background: 205 100% 34%;    /* La Salle Blue */
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 45 75% 60%;         /* La Salle Gold */
+    --sidebar-primary-foreground: 205 100% 15%;
+    --sidebar-accent: 205 100% 40%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 205 100% 30%;
+    --sidebar-ring: 45 75% 60%;
+  }
+
+  .dark {
+    --background: 205 100% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 205 50% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 205 50% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 205 100% 50%;
+    --primary-foreground: 205 100% 8%;
+
+    --secondary: 45 75% 45%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 205 20% 15%;
+    --muted-foreground: 30 7% 70%;
+
+    --accent: 45 75% 25%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 350 79% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 205 20% 20%;
+    --input: 205 20% 15%;
+    --ring: 205 100% 50%;
+
+    /* Chart colors for dark mode */
+    --chart-1: 142 76% 45%;
+    --chart-2: 350 79% 55%;
+    --chart-3: 205 100% 50%;
+    --chart-4: 45 75% 55%;
+    --chart-5: 30 7% 60%;
+
+    --sidebar-background: 205 100% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 45 75% 60%;
+    --sidebar-primary-foreground: 205 100% 8%;
+    --sidebar-accent: 205 50% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 205 20% 20%;
+    --sidebar-ring: 45 75% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

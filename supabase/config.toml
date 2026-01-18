@@ -1,0 +1,7 @@
+project_id = "bacqgdjiarwkgkwiqgpa"
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.send-consolidated-booking-email]
+verify_jwt = false

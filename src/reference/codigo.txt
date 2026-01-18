@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Agendamento de Chromebooks - La Salle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .availability-bar {
+            transition: width 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in {
+            animation: slideIn 0.5s ease forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-laptop text-2xl"></i>
+                    <h1 class="text-2xl font-bold">ChromeBook Manager</h1>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <span class="text-sm">200 dispositivos disponíveis</span>
+                    <div class="flex items-center space-x-2">
+                        <img src="https://ui-avatars.com/api/?name=Professor&background=fff&color=764ba2" 
+                             class="w-8 h-8 rounded-full" alt="Avatar">
+                        <span class="text-sm">professor@lasalle.org.br</span>
+                        <button class="ml-2 text-sm hover:text-gray-200">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-8">
+                <button class="py-4 px-2 border-b-2 border-purple-600 font-medium text-purple-600">
+                    <i class="fas fa-calendar-plus mr-2"></i>Novo Agendamento
+                </button>
+                <button class="py-4 px-2 text-gray-600 hover:text-purple-600 transition">
+                    <i class="fas fa-calendar mr-2"></i>Meus Agendamentos
+                </button>
+                <button class="py-4 px-2 text-gray-600 hover:text-purple-600 transition">
+                    <i class="fas fa-chart-line mr-2"></i>Relatórios
+                </button>
+                <button class="py-4 px-2 text-gray-600 hover:text-purple-600 transition">
+                    <i class="fas fa-cog mr-2"></i>Configurações
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Formulário de Agendamento -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg p-6 animate-slide-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-calendar-check text-purple-600 mr-2"></i>
+                        Novo Agendamento
+                    </h2>
+                    
+                    <form id="bookingForm" class="space-y-6">
+                        <!-- Nome e Turma -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Nome do Solicitante
+                                </label>
+                                <input type="text" 
+                                       value="Professor Silva" 
+                                       readonly
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Turma <span class="text-red-500">*</span>
+                                </label>
+                                <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    <option>Selecione a turma...</option>
+                                    <option>6º Ano A</option>
+                                    <option>6º Ano B</option>
+                                    <option>7º Ano A</option>
+                                    <option>8º Ano A</option>
+                                    <option>9º Ano A</option>
+                                    <option>1º Médio A</option>
+                                    <option>2º Médio A</option>
+                                    <option>3º Médio A</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Data e Horário -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Data <span class="text-red-500">*</span>
+                                </label>
+                                <input type="date" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Horário Início <span class="text-red-500">*</span>
+                                </label>
+                                <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option>07:30</option>
+                                    <option>08:20</option>
+                                    <option>09:10</option>
+                                    <option>10:00</option>
+                                    <option>10:50</option>
+                                    <option>13:30</option>
+                                    <option>14:20</option>
+                                    <option>15:10</option>
+                                    <option>16:00</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Horário Fim <span class="text-red-500">*</span>
+                                </label>
+                                <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option>08:20</option>
+                                    <option>09:10</option>
+                                    <option>10:00</option>
+                                    <option>10:50</option>
+                                    <option>11:40</option>
+                                    <option>14:20</option>
+                                    <option>15:10</option>
+                                    <option>16:00</option>
+                                    <option>16:50</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Quantidade -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Quantidade de Chromebooks <span class="text-red-500">*</span>
+                            </label>
+                            <div class="flex items-center space-x-4">
+                                <input type="number" 
+                                       id="quantity"
+                                       min="1" 
+                                       max="200" 
+                                       value="30"
+                                       class="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                <span class="text-sm text-gray-600">
+                                    <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+                                    Máximo disponível: <span id="maxAvailable" class="font-bold text-green-600">170</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Finalidade -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Finalidade do Uso
+                            </label>
+                            <textarea rows="3" 
+                                      placeholder="Descreva brevemente a atividade que será realizada..."
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"></textarea>
+                        </div>
+
+                        <!-- Opções Adicionais -->
+                        <div class="bg-purple-50 rounded-lg p-4">
+                            <h3 class="font-semibold text-purple-800 mb-3">Opções Adicionais</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2 text-purple-600">
+                                    <span class="text-sm">Agendar para múltiplos horários no mesmo dia</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2 text-purple-600">
+                                    <span class="text-sm">Salvar como template para futuros agendamentos</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2 text-purple-600">
+                                    <span class="text-sm">Receber lembrete por email</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="flex justify-between">
+                            <button type="button" 
+                                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                <i class="fas fa-times mr-2"></i>Cancelar
+                            </button>
+                            <button type="submit" 
+                                    class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                                <i class="fas fa-check mr-2"></i>Confirmar Agendamento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Calendário de Disponibilidade -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mt-8 animate-slide-in">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-calendar-alt text-purple-600 mr-2"></i>
+                        Disponibilidade da Semana
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="text-sm text-gray-600">
+                                    <th class="p-2 text-left">Horário</th>
+                                    <th class="p-2">Seg</th>
+                                    <th class="p-2">Ter</th>
+                                    <th class="p-2">Qua</th>
+                                    <th class="p-2">Qui</th>
+                                    <th class="p-2">Sex</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="p-2 text-sm font-medium">07:30-08:20</td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">200</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">120</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">180</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">30</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">150</span>
+                                    </td>
+                                </tr>
+                                <tr class="border-t">
+                                    <td class="p-2 text-sm font-medium">08:20-09:10</td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">100</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">200</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">20</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">80</span>
+                                    </td>
+                                    <td class="p-2 text-center">
+                                        <span class="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">170</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Status de Disponibilidade -->
+                <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-chart-pie text-purple-600 mr-2"></i>
+                        Status Atual
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Disponíveis</span>
+                                <span class="font-bold text-green-600">170/200</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                <div class="availability-bar bg-green-500 h-3 rounded-full" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Em Uso</span>
+                                <span class="font-bold text-yellow-600">30</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                <div class="availability-bar bg-yellow-500 h-3 rounded-full" style="width: 15%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Próximos Agendamentos -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-clock text-purple-600 mr-2"></i>
+                        Seus Próximos Agendamentos
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="p-3 bg-purple-50 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-semibold text-purple-800">Hoje - 14:20</p>
+                                    <p class="text-sm text-gray-600">7º Ano A - 35 unidades</p>
+                                </div>
+                                <button class="text-red-500 hover:text-red-700 text-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-semibold text-gray-800">Amanhã - 08:20</p>
+                                    <p class="text-sm text-gray-600">8º Ano A - 30 unidades</p>
+                                </div>
+                                <button class="text-red-500 hover:text-red-700 text-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-semibold text-gray-800">Sexta - 10:00</p>
+                                    <p class="text-sm text-gray-600">6º Ano B - 25 unidades</p>
+                                </div>
+                                <button class="text-red-500 hover:text-red-700 text-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="w-full mt-4 text-purple-600 text-sm hover:text-purple-800 transition">
+                        Ver todos os agendamentos →
+                    </button>
+                </div>
+
+                <!-- Templates Salvos -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-save text-purple-600 mr-2"></i>
+                        Templates Salvos
+                    </h3>
+                    <div class="space-y-2">
+                        <button class="w-full text-left p-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition">
+                            <p class="font-medium">Aula de Pesquisa</p>
+                            <p class="text-sm text-gray-600">6º Ano A - 30 unidades</p>
+                        </button>
+                        <button class="w-full text-left p-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition">
+                            <p class="font-medium">Projeto Integrador</p>
+                            <p class="text-sm text-gray-600">8º Ano A - 35 unidades</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dicas Rápidas -->
+                <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-lg p-6 text-white">
+                    <h3 class="text-lg font-bold mb-3">
+                        <i class="fas fa-lightbulb mr-2"></i>
+                        Dica do Dia
+                    </h3>
+                    <p class="text-sm">
+                        Você sabia? Agendamentos realizados com 48h de antecedência têm prioridade na confirmação!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 animate-slide-in">
+            <div class="text-center">
+                <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Agendamento Confirmado!</h3>
+                <p class="text-gray-600 mb-4">
+                    Seu agendamento foi realizado com sucesso. Você receberá um email de confirmação.
+                </p>
+                <div class="bg-gray-50 rounded-lg p-4 mb-4 text-left">
+                    <p class="text-sm"><strong>Data:</strong> 27/09/2025</p>
+                    <p class="text-sm"><strong>Horário:</strong> 14:20 - 15:10</p>
+                    <p class="text-sm"><strong>Turma:</strong> 7º Ano A</p>
+                    <p class="text-sm"><strong>Quantidade:</strong> 30 Chromebooks</p>
+                    <p class="text-sm"><strong>Código:</strong> #AGD-2025-0927-001</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="closeModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
+                        Fechar
+                    </button>
+                    <button class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-download mr-2"></i>Baixar QR Code
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulação de interatividade
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            document.getElementById('confirmModal').classList.remove('hidden');
+        });
+
+        function closeModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+        }
+
+        // Atualização dinâmica de disponibilidade
+        document.getElementById('quantity').addEventListener('input', function(e) {
+            const qty = parseInt(e.target.value) || 0;
+            const available = 200 - 30; // Simulação
+            const remaining = available - qty;
+            
+            if (remaining < 0) {
+                e.target.classList.add('border-red-500');
+                document.getElementById('maxAvailable').textContent = 'Quantidade excede disponível!';
+                document.getElementById('maxAvailable').classList.remove('text-green-600');
+                document.getElementById('maxAvailable').classList.add('text-red-600');
+            } else {
+                e.target.classList.remove('border-red-500');
+                document.getElementById('maxAvailable').textContent = remaining;
+                document.getElementById('maxAvailable').classList.remove('text-red-600');
+                document.getElementById('maxAvailable').classList.add('text-green-600');
+            }
+        });
+
+        // Animação de entrada dos cards
+        const cards = document.querySelectorAll('.animate-slide-in');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
+    </script>
+</body>
+</html>

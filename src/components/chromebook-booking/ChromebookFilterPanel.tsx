@@ -1,0 +1,169 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { Filter, Chrome, Laptop, GraduationCap } from "lucide-react";
+import { ptBR } from "date-fns/locale";
+
+interface ChromebookFilterPanelProps {
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  quantity: number;
+  onQuantityChange: (quantity: number) => void;
+  className: string;
+  onClassNameChange: (className: string) => void;
+  totalInventory: number;
+}
+
+export function ChromebookFilterPanel({
+  selectedDate,
+  onDateChange,
+  quantity,
+  onQuantityChange,
+  className,
+  onClassNameChange,
+  totalInventory,
+}: ChromebookFilterPanelProps) {
+  const isWeekend = (date: Date) => {
+    const day = date.getDay();
+    return day === 0 || day === 6;
+  };
+
+  const isPastDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate < today;
+  };
+
+  const maxQuantity = Math.min(50, totalInventory);
+
+  return (
+    <Card className="h-fit sticky top-4">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Filter className="h-5 w-5 text-primary" />
+          Agendar Chromebooks
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Categoria */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-muted-foreground">
+            Categoria
+          </Label>
+          <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Chrome className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">Chromebooks</p>
+              <p className="text-xs text-muted-foreground">Equipamentos para aulas</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Informações do Equipamento */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-muted-foreground">
+            Equipamento
+          </Label>
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Laptop className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">Chromebook de Aluno</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Equipamento para uso em sala de aula
+            </p>
+          </div>
+        </div>
+
+        {/* Calendário */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-muted-foreground">
+            Selecionar Data
+          </Label>
+          <div className="flex justify-center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && onDateChange(date)}
+              locale={ptBR}
+              disabled={(date) => isWeekend(date) || isPastDate(date)}
+              className="rounded-md border p-2"
+              classNames={{
+                months: "flex flex-col",
+                month: "space-y-3",
+                caption: "flex justify-center pt-1 relative items-center px-8",
+                caption_label: "text-sm font-medium",
+                nav: "space-x-1 flex items-center",
+                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-input hover:bg-accent hover:text-accent-foreground",
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
+                table: "w-full border-collapse",
+                head_row: "flex justify-between",
+                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.75rem] text-center",
+                row: "flex w-full mt-1 justify-between",
+                cell: "h-8 w-8 text-center text-sm p-0 relative",
+                day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center",
+                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                day_today: "bg-accent text-accent-foreground",
+                day_outside: "text-muted-foreground opacity-50",
+                day_disabled: "text-muted-foreground opacity-50 cursor-not-allowed",
+                day_hidden: "invisible",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Quantidade */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+            <span>Quantidade de Chromebooks</span>
+            <span className="text-primary font-bold">{quantity}</span>
+          </Label>
+          <Slider
+            value={[quantity]}
+            onValueChange={(value) => onQuantityChange(value[0])}
+            min={1}
+            max={maxQuantity}
+            step={1}
+            className="w-full"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>1</span>
+            <span>{maxQuantity}</span>
+          </div>
+        </div>
+
+        {/* Turma */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Turma
+          </Label>
+          <Input
+            placeholder="Ex: 9º Ano A"
+            value={className}
+            onChange={(e) => onClassNameChange(e.target.value)}
+            maxLength={50}
+          />
+          <p className="text-xs text-muted-foreground">
+            Informe a turma que utilizará os Chromebooks
+          </p>
+        </div>
+
+        {/* Dica */}
+        <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            💡 <strong>Dica:</strong> Selecione os horários desejados na grade ao lado e confirme sua reserva no painel de resumo.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
