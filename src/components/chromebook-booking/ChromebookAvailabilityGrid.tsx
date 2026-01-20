@@ -165,8 +165,11 @@ export function ChromebookAvailabilityGrid({
   const getAvailableCount = useCallback((slot: { start: string; end: string }): number => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const cacheKey = `${dateStr}-${slot.start}-${slot.end}`;
-    return availabilityCache.get(cacheKey) || 0;
-  }, [selectedDate, availabilityCache]);
+    // Retorna totalInventory como padrão enquanto o cache não está calculado
+    // para evitar flash de "Lotado" ao mudar de data
+    const cached = availabilityCache.get(cacheKey);
+    return cached !== undefined ? cached : totalInventory;
+  }, [selectedDate, availabilityCache, totalInventory]);
 
   const isPastDate = () => {
     const today = new Date();
