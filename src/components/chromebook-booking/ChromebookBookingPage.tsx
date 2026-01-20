@@ -56,8 +56,10 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
     fetchUserData();
   }, []);
 
-  const fetchBookings = useCallback(async () => {
-    setLoading(true);
+  const fetchBookings = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
 
     const fromDate = startOfMonth(selectedDate);
     const toDate = endOfMonth(addMonths(selectedDate, 1));
@@ -85,7 +87,9 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
   }, [selectedDate]);
 
   useEffect(() => {
-    fetchBookings();
+    // Mostrar loading apenas no primeiro carregamento
+    const isInitialLoad = bookings.length === 0;
+    fetchBookings(isInitialLoad);
 
     const channel = supabase
       .channel('chromebook-bookings-page')
@@ -97,7 +101,7 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
           table: 'chromebook_bookings'
         },
         () => {
-          fetchBookings();
+          fetchBookings(false);
         }
       )
       .subscribe();
