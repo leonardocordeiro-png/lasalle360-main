@@ -292,7 +292,7 @@ export default function CalendarBlocksManager() {
         }
     };
 
-    const BlockFormFields = () => (
+    const formFields = (
         <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -514,7 +514,7 @@ export default function CalendarBlocksManager() {
                             Bloqueie uma data/horário para impedir agendamentos no período selecionado.
                         </DialogDescription>
                     </DialogHeader>
-                    <BlockFormFields />
+                    {formFields}
                     <DialogFooter className="flex flex-wrap gap-2 justify-end">
                         <Button variant="outline" onClick={() => setShowAddDialog(false)} className="w-full sm:w-auto">
                             Cancelar
@@ -538,7 +538,7 @@ export default function CalendarBlocksManager() {
                             Altere as informações do bloqueio de calendário.
                         </DialogDescription>
                     </DialogHeader>
-                    <BlockFormFields />
+                    {formFields}
                     <DialogFooter className="flex flex-wrap gap-2 justify-end">
                         <Button variant="outline" onClick={() => setShowEditDialog(false)} className="w-full sm:w-auto">
                             Cancelar
