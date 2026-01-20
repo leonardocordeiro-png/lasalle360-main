@@ -237,16 +237,16 @@ export default function ConsolidatedBookingsList({
         </div>
 
         {/* Resumo do mês */}
-        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-success" />
-            {activeCount} ativo(s)
+            <div className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
+            <span className="whitespace-nowrap">{activeCount} ativo(s)</span>
           </span>
           <span className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-muted-foreground" />
-            {cancelledCount} cancelado(s)
+            <div className="w-2 h-2 rounded-full bg-muted-foreground flex-shrink-0" />
+            <span className="whitespace-nowrap">{cancelledCount} cancelado(s)</span>
           </span>
-          <span className="text-xs">
+          <span className="text-xs whitespace-nowrap">
             Total: {sortedConsolidatedBookings.length} agendamento(s)
           </span>
         </div>

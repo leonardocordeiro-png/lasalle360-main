@@ -659,7 +659,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
             </div>
 
             {/* Turma, Tipo de Equipamento e Quantidade */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <FormField
                 control={form.control}
                 name="class_name"
@@ -852,7 +852,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
             )}
 
             {/* Data, Horário e Previsão de Devolução */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <FormItem>
                 <FormLabel className="text-sm font-medium">Data do Empréstimo</FormLabel>
                 <div className="relative">

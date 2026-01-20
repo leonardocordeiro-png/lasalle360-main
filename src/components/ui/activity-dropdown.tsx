@@ -264,11 +264,11 @@ export function ActivityDropdown() {
     <div className="relative">
       <div
         className={cn(
-          "w-80 rounded-2xl shadow-2xl overflow-hidden cursor-pointer select-none",
+          "w-[calc(100vw-2rem)] sm:w-80 max-w-80 rounded-2xl shadow-2xl overflow-hidden cursor-pointer select-none",
           "bg-white dark:bg-neutral-900",
           "shadow-xl shadow-black/10 dark:shadow-black/50",
           "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
-          "absolute right-0 top-full mt-2 z-50",
+          "fixed sm:absolute right-4 sm:right-0 top-16 sm:top-full sm:mt-2 z-50",
           isOpen ? "rounded-3xl opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2 pointer-events-none",
         )}
         onClick={(e) => e.stopPropagation()}
