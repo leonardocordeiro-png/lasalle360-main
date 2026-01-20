@@ -58,7 +58,7 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [userProfile, setUserProfile] = useState<string>('');
   const requestIdRef = useRef(0);
-  
+
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -74,14 +74,14 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
   useEffect(() => {
     const loadUserProfile = async () => {
       if (!user) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('full_name')
           .eq('user_id', user.id)
           .single();
-        
+
         if (error) throw error;
         setUserProfile(data?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'Usuário');
       } catch (error) {
@@ -89,9 +89,23 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
         setUserProfile(user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'Usuário');
       }
     };
-    
+
     loadUserProfile();
   }, [user]);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        className: '',
+        quantity: 1,
+        bookingDate: new Date(),
+        timeSlots: [],
+        purpose: ''
+      });
+      setAvailabilityInfo([]);
+    }
+  }, [open, form]);
 
   const checkAvailability = useCallback(async (date: Date, timeSlots: string[], quantity: number) => {
     if (!date || timeSlots.length === 0) {
@@ -101,7 +115,7 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
 
     const currentId = ++requestIdRef.current;
     setCheckingAvailability(true);
-    
+
     try {
       const dateStr = date.toISOString().split('T')[0];
 
@@ -161,7 +175,7 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
       // Criar agendamentos para cada horário selecionado
       const bookingsToCreate = data.timeSlots.map(timeSlot => {
         const [startTime, endTime] = timeSlot.split('-');
-        
+
         return {
           user_id: user.id,
           full_name: fullName,
@@ -188,7 +202,7 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
         });
       } else {
         await logSecurityEvent('booking_creation_success', 'booking', `${data.className}-${bookingDate}`);
-        
+
         // Create notification for the user
         await supabase.from('notifications' as any).insert({
           user_id: user.id,
@@ -227,7 +241,7 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
           title: "Agendamentos criados!",
           description: `${bookingsToCreate.length} agendamentos criados para ${format(data.bookingDate, 'dd/MM/yyyy')}. Você receberá um email de confirmação e os eventos foram adicionados ao seu Google Calendar.`,
         });
-        
+
         // Reset e cleanup
         form.reset({
           className: '',
@@ -375,8 +389,8 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
                                       return checked
                                         ? field.onChange([...field.value, timeSlot.value])
                                         : field.onChange(
-                                            field.value?.filter((value) => value !== timeSlot.value)
-                                          )
+                                          field.value?.filter((value) => value !== timeSlot.value)
+                                        )
                                     }}
                                   />
                                 </FormControl>
@@ -419,7 +433,7 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
-                    </PopoverTrigger>
+                      </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
@@ -484,7 +498,7 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         {availabilityInfo.map((info, index) => (
-                          <div 
+                          <div
                             key={index}
                             className={cn(
                               "p-2 rounded flex justify-between items-center bg-primary/10 text-foreground",
@@ -514,17 +528,17 @@ export default function BookingDialog({ open, onOpenChange, onSuccess, totalInve
             )}
 
             <div className="flex flex-wrap justify-end gap-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => onOpenChange(false)}
                 className="w-full sm:w-auto"
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={loading || checkingAvailability || availabilityInfo.some(info => !info.sufficient)}
                 className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
               >

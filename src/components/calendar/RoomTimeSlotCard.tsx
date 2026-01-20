@@ -1,7 +1,7 @@
 import React, { memo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, User, X, Info } from 'lucide-react';
+import { Plus, User, X, Info, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -39,6 +39,9 @@ interface RoomTimeSlotCardProps {
   className?: string;
   isAdmin?: boolean;
   currentUserId?: string;
+  isBlocked?: boolean;
+  blockReason?: string;
+  blockDescription?: string | null;
 }
 
 const RoomTimeSlotCard = memo(({
@@ -50,7 +53,10 @@ const RoomTimeSlotCard = memo(({
   isPast,
   className,
   isAdmin = false,
-  currentUserId
+  currentUserId,
+  isBlocked = false,
+  blockReason,
+  blockDescription
 }: RoomTimeSlotCardProps) => {
   const { toast } = useToast();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -94,16 +100,18 @@ const RoomTimeSlotCard = memo(({
 
   return (
     <>
-      <Card 
+      <Card
         className={cn(
           'group relative transition-all duration-200 hover:shadow-lg rounded-xl overflow-hidden',
           booking
             ? 'bg-gradient-to-br from-destructive/10 to-destructive/20 border-destructive/40'
-            : 'bg-gradient-to-br from-success/10 to-success/20 border-success/40',
-          isPast ? 'opacity-60 cursor-not-allowed' : (!booking ? 'cursor-pointer' : 'cursor-default'),
+            : isBlocked
+              ? 'bg-gradient-to-br from-gray-100 to-gray-200 border-gray-400'
+              : 'bg-gradient-to-br from-success/10 to-success/20 border-success/40',
+          (isPast || isBlocked) ? 'opacity-60 cursor-not-allowed' : (!booking ? 'cursor-pointer' : 'cursor-default'),
           className
         )}
-        onClick={!isPast && !booking ? onClick : undefined}
+        onClick={!isPast && !booking && !isBlocked ? onClick : undefined}
       >
         <CardContent className="p-3 h-full flex flex-col justify-between">
           {booking ? (
@@ -146,7 +154,19 @@ const RoomTimeSlotCard = memo(({
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
-              {!isPast && (
+              {isBlocked ? (
+                <div className="flex flex-col items-center justify-center text-center px-1">
+                  <Lock className="h-4 w-4 text-gray-400 mb-1" />
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-tight">
+                    Bloqueado
+                  </span>
+                  {blockDescription && (
+                    <span className="text-[9px] text-gray-400 truncate w-full px-1">
+                      {blockDescription}
+                    </span>
+                  )}
+                </div>
+              ) : !isPast && (
                 <Button
                   size="sm"
                   variant="ghost"

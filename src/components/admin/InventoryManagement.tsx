@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CalendarBlocksManager from './CalendarBlocksManager';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,12 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Database, 
-  Plus, 
-  Edit, 
-  Calendar, 
-  Chrome, 
+import {
+  Database,
+  Plus,
+  Edit,
+  Calendar,
+  Chrome,
   AlertCircle,
   RefreshCw,
   Trash2
@@ -45,6 +46,8 @@ export default function InventoryManagement() {
   const [newDate, setNewDate] = useState('');
   const [newQuantity, setNewQuantity] = useState('200');
   const [saving, setSaving] = useState(false);
+  const [showGenerateWeekDialog, setShowGenerateWeekDialog] = useState(false);
+  const [weekQuantity, setWeekQuantity] = useState('200');
 
   useEffect(() => {
     fetchData();
@@ -109,7 +112,7 @@ export default function InventoryManagement() {
 
     try {
       setSaving(true);
-      
+
       const { error } = await supabase
         .from('chromebook_inventory')
         .upsert({
@@ -144,7 +147,7 @@ export default function InventoryManagement() {
 
     try {
       setSaving(true);
-      
+
       const { error } = await supabase
         .from('chromebook_inventory')
         .update({ total_available: parseInt(newQuantity) })
@@ -199,17 +202,26 @@ export default function InventoryManagement() {
   };
 
   const generateWeekInventory = async () => {
+    if (!weekQuantity || parseInt(weekQuantity) <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Por favor, informe uma quantidade válida de Chromebooks",
+      });
+      return;
+    }
+
     const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-    const weekDates = Array.from({ length: 5 }, (_, i) => 
+    const weekDates = Array.from({ length: 5 }, (_, i) =>
       format(addDays(startDate, i), 'yyyy-MM-dd')
     );
 
     try {
       setSaving(true);
-      
+
       const inventoryItems = weekDates.map(date => ({
         date,
-        total_available: 200
+        total_available: parseInt(weekQuantity)
       }));
 
       const { error } = await supabase
@@ -220,9 +232,11 @@ export default function InventoryManagement() {
 
       toast({
         title: "Sucesso",
-        description: "Inventário da semana gerado com sucesso",
+        description: `Inventário da semana gerado com ${weekQuantity} Chromebooks por dia`,
       });
 
+      setShowGenerateWeekDialog(false);
+      setWeekQuantity('200');
       await fetchInventory();
     } catch (error: any) {
       toast({
@@ -276,9 +290,9 @@ export default function InventoryManagement() {
               Gerenciamento de Inventário
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
-              <Button 
-                variant="outline" 
-                onClick={generateWeekInventory}
+              <Button
+                variant="outline"
+                onClick={() => setShowGenerateWeekDialog(true)}
                 disabled={saving}
                 className="w-full sm:w-auto"
               >
@@ -314,7 +328,7 @@ export default function InventoryManagement() {
                 {inventory.map((item) => {
                   const { available, status } = getAvailabilityStatus(item.date, item.total_available);
                   const booking = bookingSummary.find(b => b.date === item.date);
-                  
+
                   return (
                     <TableRow key={item.id}>
                       <TableCell>
@@ -355,8 +369,8 @@ export default function InventoryManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => {
                               setSelectedItem(item);
@@ -366,8 +380,8 @@ export default function InventoryManagement() {
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => deleteInventoryItem(item)}
                           >
@@ -472,6 +486,62 @@ export default function InventoryManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Generate Week Inventory Dialog */}
+      <Dialog open={showGenerateWeekDialog} onOpenChange={setShowGenerateWeekDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Chrome className="h-5 w-5" />
+              Gerar Inventário da Semana
+            </DialogTitle>
+            <DialogDescription>
+              Defina a quantidade de Chromebooks disponíveis para cada dia útil desta semana (segunda a sexta).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <span className="font-medium text-sm">Atenção</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Este valor será usado como base para calcular a disponibilidade no Dashboard.
+                Certifique-se de informar a quantidade real de Chromebooks funcionais.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="week-quantity" className="text-base">
+                Quantidade de Chromebooks Disponíveis
+              </Label>
+              <Input
+                id="week-quantity"
+                type="number"
+                min="1"
+                max="500"
+                value={weekQuantity}
+                onChange={(e) => setWeekQuantity(e.target.value)}
+                className="mt-2 text-lg font-medium"
+                placeholder="Ex: 200"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Valor será aplicado para todos os dias da semana atual
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex flex-wrap gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowGenerateWeekDialog(false)} className="w-full sm:w-auto">
+              Cancelar
+            </Button>
+            <Button onClick={generateWeekInventory} disabled={saving} className="w-full sm:w-auto">
+              {saving ? 'Gerando...' : 'Gerar Semana'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Calendar Blocks Manager */}
+      <CalendarBlocksManager />
     </div>
   );
 }

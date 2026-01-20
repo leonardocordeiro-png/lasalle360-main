@@ -48,10 +48,14 @@ export function QuickBookingModal({
     if (open && user) {
       // Set user full name
       setFullName(user.user_metadata?.full_name || user.email || '');
-      
+
+      // Reset form fields
+      setClassName('');
+      setQuantity('1');
+
       // Fetch max booking quantity from system config
       fetchMaxBookingQuantity();
-      
+
       // Fetch available quantity for the selected date/time
       if (selectedDate && selectedTime) {
         fetchAvailability();
@@ -68,7 +72,7 @@ export function QuickBookingModal({
         .single();
 
       if (error) throw error;
-      
+
       const maxQty = parseInt(String(data.config_value));
       setMaxBookingQuantity(maxQty || 50);
     } catch (error) {
@@ -82,7 +86,7 @@ export function QuickBookingModal({
 
     try {
       const [startTime, endTime] = selectedTime.split('-');
-      
+
       // Get available quantity using the RPC function
       const availableForSlot = await calculateAvailableQuantity(selectedDate, startTime, endTime, totalInventory);
 
@@ -103,7 +107,7 @@ export function QuickBookingModal({
     if (!user || !selectedDate || !selectedTime) return;
 
     const requestedQuantity = parseInt(quantity);
-    
+
     if (requestedQuantity <= 0) {
       toast({
         title: "Quantidade inválida",
@@ -133,9 +137,9 @@ export function QuickBookingModal({
 
     try {
       setLoading(true);
-      
+
       const [startTime, endTime] = selectedTime.split('-');
-      
+
       const { data: newBooking, error } = await supabase
         .from('chromebook_bookings')
         .insert({

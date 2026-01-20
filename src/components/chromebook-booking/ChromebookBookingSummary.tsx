@@ -18,7 +18,7 @@ interface ChromebookBookingSummaryProps {
   selectedDate: Date;
   selectedSlots: TimeSlot[];
   quantity: number;
-  className: string;
+  classGroupName: string;
   onBookingCreated: () => void;
   onClearSelection: () => void;
   totalInventory: number;
@@ -28,7 +28,7 @@ export function ChromebookBookingSummary({
   selectedDate,
   selectedSlots,
   quantity,
-  className,
+  classGroupName,
   onBookingCreated,
   onClearSelection,
   totalInventory,
@@ -51,7 +51,7 @@ export function ChromebookBookingSummary({
     fetchUserProfile();
   }, []);
 
-  const canSubmit = selectedSlots.length > 0 && className.trim().length > 0 && quantity > 0;
+  const canSubmit = selectedSlots.length > 0 && classGroupName.trim().length > 0 && quantity > 0;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -76,7 +76,7 @@ export function ChromebookBookingSummary({
       const bookingsToCreate = selectedSlots.map(slot => ({
         user_id: user.id,
         full_name: profile.full_name,
-        class_name: className.trim(),
+        class_name: classGroupName.trim(),
         quantity: quantity,
         booking_date: dateStr,
         start_time: slot.start,
@@ -175,12 +175,12 @@ export function ChromebookBookingSummary({
             </div>
 
             {/* Turma */}
-            {className && (
+            {classGroupName && (
               <div className="flex items-center gap-3">
                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Turma</p>
-                  <p className="text-sm font-medium">{className}</p>
+                  <p className="text-sm font-medium">{classGroupName}</p>
                 </div>
               </div>
             )}
@@ -203,10 +203,11 @@ export function ChromebookBookingSummary({
             <Separator />
 
             {/* Validação */}
-            {!className.trim() && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  ⚠️ Informe a turma no painel de filtros para continuar
+            {!classGroupName.trim() && selectedSlots.length > 0 && (
+              <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg animate-pulse">
+                <p className="text-xs font-medium text-red-700 dark:text-red-300 flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  ⚠️ Informe a turma no painel de filtros (ao lado) para continuar
                 </p>
               </div>
             )}

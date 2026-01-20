@@ -64,7 +64,7 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
-    
+
     // Buscar bookings para o mês atual e próximo
     const fromDate = startOfMonth(selectedDate);
     const toDate = endOfMonth(addMonths(selectedDate, 1));
@@ -146,6 +146,7 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
 
   const handleClearSelection = () => {
     setSelectedSlots([]);
+    setObservations("");
   };
 
   if (loading && bookings.length === 0) {

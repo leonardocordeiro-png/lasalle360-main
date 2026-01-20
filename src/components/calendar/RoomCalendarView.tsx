@@ -25,6 +25,17 @@ interface RoomBooking {
   observations?: string;
 }
 
+interface CalendarBlock {
+  id: string;
+  resource_type: string;
+  block_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  description: string | null;
+  reserved_for: string | null;
+}
+
 interface RoomCalendarViewProps {
   roomType: 'sala_google' | 'laboratorio';
   roomName: string;
@@ -43,6 +54,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [calendarBlocks, setCalendarBlocks] = useState<CalendarBlock[]>([]);
 
   const timeSlots = useMemo(() => [
     { start: "07:30", end: "08:20", label: "07:30 - 08:20" },
@@ -68,7 +80,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const firstDayOfWeek = monthStart.getDay(); // 0 for Sunday, 1 for Monday
-  const paddingDaysStart = Array.from({ length: firstDayOfWeek }, (_, i) => 
+  const paddingDaysStart = Array.from({ length: firstDayOfWeek }, (_, i) =>
     addDays(monthStart, -(firstDayOfWeek - i))
   );
   const allDaysInMonthGrid = [...paddingDaysStart, ...daysInMonth];
@@ -118,17 +130,44 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
 
       if (error) throw error;
       setBookings(data || []);
+
+      // Fetch blocks
+      const { data: blockData, error: blockError } = await supabase
+        .from('calendar_blocks')
+        .select('*')
+        .eq('resource_type', roomType)
+        .gte('block_date', format(fromDate, 'yyyy-MM-dd'))
+        .lte('block_date', format(toDate, 'yyyy-MM-dd'));
+
+      if (!blockError) {
+        setCalendarBlocks(blockData as CalendarBlock[]);
+      }
     } catch (error: any) {
-      console.error('Error fetching room bookings:', error);
+      console.error('Error fetching room data:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar agendamentos de salas",
+        description: "Erro ao carregar dados do calendário",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const isSlotBlocked = useCallback((date: Date, slotLabel: string): CalendarBlock | null => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const [start] = (slotLabel as string).split(' - ');
+
+    return calendarBlocks.find(block =>
+      block.block_date === dateStr &&
+      block.start_time.slice(0, 5) === start
+    ) || null;
+  }, [calendarBlocks]);
+
+  const isDayBlocked = useCallback((date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return calendarBlocks.some(block => block.block_date === dateStr);
+  }, [calendarBlocks]);
 
   const getBookingsForSlot = useCallback((date: Date, slot: { start: string; end: string }): RoomBooking | null => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -154,7 +193,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
     today.setHours(0, 0, 0, 0);
     const checkDate = new Date(day);
     checkDate.setHours(0, 0, 0, 0);
-    
+
     if (isWeekend(day) || checkDate < today) {
       return;
     }
@@ -235,19 +274,19 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <Button
             variant="outline"
             onClick={goToToday}
             className="min-w-[120px] text-sm font-medium"
           >
             <CalendarIcon className="h-4 w-4 mr-2" />
-            {viewMode === 'week' 
+            {viewMode === 'week'
               ? `${format(daysInWeek[0], 'd MMM', { locale: ptBR })} - ${format(daysInWeek[daysInWeek.length - 1], 'd MMM', { locale: ptBR })}`
               : format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
             }
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -302,7 +341,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
                       const dayKey = day.toISOString();
                       const booking = getBookingsForSlot(day, timeSlot);
                       const isPast = day < new Date() && !isSameDay(day, new Date());
-                      
+
                       return (
                         <RoomTimeSlotCard
                           key={`${dayKey}-${timeSlot.label}`}
@@ -315,6 +354,9 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
                           className="h-20"
                           isAdmin={isAdmin}
                           currentUserId={currentUserId || undefined}
+                          isBlocked={!!isSlotBlocked(day, timeSlot.label)}
+                          blockReason={isSlotBlocked(day, timeSlot.label)?.reason}
+                          blockDescription={isSlotBlocked(day, timeSlot.label)?.description || isSlotBlocked(day, timeSlot.label)?.reserved_for}
                         />
                       );
                     })}
@@ -349,6 +391,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
                     const isDisabled = isPast || isWeekendDay || !isCurrentMonth;
                     const dayBookings = getBookingsForDay(day);
                     const uniqueUsers = [...new Set(dayBookings.map(b => b.full_name))];
+                    const dayHasBlocks = isDayBlocked(day);
 
                     return (
                       <button
@@ -361,10 +404,14 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
                           isCurrentMonth ? "text-foreground" : "text-muted-foreground",
                           isToday(day) && "bg-primary/10 font-bold",
                           isSelected && "bg-primary text-primary-foreground font-bold",
-                          isDisabled && "opacity-40"
+                          isDisabled && "opacity-40",
+                          dayHasBlocks && !isSelected && "bg-gray-100 dark:bg-gray-800"
                         )}
                       >
                         <span className="font-semibold">{format(day, 'd')}</span>
+                        {dayHasBlocks && !isDisabled && !isSelected && (
+                          <Lock className="h-2 w-2 text-gray-400 mt-0.5" />
+                        )}
                         {uniqueUsers.length > 0 && !isDisabled && (
                           <div className="text-[9px] leading-tight mt-0.5 w-full overflow-hidden">
                             {uniqueUsers.slice(0, 2).map((name, i) => (
@@ -396,7 +443,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
                       const checkDate = new Date(selectedDate);
                       checkDate.setHours(0, 0, 0, 0);
                       const isPast = checkDate < today;
-                      
+
                       return (
                         <div key={slot.label} className="space-y-1">
                           <p className="text-xs font-medium text-muted-foreground text-center">
@@ -412,6 +459,9 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
                             className="h-20"
                             isAdmin={isAdmin}
                             currentUserId={currentUserId || undefined}
+                            isBlocked={!!isSlotBlocked(selectedDate, slot.label)}
+                            blockReason={isSlotBlocked(selectedDate, slot.label)?.reason}
+                            blockDescription={isSlotBlocked(selectedDate, slot.label)?.description || isSlotBlocked(selectedDate, slot.label)?.reserved_for}
                           />
                         </div>
                       );

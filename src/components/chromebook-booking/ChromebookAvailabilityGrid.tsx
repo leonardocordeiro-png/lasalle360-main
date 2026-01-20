@@ -27,6 +27,17 @@ interface TimeSlot {
   end: string;
 }
 
+interface CalendarBlock {
+  id: string;
+  resource_type: string;
+  block_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  description: string | null;
+  reserved_for: string | null;
+}
+
 interface ChromebookAvailabilityGridProps {
   selectedDate: Date;
   bookings: ChromebookBooking[];
@@ -51,6 +62,7 @@ export function ChromebookAvailabilityGrid({
   const [availabilityCache, setAvailabilityCache] = useState<Map<string, number>>(new Map());
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedBookingForTransfer, setSelectedBookingForTransfer] = useState<ChromebookBooking | null>(null);
+  const [calendarBlocks, setCalendarBlocks] = useState<CalendarBlock[]>([]);
 
   const timeSlots = useMemo(() => [
     { start: "07:30", end: "08:20", label: "07:30 - 08:20" },
@@ -118,6 +130,30 @@ export function ChromebookAvailabilityGrid({
     calculateAvailability();
   }, [selectedDate, bookings, totalInventory, timeSlots]);
 
+  // Fetch calendar blocks for the selected date
+  useEffect(() => {
+    const fetchBlocks = async () => {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('calendar_blocks')
+        .select('*')
+        .eq('resource_type', 'chromebook')
+        .eq('block_date', dateStr);
+
+      if (!error && data) {
+        setCalendarBlocks(data as CalendarBlock[]);
+      }
+    };
+
+    fetchBlocks();
+  }, [selectedDate]);
+
+  const isSlotBlocked = useCallback((slot: { start: string; end: string }): CalendarBlock | null => {
+    return calendarBlocks.find(block =>
+      intervalsOverlap(slot.start, slot.end, block.start_time.slice(0, 5), block.end_time.slice(0, 5))
+    ) || null;
+  }, [calendarBlocks]);
+
   const getBookingsForSlot = useCallback((slot: { start: string; end: string }): ChromebookBooking[] => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     return bookings.filter(booking =>
@@ -184,6 +220,10 @@ export function ChromebookAvailabilityGrid({
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
                 <span className="whitespace-nowrap">Selecionado</span>
               </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0" />
+                <span className="whitespace-nowrap">Bloqueado</span>
+              </div>
             </div>
           </div>
 
@@ -239,6 +279,7 @@ export function ChromebookAvailabilityGrid({
               const slotBookings = getBookingsForSlot(slot);
               const availableCount = getAvailableCount(slot);
               const isSelected = isSlotSelected(slot);
+              const blockInfo = isSlotBlocked(slot);
 
               return (
                 <ChromebookTimeSlotCard
@@ -249,11 +290,14 @@ export function ChromebookAvailabilityGrid({
                   totalInventory={totalInventory}
                   isSelected={isSelected}
                   isPast={isPastDate()}
-                  onSelect={() => onSlotToggle(slot)}
+                  onSelect={() => !blockInfo && onSlotToggle(slot)}
                   onBookingCancelled={onBookingCancelled}
                   onTransferClick={handleTransferClick}
                   isAdmin={isAdmin}
                   currentUserId={currentUserId || undefined}
+                  isBlocked={!!blockInfo}
+                  blockReason={blockInfo?.reason}
+                  blockDescription={blockInfo?.description || blockInfo?.reserved_for}
                 />
               );
             })}

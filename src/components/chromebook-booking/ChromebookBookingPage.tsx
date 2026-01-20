@@ -58,7 +58,7 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
-    
+
     const fromDate = startOfMonth(selectedDate);
     const toDate = endOfMonth(addMonths(selectedDate, 1));
 
@@ -127,11 +127,14 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
     fetchBookings();
     setSelectedSlots([]);
     setClassName("");
+    setQuantity(1);
     onBookingCreated();
   };
 
   const handleClearSelection = () => {
     setSelectedSlots([]);
+    setClassName("");
+    setQuantity(1);
   };
 
   if (loading && bookings.length === 0) {
@@ -152,7 +155,7 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
           onDateChange={handleDateChange}
           quantity={quantity}
           onQuantityChange={setQuantity}
-          className={className}
+          classGroupName={className}
           onClassNameChange={setClassName}
           totalInventory={totalInventory}
         />
@@ -178,7 +181,7 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
           selectedDate={selectedDate}
           selectedSlots={selectedSlots}
           quantity={quantity}
-          className={className}
+          classGroupName={className}
           onBookingCreated={handleBookingCreated}
           onClearSelection={handleClearSelection}
           totalInventory={totalInventory}

@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Clock, User, MoreVertical, Trash2, X, ArrowRightLeft, Chrome } from "lucide-react";
+import { Clock, User, MoreVertical, Trash2, X, ArrowRightLeft, Chrome, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -54,6 +54,9 @@ interface ChromebookTimeSlotCardProps {
   onTransferClick: (booking: ChromebookBooking) => void;
   isAdmin: boolean;
   currentUserId?: string;
+  isBlocked?: boolean;
+  blockReason?: string;
+  blockDescription?: string | null;
 }
 
 export function ChromebookTimeSlotCard({
@@ -68,6 +71,9 @@ export function ChromebookTimeSlotCard({
   onTransferClick,
   isAdmin,
   currentUserId,
+  isBlocked = false,
+  blockReason,
+  blockDescription,
 }: ChromebookTimeSlotCardProps) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -80,13 +86,26 @@ export function ChromebookTimeSlotCard({
   const isAvailable = availableCount > 0;
 
   const getStatusColor = () => {
+    if (isBlocked) return "border-gray-400 bg-gray-100 dark:bg-gray-900 cursor-not-allowed";
     if (isSelected) return "border-blue-500 bg-blue-50 dark:bg-blue-950";
     if (isFull) return "border-red-200 bg-red-50 dark:bg-red-950";
     if (isPartial) return "border-amber-200 bg-amber-50 dark:bg-amber-950";
     return "border-emerald-200 bg-emerald-50 dark:bg-emerald-950 hover:border-emerald-400";
   };
 
+  const getBlockReasonLabel = () => {
+    switch (blockReason) {
+      case 'manutencao': return 'Manutenção';
+      case 'atividade': return 'Atividade Especial';
+      case 'reserva_pessoal': return 'Reservado';
+      default: return 'Bloqueado';
+    }
+  };
+
   const getStatusBadge = () => {
+    if (isBlocked) {
+      return <Badge variant="secondary" className="text-xs bg-gray-500 hover:bg-gray-600 text-white whitespace-nowrap"><Lock className="h-3 w-3 mr-1" />{getBlockReasonLabel()}</Badge>;
+    }
     if (isFull) {
       return <Badge variant="destructive" className="text-xs whitespace-nowrap">Lotado</Badge>;
     }
@@ -168,10 +187,10 @@ export function ChromebookTimeSlotCard({
         className={cn(
           "p-3 transition-all duration-200 cursor-pointer border-2 min-w-0 overflow-hidden",
           getStatusColor(),
-          isPast && "opacity-50 cursor-not-allowed",
+          (isPast || isBlocked) && "opacity-60 cursor-not-allowed",
           isSelected && "ring-2 ring-blue-500 ring-offset-2"
         )}
-        onClick={() => !isPast && isAvailable && onSelect()}
+        onClick={() => !isPast && !isBlocked && isAvailable && onSelect()}
       >
         <div className="space-y-2 min-w-0">
           {/* Header */}
@@ -258,8 +277,21 @@ export function ChromebookTimeSlotCard({
             </div>
           )}
 
+          {/* Blocked State */}
+          {isBlocked && (
+            <div className="text-xs text-center py-2">
+              <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400">
+                <Lock className="h-3 w-3" />
+                <span className="font-medium">Horário Bloqueado</span>
+              </div>
+              {blockDescription && (
+                <p className="text-muted-foreground mt-1 truncate">{blockDescription}</p>
+              )}
+            </div>
+          )}
+
           {/* Empty State */}
-          {!hasBookings && isAvailable && (
+          {!hasBookings && !isBlocked && isAvailable && (
             <p className="text-xs text-muted-foreground text-center py-2">
               Clique para selecionar
             </p>

@@ -513,7 +513,7 @@ export default function Dashboard() {
                   <p><strong>Chromebooks</strong> → entrega exclusiva pela equipe de TI/TE.</p>
                   <p><strong>Chave da Sala Google e Laboratório</strong> → retirada com a equipe do SCT.</p>
                   <p className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
-                    A entrega dos Chromebooks será realizada exclusivamente pela equipe de TI, mediante agendamento prévio no sistema. Importante: Fica vedada a retirada dos equipamentos por alunos.
+                    A entrega de Chromebooks é feita exclusivamente pela equipe técnica mediante agendamento. Alunos não estão autorizados a retirar os equipamentos.
                   </p>
                 </div>
               </div>

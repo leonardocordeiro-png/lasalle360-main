@@ -3,7 +3,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import { Filter, Chrome, Laptop, GraduationCap } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 
@@ -12,7 +11,7 @@ interface ChromebookFilterPanelProps {
   onDateChange: (date: Date) => void;
   quantity: number;
   onQuantityChange: (quantity: number) => void;
-  className: string;
+  classGroupName: string;
   onClassNameChange: (className: string) => void;
   totalInventory: number;
 }
@@ -22,7 +21,7 @@ export function ChromebookFilterPanel({
   onDateChange,
   quantity,
   onQuantityChange,
-  className,
+  classGroupName,
   onClassNameChange,
   totalInventory,
 }: ChromebookFilterPanelProps) {
@@ -66,18 +65,33 @@ export function ChromebookFilterPanel({
           </div>
         </div>
 
+        {/* Turma - Moved up for visibility */}
+        <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/10 shadow-sm">
+          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-primary" />
+            Turma *
+          </Label>
+          <Input
+            placeholder="Ex: 9º Ano A"
+            value={classGroupName}
+            onChange={(e) => onClassNameChange(e.target.value)}
+            maxLength={50}
+            className="bg-background border-primary/20 focus-visible:ring-primary"
+          />
+          <p className="text-[10px] text-muted-foreground italic">
+            Campo obrigatório para continuar a reserva
+          </p>
+        </div>
+
         {/* Informações do Equipamento */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-muted-foreground">
-            Equipamento
-          </Label>
           <div className="p-3 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               <Laptop className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Chromebook de Aluno</span>
+              <span className="font-medium text-sm text-foreground">Equipamento de Aluno</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Equipamento para uso em sala de aula
+            <p className="text-[10px] text-muted-foreground">
+              Chromebook para uso pedagógico em sala.
             </p>
           </div>
         </div>
@@ -138,23 +152,6 @@ export function ChromebookFilterPanel({
             <span>1</span>
             <span>{maxQuantity}</span>
           </div>
-        </div>
-
-        {/* Turma */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <GraduationCap className="h-4 w-4" />
-            Turma
-          </Label>
-          <Input
-            placeholder="Ex: 9º Ano A"
-            value={className}
-            onChange={(e) => onClassNameChange(e.target.value)}
-            maxLength={50}
-          />
-          <p className="text-xs text-muted-foreground">
-            Informe a turma que utilizará os Chromebooks
-          </p>
         </div>
 
         {/* Dica */}
