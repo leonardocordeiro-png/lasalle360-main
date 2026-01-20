@@ -304,6 +304,7 @@ export default function Dashboard() {
       setTotalInventory(fetchedDefaultInventory);
       setMaxBookingQuantity(fetchedMaxBookingQuantity);
 
+      // Buscar agendamentos de hoje (ativos)
       const { data: todayBookingsData, error: bookingsDataError } = await supabase
         .from('chromebook_bookings')
         .select('*')
@@ -314,15 +315,20 @@ export default function Dashboard() {
 
       setTodayBookings(todayBookingsData || []);
 
-      const { data: dayUsage, error: usageError } = await supabase
-        .rpc('get_chromebook_day_usage', { p_date: today });
+      // Calcular uso de hoje somando as quantidades de todos os agendamentos ativos
+      // Agrupa por usuário e pega o máximo de cada usuário para evitar contagem dupla
+      const userMaxQuantities = new Map<string, number>();
+      (todayBookingsData || []).forEach((booking: Booking) => {
+        const currentMax = userMaxQuantities.get(booking.user_id) || 0;
+        if (booking.quantity > currentMax) {
+          userMaxQuantities.set(booking.user_id, booking.quantity);
+        }
+      });
+      
+      const totalInUse = Array.from(userMaxQuantities.values()).reduce((sum, qty) => sum + qty, 0);
+      const available = fetchedDefaultInventory - totalInUse;
 
-      if (usageError) throw usageError;
-
-      const usageRow: any = Array.isArray(dayUsage) ? dayUsage[0] : dayUsage;
-      const available = usageRow?.available ?? fetchedDefaultInventory;
-
-      setAvailableChromebooks(available);
+      setAvailableChromebooks(Math.max(0, available));
     } catch (error: any) {
       console.error('Error fetching system config or today availability:', error);
       setTotalInventory(200);
@@ -489,9 +495,11 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{bookings.length}</div>
+              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                {bookings.filter(b => b.status === 'active').length}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                todos os tempos
+                ativos no sistema
               </p>
             </CardContent>
           </Card>
@@ -508,7 +516,10 @@ export default function Dashboard() {
                   <p><strong>Chromebooks</strong> → entrega exclusiva pela equipe de TI/TE.</p>
                   <p><strong>Chave da Sala Google e Laboratório</strong> → retirada com a equipe do SCT.</p>
                   <p className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
-                    A entrega de Chromebooks é feita exclusivamente pela equipe técnica mediante agendamento. Alunos não estão autorizados a retirar os equipamentos.
+                    A entrega de Chromebooks é feita exclusivamente pela equipe técnica mediante agendamento.
+                  </p>
+                  <p className="mt-2">
+                    <strong>Obs:</strong> Alunos não estão autorizados a retirar os equipamentos.
                   </p>
                 </div>
               </div>
