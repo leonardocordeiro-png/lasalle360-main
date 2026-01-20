@@ -85,7 +85,7 @@ export default function Dashboard() {
     sala_criativa: true,
     loans_management: true,
   });
-  
+
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [userPermissions, setUserPermissions] = useState<any[]>([]);
 
@@ -155,14 +155,14 @@ export default function Dashboard() {
         .single();
 
       if (profileError) throw profileError;
-      
+
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user?.id)
         .eq('role', 'admin')
         .maybeSingle();
-        
+
       setProfile({ ...profileData, is_admin: !!roleData });
     } catch (error: any) {
       console.error('Error fetching profile:', error);
@@ -291,7 +291,7 @@ export default function Dashboard() {
   const fetchSystemConfigAndAvailability = async () => {
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
-      
+
       const { data: configData, error: configError } = await supabase
         .from('system_config')
         .select('config_key, config_value');
@@ -390,9 +390,9 @@ export default function Dashboard() {
   }
 
   const defaultTab = modulePermissions.chromebooks ? "chromebooks" :
-                     modulePermissions.loans_management ? "emprestimos" :
-                     (modulePermissions.sala_google || modulePermissions.laboratorio || modulePermissions.sala_criativa) ? "salas" :
-                     "bookings";
+    modulePermissions.loans_management ? "emprestimos" :
+      (modulePermissions.sala_google || modulePermissions.laboratorio || modulePermissions.sala_criativa) ? "salas" :
+        "bookings";
 
   // Dados do usuário para o dropdown
   const userDropdownData = {
@@ -426,7 +426,7 @@ export default function Dashboard() {
               <NotificationBell />
 
               {/* User Dropdown com Avatar */}
-              <UserDropdown 
+              <UserDropdown
                 user={userDropdownData}
                 onAction={handleUserAction}
                 onLogout={signOut}
@@ -453,7 +453,7 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-white dark:from-amber-950 dark:to-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Em Uso Hoje</CardTitle>
@@ -468,7 +468,7 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Meus Agendamentos</CardTitle>
@@ -485,7 +485,7 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Agendamentos</CardTitle>
@@ -513,7 +513,7 @@ export default function Dashboard() {
                   <p><strong>Chromebooks</strong> → entrega exclusiva pela equipe de TI/TE.</p>
                   <p><strong>Chave da Sala Google e Laboratório</strong> → retirada com a equipe do SCT.</p>
                   <p className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
-                    As entregas só serão liberadas mediante agendamento no sistema, e somente pelas equipes responsáveis. Professores não devem sair de sala nem enviar alunos para retirada.
+                    A entrega dos Chromebooks será realizada exclusivamente pela equipe de TI, mediante agendamento prévio no sistema. Importante: Fica vedada a retirada dos equipamentos por alunos.
                   </p>
                 </div>
               </div>
@@ -559,9 +559,9 @@ export default function Dashboard() {
           <TabsContent value="chromebooks" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className="lg:col-span-3">
-                <ChromebookBookingPage 
-                  onBookingCreated={handleBookingCreated} 
-                  totalInventory={totalInventory} 
+                <ChromebookBookingPage
+                  onBookingCreated={handleBookingCreated}
+                  totalInventory={totalInventory}
                 />
               </div>
               <div>
@@ -606,7 +606,7 @@ export default function Dashboard() {
                         <School className="h-4 w-4" />
                         Sala Google
                       </h4>
-                      <RoomBookingsList 
+                      <RoomBookingsList
                         bookings={salaGoogleBookings}
                         onBookingDeleted={fetchRoomBookings}
                         roomName="Sala Google"
@@ -619,7 +619,7 @@ export default function Dashboard() {
                         <FlaskConical className="h-4 w-4" />
                         Laboratório
                       </h4>
-                      <RoomBookingsList 
+                      <RoomBookingsList
                         bookings={laboratorioBookings}
                         onBookingDeleted={fetchRoomBookings}
                         roomName="Laboratório"
@@ -632,7 +632,7 @@ export default function Dashboard() {
                         <Lightbulb className="h-4 w-4" />
                         Sala Criativa
                       </h4>
-                      <RoomBookingsList 
+                      <RoomBookingsList
                         bookings={salaCriativaBookings}
                         onBookingDeleted={fetchRoomBookings}
                         roomName="Sala Criativa"
@@ -679,8 +679,8 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ConsolidatedBookingsList 
-                  bookings={bookings} 
+                <ConsolidatedBookingsList
+                  bookings={bookings}
                   onBookingCancelled={handleBookingCancelled}
                   isAdmin={profile?.is_admin || false}
                   currentUserId={user?.id || ''}
@@ -692,7 +692,7 @@ export default function Dashboard() {
       </div>
 
       {/* Booking Dialog */}
-      <BookingDialog 
+      <BookingDialog
         open={showBookingDialog}
         onOpenChange={setShowBookingDialog}
         onSuccess={handleBookingCreated}
