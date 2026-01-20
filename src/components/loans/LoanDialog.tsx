@@ -155,8 +155,21 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
       setSearchQuery('');
       setSearchResults([]);
       setEquipmentValidated(false);
+      setUserSearchQuery('');
+      setUserSearchResults([]);
+      setSelectedUser(null);
+      setShowUserResults(false);
     }
   }, [open, form]);
+
+  // Limpar busca de usuário quando muda o tipo de solicitante
+  useEffect(() => {
+    setUserSearchQuery('');
+    setUserSearchResults([]);
+    setSelectedUser(null);
+    setShowUserResults(false);
+    form.setValue("borrower_name", "");
+  }, [borrowerType]);
 
   useEffect(() => {
     if (selectedEquipments.length > quantity) {
@@ -190,31 +203,42 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const handleUserInputChange = (value: string) => {
+  const handleUserInputChange = async (value: string) => {
     setUserSearchQuery(value);
+    form.setValue("borrower_name", value);
+    
     if (value.length >= 2) {
       setIsSearchingUsers(true);
-      // Simular busca de usuários
-      setTimeout(() => {
-        setUserSearchResults([
-          { user_id: "1", full_name: "João Silva", email: "joao.silva@escola.edu", avatar_url: "https://via.placeholder.com/150" },
-          { user_id: "2", full_name: "Maria Oliveira", email: "maria.oliveira@escola.edu", avatar_url: "https://via.placeholder.com/150" },
-        ]);
+      setShowUserResults(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email, avatar_url')
+          .ilike('full_name', `%${value}%`)
+          .limit(10);
+        
+        if (error) throw error;
+        setUserSearchResults(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
+        setUserSearchResults([]);
+      } finally {
         setIsSearchingUsers(false);
-      }, 500);
+      }
     } else {
       setUserSearchResults([]);
       setIsSearchingUsers(false);
+      setShowUserResults(false);
     }
   };
 
   const handleUserSelect = (user: any) => {
     form.setValue("borrower_name", user.full_name);
-    setUserSearchQuery('');
+    setUserSearchQuery(user.full_name);
     setUserSearchResults([]);
     setShowUserResults(false);
     setIsSearchingUsers(false);
-    setSelectedUser(null);
+    setSelectedUser(user);
   };
 
   const handleEquipmentSelect = async (equipment: any) => {
