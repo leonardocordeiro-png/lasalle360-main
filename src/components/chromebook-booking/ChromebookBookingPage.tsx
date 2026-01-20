@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChromebookFilterPanel } from "./ChromebookFilterPanel";
 import { ChromebookAvailabilityGrid } from "./ChromebookAvailabilityGrid";
 import { ChromebookBookingSummary } from "./ChromebookBookingSummary";
@@ -38,6 +38,15 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [className, setClassName] = useState("");
+  
+  // Ref para armazenar a data atual sem causar re-renders
+  const selectedDateRef = useRef<Date>(selectedDate);
+  const isInitialMount = useRef(true);
+
+  // Atualizar ref quando a data muda
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -56,13 +65,14 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
     fetchUserData();
   }, []);
 
-  const fetchBookings = useCallback(async (showLoading = false) => {
+  // Função de fetch estável que usa ref
+  const fetchBookings = useCallback(async (dateToFetch: Date, showLoading = false) => {
     if (showLoading) {
       setLoading(true);
     }
 
-    const fromDate = startOfMonth(selectedDate);
-    const toDate = endOfMonth(addMonths(selectedDate, 1));
+    const fromDate = startOfMonth(dateToFetch);
+    const toDate = endOfMonth(addMonths(dateToFetch, 1));
 
     try {
       const { data, error } = await supabase
@@ -84,12 +94,11 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, []);
 
+  // Efeito inicial - apenas uma vez para carregar dados e configurar subscription
   useEffect(() => {
-    // Mostrar loading apenas no primeiro carregamento
-    const isInitialLoad = bookings.length === 0;
-    fetchBookings(isInitialLoad);
+    fetchBookings(selectedDateRef.current, true);
 
     const channel = supabase
       .channel('chromebook-bookings-page')
@@ -101,7 +110,7 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
           table: 'chromebook_bookings'
         },
         () => {
-          fetchBookings(false);
+          fetchBookings(selectedDateRef.current, false);
         }
       )
       .subscribe();
@@ -110,6 +119,16 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
       channel.unsubscribe();
     };
   }, [fetchBookings]);
+
+  // Efeito separado para mudança de data (não recria subscription)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Buscar dados sem mostrar loading
+    fetchBookings(selectedDate, false);
+  }, [selectedDate, fetchBookings]);
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
@@ -128,7 +147,7 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
   };
 
   const handleBookingCreated = () => {
-    fetchBookings();
+    fetchBookings(selectedDate, false);
     setSelectedSlots([]);
     setClassName("");
     setQuantity(1);
