@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { RoomFilterPanel } from "./RoomFilterPanel";
 import { RoomAvailabilityGrid } from "./RoomAvailabilityGrid";
 import { RoomBookingSummary } from "./RoomBookingSummary";
@@ -39,11 +39,25 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [observations, setObservations] = useState("");
 
+  // Refs para armazenar valores atuais sem causar re-renders
+  const selectedDateRef = useRef<Date>(selectedDate);
+  const roomTypeRef = useRef<'sala_google' | 'laboratorio' | 'sala_criativa'>(roomType);
+  const isInitialMount = useRef(true);
+
   const roomNames: Record<'sala_google' | 'laboratorio' | 'sala_criativa', string> = {
     sala_google: 'Sala Google',
     laboratorio: 'Laboratório',
     sala_criativa: 'Sala Criativa',
   };
+
+  // Atualizar refs quando os valores mudam
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
+
+  useEffect(() => {
+    roomTypeRef.current = roomType;
+  }, [roomType]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -62,18 +76,20 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
     fetchUserData();
   }, []);
 
-  const fetchBookings = useCallback(async () => {
-    setLoading(true);
+  // Função de fetch estável que recebe parâmetros
+  const fetchBookings = useCallback(async (dateToFetch: Date, roomTypeToFetch: string, showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
 
-    // Buscar bookings para o mês atual e próximo
-    const fromDate = startOfMonth(selectedDate);
-    const toDate = endOfMonth(addMonths(selectedDate, 1));
+    const fromDate = startOfMonth(dateToFetch);
+    const toDate = endOfMonth(addMonths(dateToFetch, 1));
 
     try {
       const { data, error } = await supabase
         .from('room_bookings')
         .select('*')
-        .eq('room_type', roomType)
+        .eq('room_type', roomTypeToFetch)
         .eq('status', 'active')
         .gte('booking_date', format(fromDate, 'yyyy-MM-dd'))
         .lte('booking_date', format(toDate, 'yyyy-MM-dd'));
@@ -90,12 +106,12 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, roomType]);
+  }, []);
 
+  // Efeito inicial - configura subscription apenas uma vez por roomType
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(selectedDateRef.current, roomType, true);
 
-    // Realtime subscription
     const channel = supabase
       .channel(`room-bookings-${roomType}`)
       .on(
@@ -107,7 +123,7 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
           filter: `room_type=eq.${roomType}`
         },
         () => {
-          fetchBookings();
+          fetchBookings(selectedDateRef.current, roomTypeRef.current, false);
         }
       )
       .subscribe();
@@ -116,6 +132,15 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
       channel.unsubscribe();
     };
   }, [fetchBookings, roomType]);
+
+  // Efeito separado para mudança de data (não recria subscription)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    fetchBookings(selectedDate, roomType, false);
+  }, [selectedDate, fetchBookings, roomType]);
 
   const handleRoomTypeChange = (newRoomType: 'sala_google' | 'laboratorio' | 'sala_criativa') => {
     setRoomType(newRoomType);
@@ -139,7 +164,7 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
   };
 
   const handleBookingCreated = () => {
-    fetchBookings();
+    fetchBookings(selectedDate, roomType, false);
     setObservations(""); // Limpar observações após criar reserva
     onBookingCreated();
   };
