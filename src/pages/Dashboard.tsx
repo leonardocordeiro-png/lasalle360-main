@@ -132,16 +132,11 @@ export default function Dashboard() {
         )
         .subscribe();
 
-      const intervalId = setInterval(() => {
-        fetchSystemConfigAndAvailability();
-        fetchBookings();
-        fetchRoomBookings();
-      }, 30000);
+      // Removido polling de 30s - realtime subscriptions já cuidam das atualizações
 
       return () => {
         chromebookChannel.unsubscribe();
         roomChannel.unsubscribe();
-        clearInterval(intervalId);
       };
     }
   }, [user]);

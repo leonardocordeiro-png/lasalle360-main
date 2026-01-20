@@ -408,16 +408,16 @@ export default function UserManagement() {
             </Button>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Provedor</TableHead>
-                  <TableHead>Último Login</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="whitespace-nowrap">Usuário</TableHead>
+                  <TableHead className="whitespace-nowrap hidden md:table-cell">Email</TableHead>
+                  <TableHead className="whitespace-nowrap">Papel</TableHead>
+                  <TableHead className="whitespace-nowrap hidden lg:table-cell">Provedor</TableHead>
+                  <TableHead className="whitespace-nowrap hidden lg:table-cell">Último Login</TableHead>
+                  <TableHead className="whitespace-nowrap">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -439,43 +439,43 @@ export default function UserManagement() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span>{maskEmail(user.email)}</span>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex items-center gap-2 max-w-[200px]">
+                        <span className="truncate">{maskEmail(user.email)}</span>
                         {dataMaskingEnabled && (
-                          <Shield className="h-3 w-3 text-muted-foreground" />
+                          <Shield className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1">
                         {user.profiles.is_admin ? (
-                          <Badge variant="default">
+                          <Badge variant="default" className="text-xs">
                             <Shield className="h-3 w-3 mr-1" />
                             Admin
                           </Badge>
                         ) : (
-                          <Badge variant="secondary">
+                          <Badge variant="secondary" className="text-xs">
                             <UserCheck className="h-3 w-3 mr-1" />
                             Usuário
                           </Badge>
                         )}
                         {user.profiles.is_blocked && (
-                          <Badge variant="destructive">
+                          <Badge variant="destructive" className="text-xs">
                             <Ban className="h-3 w-3 mr-1" />
                             Bloqueado
                           </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {getProviderBadge(user)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {user.last_sign_in_at ? (
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">
+                          <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm whitespace-nowrap">
                             {format(new Date(user.last_sign_in_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                           </span>
                         </div>

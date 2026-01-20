@@ -584,34 +584,34 @@ export function LoansManagement() {
       {/* Table */}
       <div className="bg-card border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[900px]">
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                   Status
                 </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                   Data/Hora
                 </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                   Solicitante
                 </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap hidden lg:table-cell">
                   Professor Resp.
                 </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                   Chromebook Nº
                 </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap hidden md:table-cell">
                   Tipo
                 </th>
-                <th className="text-center py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-center py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                   Qtd
                 </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap hidden xl:table-cell">
                   Prev. Devolução
                 </th>
-                <th className="text-right py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="text-right py-3 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                   Ações
                 </th>
               </tr>
@@ -643,78 +643,78 @@ export function LoansManagement() {
                   
                   return (
                     <tr key={loan.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-3">
                         {getStatusBadge(loan.status)}
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-3">
                         <div className="text-sm">
-                          <p className="font-medium text-foreground">
-                            {format(parse(loan.loan_date, "yyyy-MM-dd", new Date()), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                          <p className="font-medium text-foreground whitespace-nowrap">
+                            {format(parse(loan.loan_date, "yyyy-MM-dd", new Date()), "dd/MM/yy", { locale: ptBR })}
                           </p>
                           <p className="text-xs text-muted-foreground">{loan.pickup_time}</p>
                         </div>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border">
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8 border flex-shrink-0">
                             <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
                               {getInitials(loan.borrower_name)}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium text-sm text-foreground">{loan.borrower_name}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-foreground truncate max-w-[150px]">{loan.borrower_name}</p>
                             <p className="text-xs text-muted-foreground capitalize">{loan.borrower_type}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm text-foreground">
+                      <td className="py-3 px-3 hidden lg:table-cell">
+                        <span className="text-sm text-foreground truncate max-w-[120px] block">
                           {loan.responsible_teacher || "—"}
                         </span>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="font-mono text-sm text-foreground">
+                      <td className="py-3 px-3">
+                        <div className="font-mono text-xs text-foreground max-w-[100px]">
                           {/* Exibição para equipamento único com it_equipment */}
                           {loan.equipment_id && loan.it_equipment?.id_number ? (
-                            <span>{loan.it_equipment.id_number}</span>
+                            <span className="truncate block">{loan.it_equipment.id_number}</span>
                           ) : loan.equipment_id && loan.it_equipment?.patrimony ? (
-                            <span>{loan.it_equipment.patrimony}</span>
+                            <span className="truncate block">{loan.it_equipment.patrimony}</span>
                           ) : hasMultipleEquipments ? (
                             // Exibição para múltiplos equipamentos
-                            <div className="flex flex-col gap-1">
-                              <span>{equipmentsList[0]}</span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="truncate">{equipmentsList[0]}</span>
                               <button
                                 onClick={() => handleViewEquipments(loan)}
                                 className="text-xs text-primary hover:text-primary/80 hover:underline flex items-center gap-1 w-fit"
                               >
                                 <Eye className="h-3 w-3" />
-                                Ver todos ({equipmentsList.length})
+                                +{equipmentsList.length - 1}
                               </button>
                             </div>
                           ) : (
                             // Equipamento único sem it_equipment
-                            <span>{equipmentsList[0] || loan.chromebook_number}</span>
+                            <span className="truncate block">{equipmentsList[0] || loan.chromebook_number}</span>
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-3 hidden md:table-cell">
                         {getBorrowerTypeBadge(loan.equipment_type)}
                       </td>
-                      <td className="py-4 px-4 text-center">
+                      <td className="py-3 px-3 text-center">
                         <span className="font-semibold text-foreground">{loan.quantity}</span>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-3 hidden xl:table-cell">
                         {loan.expected_return_date ? (
-                          <span className={`text-sm ${
+                          <span className={`text-sm whitespace-nowrap ${
                             loan.status === 'atrasado' ? 'text-red-600 font-medium' : 'text-foreground'
                           }`}>
-                            {format(parse(loan.expected_return_date, "yyyy-MM-dd", new Date()), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                            {format(parse(loan.expected_return_date, "yyyy-MM-dd", new Date()), "dd 'de' MMM", { locale: ptBR })}
                           </span>
                         ) : (
                           <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-3">
                         <div className="flex items-center justify-end gap-1">
                           {loan.status === "devolvido" && isAdmin ? (
                             <TooltipProvider>
