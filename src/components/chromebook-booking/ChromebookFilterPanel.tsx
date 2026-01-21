@@ -97,21 +97,21 @@ export function ChromebookFilterPanel({
         </div>
 
         {/* Calendário */}
-        <div className="space-y-2 overflow-hidden">
+        <div className="space-y-2">
           <Label className="text-sm font-medium text-muted-foreground">
             Selecionar Data
           </Label>
-          <div className="flex justify-center overflow-hidden">
+          <div className="flex justify-center">
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && onDateChange(date)}
               locale={ptBR}
               disabled={(date) => isWeekend(date) || isPastDate(date)}
-              className="rounded-md border p-2"
+              className="rounded-md border p-2 w-full"
               classNames={{
-                months: "flex flex-col",
-                month: "space-y-3",
+                months: "flex flex-col w-full",
+                month: "space-y-3 w-full",
                 caption: "flex justify-center pt-1 relative items-center px-8",
                 caption_label: "text-sm font-medium",
                 nav: "space-x-1 flex items-center",
@@ -119,10 +119,10 @@ export function ChromebookFilterPanel({
                 nav_button_previous: "absolute left-1",
                 nav_button_next: "absolute right-1",
                 table: "w-full border-collapse",
-                head_row: "flex justify-between",
-                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.75rem] text-center",
-                row: "flex w-full mt-1 justify-between",
-                cell: "h-8 w-8 text-center text-sm p-0 relative",
+                head_row: "flex w-full",
+                head_cell: "text-muted-foreground rounded-md flex-1 font-normal text-[0.7rem] text-center",
+                row: "flex w-full mt-1",
+                cell: "flex-1 text-center text-sm p-0 relative flex items-center justify-center",
                 day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center",
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 day_today: "bg-accent text-accent-foreground",
