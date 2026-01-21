@@ -43,22 +43,29 @@ export async function calculateAvailableQuantity(
     const slotStartMinutes = timeToMinutes(startTime);
     const slotEndMinutes = timeToMinutes(endTime);
 
-    // CUMULATIVE LOGIC (CORRECTED):
-    // Sum ALL booking quantities that started at or before this slot's start time
-    // Each booking represents a separate set of Chromebooks that are out
-    // No per-user consolidation - if a user made 2 bookings, both are counted
+    // CUMULATIVE LOGIC WITH PER-USER CONSOLIDATION:
+    // - Same user with multiple bookings = reuses same Chromebooks → MAX
+    // - Different users = separate equipment → SUM of maxes
+    // - Bookings that started before or during this slot impact availability
     
-    let bookedQuantity = 0;
+    const userMaxInSlot = new Map<string, number>();
     
     bookingsData?.forEach(booking => {
       const bookingStartMinutes = timeToMinutes(booking.start_time);
       
-      // If the booking started before or at the start of this slot, it impacts availability
-      // OR if the booking starts during this slot
+      // If the booking started before or at the start of this slot, OR starts during this slot
       if (bookingStartMinutes <= slotStartMinutes || 
           (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes)) {
-        bookedQuantity += booking.quantity;
+        const currentMax = userMaxInSlot.get(booking.user_id) || 0;
+        // For same user, keep only the MAX (they reuse Chromebooks)
+        userMaxInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
       }
+    });
+
+    // Sum the maxes from each different user
+    let bookedQuantity = 0;
+    userMaxInSlot.forEach(quantity => {
+      bookedQuantity += quantity;
     });
     
     return Math.max(0, totalInventory - bookedQuantity);

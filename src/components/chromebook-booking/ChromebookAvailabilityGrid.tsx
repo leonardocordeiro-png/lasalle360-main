@@ -108,22 +108,29 @@ export function ChromebookAvailabilityGrid({
         const slotStartMinutes = timeToMinutes(slot.start);
         const slotEndMinutes = timeToMinutes(slot.end);
 
-        // LÓGICA CUMULATIVA CORRIGIDA:
-        // Para cada slot, somar TODAS as quantidades de bookings que começaram até o início deste slot
-        // Cada booking representa um conjunto separado de Chromebooks que estão fora
-        // Não há consolidação por usuário - se um usuário fez 2 bookings, ambos são contados
+        // LÓGICA CUMULATIVA COM CONSOLIDAÇÃO POR USUÁRIO:
+        // - Mesmo usuário com múltiplos agendamentos = reutiliza os mesmos Chromebooks → MAX
+        // - Usuários diferentes = equipamentos separados → SOMA dos máximos
+        // - Bookings que começaram antes ou durante este slot impactam a disponibilidade
         
-        let bookedQuantity = 0;
+        const userMaxInSlot = new Map<string, number>();
         
         dayBookings.forEach(booking => {
           const bookingStartMinutes = timeToMinutes(booking.start_time);
           
-          // Se o booking começou antes ou no início deste slot, ele impacta a disponibilidade
-          // OU se o booking começa durante este slot
+          // Se o booking começou antes ou no início deste slot, OU começa durante este slot
           if (bookingStartMinutes <= slotStartMinutes || 
               (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes)) {
-            bookedQuantity += booking.quantity;
+            const currentMax = userMaxInSlot.get(booking.user_id) || 0;
+            // Para o mesmo usuário, manter apenas o MÁXIMO (ele reutiliza os Chromebooks)
+            userMaxInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
           }
+        });
+
+        // Somar os máximos de cada usuário diferente
+        let bookedQuantity = 0;
+        userMaxInSlot.forEach(quantity => {
+          bookedQuantity += quantity;
         });
 
         const available = Math.max(0, dayTotalInventory - bookedQuantity);
