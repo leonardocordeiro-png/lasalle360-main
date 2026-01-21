@@ -41,7 +41,7 @@ export function ChromebookFilterPanel({
   const maxQuantity = Math.min(50, totalInventory);
 
   return (
-    <Card className="h-fit sticky top-4">
+    <Card className="h-fit sticky top-4 overflow-hidden">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Filter className="h-5 w-5 text-primary" />
@@ -97,33 +97,33 @@ export function ChromebookFilterPanel({
         </div>
 
         {/* Calendário */}
-        <div className="space-y-2">
+        <div className="space-y-2 w-full max-w-full overflow-hidden">
           <Label className="text-sm font-medium text-muted-foreground">
             Selecionar Data
           </Label>
-          <div className="flex justify-center">
+          <div className="w-full max-w-full overflow-hidden">
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && onDateChange(date)}
               locale={ptBR}
               disabled={(date) => isWeekend(date) || isPastDate(date)}
-              className="rounded-md border p-2 w-full"
+              className="rounded-md border p-2 w-full max-w-full [&_table]:w-full [&_table]:table-fixed"
               classNames={{
                 months: "flex flex-col w-full",
                 month: "space-y-3 w-full",
-                caption: "flex justify-center pt-1 relative items-center px-8",
+                caption: "flex justify-center pt-1 relative items-center px-6",
                 caption_label: "text-sm font-medium",
                 nav: "space-x-1 flex items-center",
                 nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-input hover:bg-accent hover:text-accent-foreground",
-                nav_button_previous: "absolute left-1",
-                nav_button_next: "absolute right-1",
-                table: "w-full border-collapse",
-                head_row: "flex w-full",
-                head_cell: "text-muted-foreground rounded-md flex-1 font-normal text-[0.7rem] text-center",
-                row: "flex w-full mt-1",
-                cell: "flex-1 text-center text-sm p-0 relative flex items-center justify-center",
-                day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center",
+                nav_button_previous: "absolute left-0",
+                nav_button_next: "absolute right-0",
+                table: "w-full border-collapse table-fixed",
+                head_row: "flex w-full justify-between",
+                head_cell: "text-muted-foreground rounded-md w-[14.28%] font-normal text-[0.7rem] text-center",
+                row: "flex w-full mt-1 justify-between",
+                cell: "w-[14.28%] text-center text-sm p-0 relative flex items-center justify-center",
+                day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center text-xs",
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 day_today: "bg-accent text-accent-foreground",
                 day_outside: "text-muted-foreground opacity-50",
