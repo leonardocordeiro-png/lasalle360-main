@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileDown, Printer, GripVertical, Save, X, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { FileDown, Printer, GripVertical, Save, X, Loader2, Users, TrendingUp, GraduationCap, ChevronUp, MoreHorizontal, Filter, BookOpen, School, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Table,
@@ -199,17 +201,51 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
   const getAcademicLevelRowClass = (academicLevelName: string) => {
     switch (academicLevelName) {
       case "Educação Infantil":
-        return "bg-red-50 hover:bg-red-100";
+        return "bg-red-50/50 hover:bg-red-100/50 dark:bg-red-950/20 dark:hover:bg-red-900/30";
       case "Ensino Fundamental I":
-        return "bg-yellow-50 hover:bg-yellow-100";
+        return "bg-yellow-50/50 hover:bg-yellow-100/50 dark:bg-yellow-950/20 dark:hover:bg-yellow-900/30";
       case "Ensino Fundamental II":
-        return "bg-blue-50 hover:bg-blue-100";
+        return "bg-blue-50/50 hover:bg-blue-100/50 dark:bg-blue-950/20 dark:hover:bg-blue-900/30";
       case "Ensino Médio":
-        return "bg-gray-50 hover:bg-gray-100";
+        return "bg-gray-50/50 hover:bg-gray-100/50 dark:bg-gray-800/20 dark:hover:bg-gray-700/30";
       default:
         return "";
     }
   };
+
+  const getLevelIcon = (level: string) => {
+    switch (level) {
+      case "Educação Infantil":
+        return { icon: School, color: "#EF4444", bgColor: "#FEE2E2" };
+      case "Ensino Fundamental I":
+        return { icon: BookOpen, color: "#F59E0B", bgColor: "#FEF3C7" };
+      case "Ensino Fundamental II":
+        return { icon: GraduationCap, color: "#3B82F6", bgColor: "#DBEAFE" };
+      case "Ensino Médio":
+        return { icon: Building2, color: "#6B7280", bgColor: "#F3F4F6" };
+      default:
+        return { icon: Users, color: "#0066CC", bgColor: "#E0F2FE" };
+    }
+  };
+
+  // Calculate totals
+  const grandTotalVacancies = localClassPlanning?.reduce(
+    (sum, item) => sum + item.total_classes * item.vacancies_per_class,
+    0
+  ) || 0;
+  const grandTotalStudents = localClassPlanning?.reduce(
+    (sum, item) => sum + item.re_enrolled_students + item.new_students,
+    0
+  ) || 0;
+  const grandTotalReEnrolled = localClassPlanning?.reduce(
+    (sum, item) => sum + item.re_enrolled_students,
+    0
+  ) || 0;
+  const grandTotalNew = localClassPlanning?.reduce(
+    (sum, item) => sum + item.new_students,
+    0
+  ) || 0;
+  const overallOccupancy = grandTotalVacancies > 0 ? (grandTotalStudents / grandTotalVacancies) * 100 : 0;
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination || readOnly) {
@@ -235,16 +271,21 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 print:hidden">
-        <h2 className="text-xl sm:text-2xl font-bold">Relatórios</h2>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+    <div className="space-y-6">
+      {/* Header with Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Relatório Completo</h2>
+          <p className="text-sm text-muted-foreground mt-1">Visão detalhada do planejamento escolar</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {!readOnly && isReordering && (
             <>
               <Button 
                 onClick={handleCancelReorder} 
                 variant="outline" 
-                className="w-full sm:w-auto"
+                size="sm"
+                className="h-9"
                 disabled={updateOrderMutation.isPending}
               >
                 <X className="mr-2 h-4 w-4" />
@@ -252,7 +293,8 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
               </Button>
               <Button 
                 onClick={handleSaveOrder} 
-                className="w-full sm:w-auto"
+                size="sm"
+                className="h-9 bg-[#0066CC] hover:bg-[#0052A3]"
                 disabled={updateOrderMutation.isPending}
               >
                 {updateOrderMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -261,92 +303,213 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
               </Button>
             </>
           )}
-          <Button onClick={handleExportExcel} variant="outline" className="w-full sm:w-auto">
+          <Button onClick={handleExportExcel} variant="outline" size="sm" className="h-9">
             <FileDown className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Exportar Excel</span>
             <span className="sm:hidden">Excel</span>
           </Button>
-          <Button onClick={handlePrint} className="w-full sm:w-auto">
+          <Button onClick={handlePrint} size="sm" className="h-9 bg-[#0066CC] hover:bg-[#0052A3]">
             <Printer className="mr-2 h-4 w-4" />
             Imprimir
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Relatório Completo de Planejamento</CardTitle>
+      {/* Summary Stats Cards - Modern Gradient Style */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-[#0066CC] to-[#004C99] text-white">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm font-medium">Total Geral</p>
+                <p className="text-2xl font-bold mt-1">{grandTotalStudents.toLocaleString()}</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1.5">
+              <ChevronUp className="h-4 w-4" />
+              <span className="text-sm">{overallOccupancy.toFixed(1)}% ocupação</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-emerald-100 text-sm font-medium">Vagas Totais</p>
+                <p className="text-2xl font-bold mt-1">{grandTotalVacancies.toLocaleString()}</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-sm">{(grandTotalVacancies - grandTotalStudents).toLocaleString()} disponíveis</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-amber-100 text-sm font-medium">Rematriculados</p>
+                <p className="text-2xl font-bold mt-1">{grandTotalReEnrolled.toLocaleString()}</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-sm">{((grandTotalReEnrolled / Math.max(1, grandTotalStudents)) * 100).toFixed(0)}% do total</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-violet-100 text-sm font-medium">Novos Alunos</p>
+                <p className="text-2xl font-bold mt-1">{grandTotalNew.toLocaleString()}</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-sm">{((grandTotalNew / Math.max(1, grandTotalStudents)) * 100).toFixed(0)}% do total</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Level Summary Cards - Modern Design */}
+      <Card className="overflow-hidden border-0 shadow-lg bg-white dark:bg-neutral-900">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold text-foreground">Resumo por Nível de Ensino</CardTitle>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4 sm:space-y-6">
-            {/* Summary by Level */}
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              {["Educação Infantil", "Ensino Fundamental I", "Ensino Fundamental II", "Ensino Médio"].map(
-                (level) => {
-                  const levelData = localClassPlanning?.filter(
-                    (item) => item.grade_series.academic_level.name === level
-                  );
-                  const totalVacancies = levelData?.reduce(
-                    (sum, item) => sum + item.total_classes * item.vacancies_per_class,
-                    0
-                  ) || 0;
-                  const totalStudents = levelData?.reduce(
-                    (sum, item) => sum + item.re_enrolled_students + item.new_students,
-                    0
-                  ) || 0;
-                  const occupancy = totalVacancies > 0 ? (totalStudents / totalVacancies) * 100 : 0;
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {["Educação Infantil", "Ensino Fundamental I", "Ensino Fundamental II", "Ensino Médio"].map(
+              (level) => {
+                const levelInfo = getLevelIcon(level);
+                const IconComponent = levelInfo.icon;
+                const levelData = localClassPlanning?.filter(
+                  (item) => item.grade_series.academic_level.name === level
+                );
+                const totalVacancies = levelData?.reduce(
+                  (sum, item) => sum + item.total_classes * item.vacancies_per_class,
+                  0
+                ) || 0;
+                const totalStudents = levelData?.reduce(
+                  (sum, item) => sum + item.re_enrolled_students + item.new_students,
+                  0
+                ) || 0;
+                const occupancy = totalVacancies > 0 ? (totalStudents / totalVacancies) * 100 : 0;
 
-                  return (
-                    <Card key={level} style={{ borderColor: "#0066CC", borderWidth: "2px" }}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">{level}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold" style={{ color: "#0066CC" }}>
-                          {totalStudents}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          de {totalVacancies} vagas
-                        </p>
-                        <div
-                          className={`mt-2 px-2 py-1 rounded text-xs font-medium ${getOccupancyStyle(
-                            occupancy
-                          )}`}
+                return (
+                  <div 
+                    key={level} 
+                    className="p-4 rounded-xl border-2 transition-all hover:shadow-md"
+                    style={{ borderColor: levelInfo.color + "40" }}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: levelInfo.bgColor }}
+                      >
+                        <IconComponent className="h-5 w-5" style={{ color: levelInfo.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{level}</p>
+                        <p className="text-xs text-muted-foreground">{levelData?.length || 0} séries</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-bold" style={{ color: levelInfo.color }}>
+                          {totalStudents.toLocaleString()}
+                        </span>
+                        <Badge 
+                          className={cn(
+                            "text-xs font-medium",
+                            occupancy > 100 ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                            occupancy > 80 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                            "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          )}
                         >
-                          {occupancy.toFixed(1)}% ocupação
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-              )}
-            </div>
+                          {occupancy.toFixed(0)}%
+                        </Badge>
+                      </div>
+                      
+                      <Progress 
+                        value={Math.min(100, occupancy)} 
+                        className="h-2"
+                        style={{ 
+                          backgroundColor: levelInfo.bgColor,
+                        }}
+                      />
+                      
+                      <p className="text-xs text-muted-foreground">
+                        de {totalVacancies.toLocaleString()} vagas
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Detailed Table */}
-            <div className="border rounded-lg overflow-x-auto" style={{ borderColor: "#0066CC" }}>
-              {isLoading ? (
-                <div className="text-center py-8">Carregando planejamentos...</div>
-              ) : (
-                <DragDropContext onDragEnd={onDragEnd}>
-                  <Table className="min-w-max sm:min-w-0">
-                    <TableHeader>
-                      <TableRow style={{ backgroundColor: "#0066CC" }}>
-                        {!readOnly && <TableHead className="w-12 text-white text-xs sm:text-sm">Ordem</TableHead>}
-                        <TableHead className="text-white text-xs sm:text-sm">Ano</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm whitespace-nowrap">Nível de Ensino</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm">Série/Ano</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm">Turno</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm">Cenário</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm">Turmas</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm whitespace-nowrap">Vagas/Turma</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm whitespace-nowrap">Total Vagas</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm">Remat.</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm">Novos</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm whitespace-nowrap">Total Alunos</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm whitespace-nowrap">Vagas Disponíveis</TableHead>
-                        <TableHead className="text-white text-xs sm:text-sm">Ocupação %</TableHead>
-                      </TableRow>
-                    </TableHeader>
+      {/* Detailed Table - Modern Card Style */}
+      <Card className="overflow-hidden border-0 shadow-lg bg-white dark:bg-neutral-900">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg font-semibold text-foreground">Detalhamento por Série</CardTitle>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {localClassPlanning?.length || 0} registros
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            {isLoading ? (
+              <div className="text-center py-8">Carregando planejamentos...</div>
+            ) : (
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-[#0066CC] hover:bg-[#0066CC]">
+                      {!readOnly && <TableHead className="w-12 text-white text-xs font-medium">Ordem</TableHead>}
+                      <TableHead className="text-white text-xs font-medium">Ano</TableHead>
+                      <TableHead className="text-white text-xs font-medium whitespace-nowrap">Nível de Ensino</TableHead>
+                      <TableHead className="text-white text-xs font-medium">Série/Ano</TableHead>
+                      <TableHead className="text-white text-xs font-medium">Turno</TableHead>
+                      <TableHead className="text-white text-xs font-medium">Cenário</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center">Turmas</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center whitespace-nowrap">Vagas/Turma</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center whitespace-nowrap">Total Vagas</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center">Remat.</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center">Novos</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center whitespace-nowrap">Total Alunos</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center whitespace-nowrap">Disponíveis</TableHead>
+                      <TableHead className="text-white text-xs font-medium text-center">Ocupação</TableHead>
+                    </TableRow>
+                  </TableHeader>
                     <Droppable droppableId="planning-reports-table">
                       {(provided) => (
                         <TableBody {...provided.droppableProps} ref={provided.innerRef}>
@@ -363,7 +526,7 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
                                   key={item.id} 
                                   draggableId={item.id} 
                                   index={index}
-                                  isDragDisabled={readOnly} // Disable drag if readOnly
+                                  isDragDisabled={readOnly}
                                 >
                                   {(provided, snapshot) => (
                                     <TableRow 
@@ -371,44 +534,59 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
                                       {...provided.draggableProps}
                                       className={cn(
                                         getAcademicLevelRowClass(academicLevelName),
-                                        snapshot.isDragging && "bg-accent/50" // Highlight dragged item
+                                        snapshot.isDragging && "bg-accent/50 shadow-lg",
+                                        "transition-colors"
                                       )}
                                     >
                                       {!readOnly && (
-                                        <TableCell className="text-xs sm:text-sm">
-                                          <span {...provided.dragHandleProps} className="cursor-grab">
-                                            <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                        <TableCell className="text-xs">
+                                          <span {...provided.dragHandleProps} className="cursor-grab hover:cursor-grabbing">
+                                            <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                                           </span>
                                         </TableCell>
                                       )}
-                                      <TableCell className="text-xs sm:text-sm">{item.school_year.year}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">{academicLevelName}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm">{item.grade_series.name}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm">{item.shift}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm">{item.scenario_name}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm">{item.total_classes}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm">{item.vacancies_per_class}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm font-semibold">{totalVacancies}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm">{item.re_enrolled_students}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm">{item.new_students}</TableCell>
-                                      <TableCell className="text-xs sm:text-sm font-semibold">{totalStudents}</TableCell>
-                                      <TableCell>
-                                        <span
-                                          className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium whitespace-nowrap ${getAvailableVacanciesStyle(
-                                            availableVacancies
-                                          )}`}
+                                      <TableCell className="text-xs font-medium">{item.school_year.year}</TableCell>
+                                      <TableCell className="text-xs whitespace-nowrap">
+                                        <div className="flex items-center gap-2">
+                                          <div 
+                                            className="w-2 h-2 rounded-full"
+                                            style={{ backgroundColor: getLevelIcon(academicLevelName).color }}
+                                          />
+                                          {academicLevelName}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-xs font-medium">{item.grade_series.name}</TableCell>
+                                      <TableCell className="text-xs">{item.shift}</TableCell>
+                                      <TableCell className="text-xs">{item.scenario_name}</TableCell>
+                                      <TableCell className="text-xs text-center">{item.total_classes}</TableCell>
+                                      <TableCell className="text-xs text-center">{item.vacancies_per_class}</TableCell>
+                                      <TableCell className="text-xs text-center font-semibold text-[#0066CC]">{totalVacancies}</TableCell>
+                                      <TableCell className="text-xs text-center">{item.re_enrolled_students}</TableCell>
+                                      <TableCell className="text-xs text-center">{item.new_students}</TableCell>
+                                      <TableCell className="text-xs text-center font-semibold">{totalStudents}</TableCell>
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          className={cn(
+                                            "text-xs font-medium",
+                                            availableVacancies < 0 ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                                            availableVacancies <= 5 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                                            "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                          )}
                                         >
                                           {availableVacancies}
-                                        </span>
+                                        </Badge>
                                       </TableCell>
-                                      <TableCell>
-                                        <span
-                                          className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium whitespace-nowrap ${getOccupancyStyle(
-                                            occupancy
-                                          )}`}
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          className={cn(
+                                            "text-xs font-medium",
+                                            occupancy > 100 ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                                            occupancy > 80 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                                            "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                          )}
                                         >
-                                          {occupancy.toFixed(1)}%
-                                        </span>
+                                          {occupancy.toFixed(0)}%
+                                        </Badge>
                                       </TableCell>
                                     </TableRow>
                                   )}
@@ -417,8 +595,11 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
                             })
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={!readOnly ? 14 : 13} className="text-center py-8 text-muted-foreground">
-                                Nenhum planejamento encontrado.
+                              <TableCell colSpan={!readOnly ? 14 : 13} className="text-center py-12 text-muted-foreground">
+                                <div className="flex flex-col items-center gap-2">
+                                  <GraduationCap className="h-8 w-8 text-muted-foreground/50" />
+                                  <span>Nenhum planejamento encontrado.</span>
+                                </div>
                               </TableCell>
                             </TableRow>
                           )}
@@ -430,21 +611,24 @@ export const SchoolPlanningReports = ({ readOnly = false }: SchoolPlanningReport
                 </DragDropContext>
               )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Legend */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-xs sm:text-sm print:hidden">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-green-500 flex-shrink-0" />
-                <span>Até 80% - Disponível</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-yellow-500 flex-shrink-0" />
-                <span>80-100% - Atenção</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-red-500 flex-shrink-0" />
-                <span>&gt;100% - Superlotação</span>
-              </div>
+      {/* Legend - Modern Style */}
+      <Card className="overflow-hidden border-0 shadow-lg bg-white dark:bg-neutral-900 print:hidden">
+        <CardContent className="py-4">
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-emerald-500" />
+              <span className="text-sm text-muted-foreground">Até 80% - Disponível</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <span className="text-sm text-muted-foreground">80-100% - Atenção</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <span className="text-sm text-muted-foreground">&gt;100% - Superlotação</span>
             </div>
           </div>
         </CardContent>
