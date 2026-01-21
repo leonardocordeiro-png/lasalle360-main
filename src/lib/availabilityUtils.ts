@@ -43,35 +43,22 @@ export async function calculateAvailableQuantity(
     const slotStartMinutes = timeToMinutes(startTime);
     const slotEndMinutes = timeToMinutes(endTime);
 
-    // CUMULATIVE LOGIC:
-    // For this slot, find all bookings that STARTED before or at the start of this slot
-    // This means once Chromebooks are reserved, they remain unavailable for all subsequent slots
-    const userBookingsInSlot = new Map<string, number>();
-
+    // CUMULATIVE LOGIC (CORRECTED):
+    // Sum ALL booking quantities that started at or before this slot's start time
+    // Each booking represents a separate set of Chromebooks that are out
+    // No per-user consolidation - if a user made 2 bookings, both are counted
+    
+    let bookedQuantity = 0;
+    
     bookingsData?.forEach(booking => {
       const bookingStartMinutes = timeToMinutes(booking.start_time);
       
       // If the booking started before or at the start of this slot, it impacts availability
-      if (bookingStartMinutes <= slotStartMinutes) {
-        const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
-        userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
+      // OR if the booking starts during this slot
+      if (bookingStartMinutes <= slotStartMinutes || 
+          (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes)) {
+        bookedQuantity += booking.quantity;
       }
-    });
-
-    // Also include bookings that start DURING this slot
-    bookingsData?.forEach(booking => {
-      const bookingStartMinutes = timeToMinutes(booking.start_time);
-      
-      if (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes) {
-        const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
-        userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
-      }
-    });
-
-    // Sum up the max quantities per user
-    let bookedQuantity = 0;
-    userBookingsInSlot.forEach(quantity => {
-      bookedQuantity += quantity;
     });
     
     return Math.max(0, totalInventory - bookedQuantity);

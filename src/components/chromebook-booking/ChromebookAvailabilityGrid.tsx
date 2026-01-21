@@ -106,42 +106,24 @@ export function ChromebookAvailabilityGrid({
       for (const slot of timeSlots) {
         const cacheKey = `${dateStr}-${slot.start}-${slot.end}`;
         const slotStartMinutes = timeToMinutes(slot.start);
+        const slotEndMinutes = timeToMinutes(slot.end);
 
-        // NOVA LÓGICA CUMULATIVA:
-        // Para cada slot, encontrar todos os bookings que COMEÇARAM antes ou no início deste slot
-        // Isso significa que uma vez que os Chromebooks são reservados, eles ficam indisponíveis
-        // para todos os horários subsequentes até o fim do dia
+        // LÓGICA CUMULATIVA CORRIGIDA:
+        // Para cada slot, somar TODAS as quantidades de bookings que começaram até o início deste slot
+        // Cada booking representa um conjunto separado de Chromebooks que estão fora
+        // Não há consolidação por usuário - se um usuário fez 2 bookings, ambos são contados
         
-        // Agrupar bookings por usuário, considerando apenas os que começaram até o início deste slot
-        const userBookingsInSlot = new Map<string, number>();
+        let bookedQuantity = 0;
         
         dayBookings.forEach(booking => {
           const bookingStartMinutes = timeToMinutes(booking.start_time);
           
           // Se o booking começou antes ou no início deste slot, ele impacta a disponibilidade
-          if (bookingStartMinutes <= slotStartMinutes) {
-            const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
-            // Manter o máximo de cada usuário (consolidação)
-            userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
+          // OU se o booking começa durante este slot
+          if (bookingStartMinutes <= slotStartMinutes || 
+              (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes)) {
+            bookedQuantity += booking.quantity;
           }
-        });
-
-        // Também incluir bookings que começam DURANTE este slot (overlap normal)
-        dayBookings.forEach(booking => {
-          const bookingStartMinutes = timeToMinutes(booking.start_time);
-          const slotEndMinutes = timeToMinutes(slot.end);
-          
-          // Se o booking começa durante este slot
-          if (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes) {
-            const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
-            userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
-          }
-        });
-
-        // Somar máximos dos usuários
-        let bookedQuantity = 0;
-        userBookingsInSlot.forEach(quantity => {
-          bookedQuantity += quantity;
         });
 
         const available = Math.max(0, dayTotalInventory - bookedQuantity);
