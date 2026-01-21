@@ -97,11 +97,11 @@ export function ChromebookFilterPanel({
         </div>
 
         {/* Calendário */}
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-hidden">
           <Label className="text-sm font-medium text-muted-foreground">
             Selecionar Data
           </Label>
-          <div className="flex justify-center">
+          <div className="flex justify-center overflow-hidden">
             <Calendar
               mode="single"
               selected={selectedDate}
