@@ -34,41 +34,26 @@ export async function calculateAvailableQuantity(
 
     if (error) throw error;
 
-    // Helper function to convert time to minutes
-    const timeToMinutes = (time: string): number => {
-      const [hours, minutes] = time.split(':').map(Number);
-      return hours * 60 + minutes;
-    };
-
-    const slotStartMinutes = timeToMinutes(startTime);
-    const slotEndMinutes = timeToMinutes(endTime);
-
-    // CUMULATIVE LOGIC WITH PER-USER CONSOLIDATION:
-    // - Same user with multiple bookings = reuses same Chromebooks → MAX
-    // - Different users = separate equipment → SUM of maxes
-    // - Bookings that started before or during this slot impact availability
+    // CORRECT AVAILABILITY LOGIC:
+    // 1. Reserved Chromebooks are COMMITTED for the ENTIRE DAY
+    // 2. Same user with multiple slots → uses SAME Chromebooks → take MAX
+    // 3. Different users → separate equipment → SUM the maxes
+    // 4. ALL time slots show the same availability
     
-    const userMaxInSlot = new Map<string, number>();
-    
+    // Calculate MAX per user for the entire day
+    const userMaxOnDay = new Map<string, number>();
     bookingsData?.forEach(booking => {
-      const bookingStartMinutes = timeToMinutes(booking.start_time);
-      
-      // If the booking started before or at the start of this slot, OR starts during this slot
-      if (bookingStartMinutes <= slotStartMinutes || 
-          (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes)) {
-        const currentMax = userMaxInSlot.get(booking.user_id) || 0;
-        // For same user, keep only the MAX (they reuse Chromebooks)
-        userMaxInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
-      }
+      const currentMax = userMaxOnDay.get(booking.user_id) || 0;
+      userMaxOnDay.set(booking.user_id, Math.max(currentMax, booking.quantity));
     });
 
-    // Sum the maxes from each different user
-    let bookedQuantity = 0;
-    userMaxInSlot.forEach(quantity => {
-      bookedQuantity += quantity;
+    // Sum the maxes from each different user = total committed for the day
+    let totalCommitted = 0;
+    userMaxOnDay.forEach(quantity => {
+      totalCommitted += quantity;
     });
     
-    return Math.max(0, totalInventory - bookedQuantity);
+    return Math.max(0, totalInventory - totalCommitted);
   } catch (error) {
     console.error('Error calculating availability:', error);
     return totalInventory;

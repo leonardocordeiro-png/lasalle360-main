@@ -97,44 +97,32 @@ export function ChromebookAvailabilityGrid({
       // Filtrar bookings ativos do dia
       const dayBookings = bookings.filter(b => b.booking_date === dateStr && b.status === 'active');
 
-      // Função para converter horário em minutos para comparação
-      const timeToMinutes = (time: string): number => {
-        const [hours, minutes] = time.split(':').map(Number);
-        return hours * 60 + minutes;
-      };
+      // LÓGICA CORRETA DE DISPONIBILIDADE:
+      // 1. Chromebooks reservados ficam COMPROMETIDOS para o DIA INTEIRO
+      // 2. Mesmo usuário com múltiplos horários → usa os MESMOS Chromebooks → pegar MAX
+      // 3. Usuários diferentes → equipamentos distintos → SOMAR os máximos
+      // 4. TODOS os horários do dia mostram a mesma disponibilidade
+      
+      // Calcular o MÁXIMO por usuário no dia inteiro
+      const userMaxOnDay = new Map<string, number>();
+      dayBookings.forEach(booking => {
+        const currentMax = userMaxOnDay.get(booking.user_id) || 0;
+        userMaxOnDay.set(booking.user_id, Math.max(currentMax, booking.quantity));
+      });
 
+      // Somar os máximos de cada usuário diferente = total comprometido no dia
+      let totalCommitted = 0;
+      userMaxOnDay.forEach(quantity => {
+        totalCommitted += quantity;
+      });
+
+      // Disponibilidade é igual para TODOS os horários do dia
+      const availableForDay = Math.max(0, dayTotalInventory - totalCommitted);
+
+      // Aplicar a mesma disponibilidade para todos os slots
       for (const slot of timeSlots) {
         const cacheKey = `${dateStr}-${slot.start}-${slot.end}`;
-        const slotStartMinutes = timeToMinutes(slot.start);
-        const slotEndMinutes = timeToMinutes(slot.end);
-
-        // LÓGICA CUMULATIVA COM CONSOLIDAÇÃO POR USUÁRIO:
-        // - Mesmo usuário com múltiplos agendamentos = reutiliza os mesmos Chromebooks → MAX
-        // - Usuários diferentes = equipamentos separados → SOMA dos máximos
-        // - Bookings que começaram antes ou durante este slot impactam a disponibilidade
-        
-        const userMaxInSlot = new Map<string, number>();
-        
-        dayBookings.forEach(booking => {
-          const bookingStartMinutes = timeToMinutes(booking.start_time);
-          
-          // Se o booking começou antes ou no início deste slot, OU começa durante este slot
-          if (bookingStartMinutes <= slotStartMinutes || 
-              (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes)) {
-            const currentMax = userMaxInSlot.get(booking.user_id) || 0;
-            // Para o mesmo usuário, manter apenas o MÁXIMO (ele reutiliza os Chromebooks)
-            userMaxInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
-          }
-        });
-
-        // Somar os máximos de cada usuário diferente
-        let bookedQuantity = 0;
-        userMaxInSlot.forEach(quantity => {
-          bookedQuantity += quantity;
-        });
-
-        const available = Math.max(0, dayTotalInventory - bookedQuantity);
-        newCache.set(cacheKey, available);
+        newCache.set(cacheKey, availableForDay);
       }
 
       setAvailabilityCache(newCache);
