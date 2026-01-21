@@ -78,7 +78,8 @@ export function ChromebookAvailabilityGrid({
     { start: "17:10", end: "18:00", label: "17:10 - 18:00" },
   ], []);
 
-  // Calcular disponibilidade para cada slot
+  // Calcular disponibilidade para cada slot (lógica cumulativa)
+  // Chromebooks reservados em um horário permanecem indisponíveis nos horários seguintes
   useEffect(() => {
     const calculateAvailability = async () => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -93,31 +94,54 @@ export function ChromebookAvailabilityGrid({
 
       const dayTotalInventory = inventoryData?.total_available || totalInventory;
 
-      // Filtrar bookings do dia
-      const dayBookings = bookings.filter(b => b.booking_date === dateStr);
+      // Filtrar bookings ativos do dia
+      const dayBookings = bookings.filter(b => b.booking_date === dateStr && b.status === 'active');
 
-      // Calcular máximo por usuário no dia
-      const userMaxOnDay = new Map<string, number>();
-      dayBookings.forEach(booking => {
-        const currentMax = userMaxOnDay.get(booking.user_id) || 0;
-        userMaxOnDay.set(booking.user_id, Math.max(currentMax, booking.quantity));
-      });
+      // Função para converter horário em minutos para comparação
+      const timeToMinutes = (time: string): number => {
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
 
       for (const slot of timeSlots) {
         const cacheKey = `${dateStr}-${slot.start}-${slot.end}`;
+        const slotStartMinutes = timeToMinutes(slot.start);
 
-        // Usuários com bookings neste slot
-        const usersInSlot = new Set<string>();
-        dayBookings.forEach(b => {
-          if (intervalsOverlap(slot.start, slot.end, b.start_time, b.end_time)) {
-            usersInSlot.add(b.user_id);
+        // NOVA LÓGICA CUMULATIVA:
+        // Para cada slot, encontrar todos os bookings que COMEÇARAM antes ou no início deste slot
+        // Isso significa que uma vez que os Chromebooks são reservados, eles ficam indisponíveis
+        // para todos os horários subsequentes até o fim do dia
+        
+        // Agrupar bookings por usuário, considerando apenas os que começaram até o início deste slot
+        const userBookingsInSlot = new Map<string, number>();
+        
+        dayBookings.forEach(booking => {
+          const bookingStartMinutes = timeToMinutes(booking.start_time);
+          
+          // Se o booking começou antes ou no início deste slot, ele impacta a disponibilidade
+          if (bookingStartMinutes <= slotStartMinutes) {
+            const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
+            // Manter o máximo de cada usuário (consolidação)
+            userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
           }
         });
 
-        // Somar máximos dos usuários no slot
+        // Também incluir bookings que começam DURANTE este slot (overlap normal)
+        dayBookings.forEach(booking => {
+          const bookingStartMinutes = timeToMinutes(booking.start_time);
+          const slotEndMinutes = timeToMinutes(slot.end);
+          
+          // Se o booking começa durante este slot
+          if (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes) {
+            const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
+            userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
+          }
+        });
+
+        // Somar máximos dos usuários
         let bookedQuantity = 0;
-        usersInSlot.forEach(userId => {
-          bookedQuantity += userMaxOnDay.get(userId) || 0;
+        userBookingsInSlot.forEach(quantity => {
+          bookedQuantity += quantity;
         });
 
         const available = Math.max(0, dayTotalInventory - bookedQuantity);

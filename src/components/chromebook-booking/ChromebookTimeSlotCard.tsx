@@ -82,7 +82,8 @@ export function ChromebookTimeSlotCard({
 
   const hasBookings = bookings.length > 0;
   const isFull = availableCount === 0;
-  const isPartial = availableCount > 0 && availableCount < totalInventory && hasBookings;
+  // Com lógica cumulativa, mostrar amarelo se disponibilidade < total (mesmo sem bookings neste slot específico)
+  const isPartial = availableCount > 0 && availableCount < totalInventory;
   const isAvailable = availableCount > 0;
 
   const getStatusColor = () => {

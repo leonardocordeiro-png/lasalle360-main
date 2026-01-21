@@ -1,5 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import { intervalsOverlap } from '@/lib/timeUtils';
 
 interface Booking {
   id: string;
@@ -12,9 +11,12 @@ interface Booking {
 }
 
 /**
- * Calculates the available quantity for a specific time slot considering that
- * the same user can reuse equipment across different time slots on the same day.
- * Only the maximum quantity booked by a user on a given day is counted towards inventory usage.
+ * Calculates the available quantity for a specific time slot using CUMULATIVE logic.
+ * Once Chromebooks are booked at a certain time, they remain unavailable for all
+ * subsequent time slots until the end of the day.
+ * 
+ * The same user can reuse equipment across different time slots on the same day.
+ * Only the maximum quantity booked by a user is counted towards inventory usage.
  */
 export async function calculateAvailableQuantity(
   date: string,
@@ -24,7 +26,6 @@ export async function calculateAvailableQuantity(
 ): Promise<number> {
   try {
     // Get all active bookings for the entire day
-    // We need all day bookings to calculate max per user correctly
     const { data: bookingsData, error } = await supabase
       .from('chromebook_bookings')
       .select('user_id, quantity, start_time, end_time')
@@ -33,25 +34,44 @@ export async function calculateAvailableQuantity(
 
     if (error) throw error;
 
-    // First, calculate the maximum quantity each user has booked on this entire day
-    const userMaxOnDay = new Map<string, number>();
-    bookingsData?.forEach(booking => {
-      const currentMax = userMaxOnDay.get(booking.user_id) || 0;
-      userMaxOnDay.set(booking.user_id, Math.max(currentMax, booking.quantity));
-    });
+    // Helper function to convert time to minutes
+    const timeToMinutes = (time: string): number => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
 
-    // Then, identify users who have bookings overlapping with this specific time slot
-    const usersInSlot = new Set<string>();
+    const slotStartMinutes = timeToMinutes(startTime);
+    const slotEndMinutes = timeToMinutes(endTime);
+
+    // CUMULATIVE LOGIC:
+    // For this slot, find all bookings that STARTED before or at the start of this slot
+    // This means once Chromebooks are reserved, they remain unavailable for all subsequent slots
+    const userBookingsInSlot = new Map<string, number>();
+
     bookingsData?.forEach(booking => {
-      if (intervalsOverlap(startTime, endTime, booking.start_time, booking.end_time)) {
-        usersInSlot.add(booking.user_id);
+      const bookingStartMinutes = timeToMinutes(booking.start_time);
+      
+      // If the booking started before or at the start of this slot, it impacts availability
+      if (bookingStartMinutes <= slotStartMinutes) {
+        const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
+        userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
       }
     });
 
-    // Calculate total booked (sum of max quantities for users in this slot)
+    // Also include bookings that start DURING this slot
+    bookingsData?.forEach(booking => {
+      const bookingStartMinutes = timeToMinutes(booking.start_time);
+      
+      if (bookingStartMinutes > slotStartMinutes && bookingStartMinutes < slotEndMinutes) {
+        const currentMax = userBookingsInSlot.get(booking.user_id) || 0;
+        userBookingsInSlot.set(booking.user_id, Math.max(currentMax, booking.quantity));
+      }
+    });
+
+    // Sum up the max quantities per user
     let bookedQuantity = 0;
-    usersInSlot.forEach(userId => {
-      bookedQuantity += userMaxOnDay.get(userId) || 0;
+    userBookingsInSlot.forEach(quantity => {
+      bookedQuantity += quantity;
     });
     
     return Math.max(0, totalInventory - bookedQuantity);
