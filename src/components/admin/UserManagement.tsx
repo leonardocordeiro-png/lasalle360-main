@@ -26,10 +26,12 @@ import {
   Ban,
   CheckCircle,
   Settings,
-  UserPlus
+  UserPlus,
+  Upload
 } from 'lucide-react';
 import { UserPermissionsDialog } from './UserPermissionsDialog';
 import { CreateUserDialog } from './CreateUserDialog';
+import { BulkUserImportDialog } from './BulkUserImportDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -73,6 +75,7 @@ export default function UserManagement() {
   const [dataMaskingEnabled, setDataMaskingEnabled] = useState(true);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
+  const [showBulkImportDialog, setShowBulkImportDialog] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -368,10 +371,16 @@ export default function UserManagement() {
               <Users className="h-5 w-5" />
               Gerenciamento de Usuários
             </CardTitle>
-            <Button onClick={() => setShowCreateUserDialog(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Criar Usuário
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setShowBulkImportDialog(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importar em Lote
+              </Button>
+              <Button onClick={() => setShowCreateUserDialog(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Criar Usuário
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -705,6 +714,13 @@ export default function UserManagement() {
         open={showCreateUserDialog}
         onOpenChange={setShowCreateUserDialog}
         onUserCreated={fetchUsers}
+      />
+
+      {/* Bulk Import Dialog */}
+      <BulkUserImportDialog
+        open={showBulkImportDialog}
+        onOpenChange={setShowBulkImportDialog}
+        onUsersCreated={fetchUsers}
       />
     </div>
   );
