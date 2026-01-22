@@ -27,7 +27,10 @@ import {
   CheckCircle,
   Settings,
   UserPlus,
-  Upload
+  Upload,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Clock
 } from 'lucide-react';
 import { UserPermissionsDialog } from './UserPermissionsDialog';
 import { CreateUserDialog } from './CreateUserDialog';
@@ -66,6 +69,7 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<string>('recent');
   const [selectedUser, setSelectedUser] = useState<UserWithProfile | null>(null);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -183,16 +187,26 @@ export default function UserManagement() {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesRole = filterRole === 'all' || 
-                       (filterRole === 'admin' && user.profiles.is_admin) ||
-                       (filterRole === 'user' && !user.profiles.is_admin);
-    
-    return matchesSearch && matchesRole;
-  });
+  const filteredUsers = users
+    .filter(user => {
+      const matchesSearch = user.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesRole = filterRole === 'all' || 
+                         (filterRole === 'admin' && user.profiles.is_admin) ||
+                         (filterRole === 'user' && !user.profiles.is_admin);
+      
+      return matchesSearch && matchesRole;
+    })
+    .sort((a, b) => {
+      if (sortOrder === 'alpha-asc') {
+        return a.profiles.full_name.localeCompare(b.profiles.full_name, 'pt-BR');
+      } else if (sortOrder === 'alpha-desc') {
+        return b.profiles.full_name.localeCompare(a.profiles.full_name, 'pt-BR');
+      }
+      // Default: recent first (by created_at descending)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const toggleAdminStatus = async (userId: string, currentStatus: boolean) => {
     try {
@@ -395,13 +409,38 @@ export default function UserManagement() {
               />
             </div>
             <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full md:w-40">
                 <SelectValue placeholder="Filtrar por papel" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="admin">Administradores</SelectItem>
                 <SelectItem value="user">Usuários</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Mais recentes
+                  </div>
+                </SelectItem>
+                <SelectItem value="alpha-asc">
+                  <div className="flex items-center gap-2">
+                    <ArrowDownAZ className="h-4 w-4" />
+                    A - Z
+                  </div>
+                </SelectItem>
+                <SelectItem value="alpha-desc">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpAZ className="h-4 w-4" />
+                    Z - A
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
             <Button
