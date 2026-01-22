@@ -7,6 +7,7 @@ import { Loader2, Upload, Download, FileSpreadsheet, CheckCircle, XCircle } from
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import * as XLSX from 'xlsx';
 
 interface BulkUserImportDialogProps {
   open: boolean;
@@ -122,14 +123,53 @@ Pedro Oliveira;pedro.oliveira@lasalle.org.br;Senha@789`;
     return users;
   };
 
+  const parseExcel = (buffer: ArrayBuffer): UserRow[] => {
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    
+    // Convert to JSON with header row
+    const data = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
+    const users: UserRow[] = [];
+    
+    // Skip header row (index 0)
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row || row.length < 3) continue;
+      
+      const fullName = String(row[0] || '').trim();
+      const email = String(row[1] || '').trim();
+      const password = String(row[2] || '').trim();
+      
+      if (fullName && email && password) {
+        users.push({
+          fullName,
+          email,
+          password,
+          rowNumber: i + 1,
+        });
+      }
+    }
+    
+    return users;
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
     try {
-      const content = await file.text();
-      const users = parseCSV(content);
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      let users: UserRow[];
+      
+      if (isExcel) {
+        const buffer = await file.arrayBuffer();
+        users = parseExcel(buffer);
+      } else {
+        const content = await file.text();
+        users = parseCSV(content);
+      }
       
       if (users.length === 0) {
         toast({
@@ -286,12 +326,12 @@ Pedro Oliveira;pedro.oliveira@lasalle.org.br;Senha@789`;
             <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
               <p className="text-sm text-muted-foreground mb-4">
-                Faça o upload de um arquivo CSV com os dados dos usuários
+                Faça o upload de um arquivo CSV ou Excel (.xlsx) com os dados dos usuários
               </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx,.xls"
                 onChange={handleFileUpload}
                 className="hidden"
                 id="csv-upload"
