@@ -16,7 +16,7 @@ interface BulkUserImportDialogProps {
 
 interface UserRow {
   fullName: string;
-  emailPrefix: string;
+  email: string;
   password: string;
   rowNumber: number;
 }
@@ -38,10 +38,10 @@ export function BulkUserImportDialog({ open, onOpenChange, onUsersCreated }: Bul
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
-    const csvContent = `nome_completo,email_prefixo,senha
-João Silva,joao.silva,Senha@123
-Maria Santos,maria.santos,Senha@456
-Pedro Oliveira,pedro.oliveira,Senha@789`;
+    const csvContent = `Nome Completo,E-mail,Senha
+João Silva,joao.silva@lasalle.org.br,Senha@123
+Maria Santos,maria.santos@lasalle.org.br,Senha@456
+Pedro Oliveira,pedro.oliveira@lasalle.org.br,Senha@789`;
 
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -67,8 +67,29 @@ Pedro Oliveira,pedro.oliveira,Senha@789`;
     return true;
   };
 
-  const validateEmailPrefix = (prefix: string): boolean => {
-    return /^[a-zA-Z0-9._-]+$/.test(prefix) && prefix.length >= 3;
+  const validateEmail = (email: string): boolean => {
+    // Accept full email or just prefix
+    const emailLower = email.toLowerCase().trim();
+    // If it's a full email, validate format
+    if (emailLower.includes('@')) {
+      return /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailLower);
+    }
+    // If it's just a prefix, validate prefix format
+    return /^[a-zA-Z0-9._-]+$/.test(emailLower) && emailLower.length >= 3;
+  };
+
+  const extractEmailForAPI = (email: string): string => {
+    const emailLower = email.toLowerCase().trim();
+    // If already has @lasalle.org.br, return as is
+    if (emailLower.endsWith('@lasalle.org.br')) {
+      return emailLower;
+    }
+    // If has another domain, use as is
+    if (emailLower.includes('@')) {
+      return emailLower;
+    }
+    // Otherwise, append @lasalle.org.br
+    return `${emailLower}@lasalle.org.br`;
   };
 
   const parseCSV = (content: string): UserRow[] => {
@@ -86,7 +107,7 @@ Pedro Oliveira,pedro.oliveira,Senha@789`;
       if (parts.length >= 3) {
         users.push({
           fullName: parts[0],
-          emailPrefix: parts[1],
+          email: parts[1].trim(),
           password: parts[2],
           rowNumber: i + 1,
         });
@@ -121,7 +142,7 @@ Pedro Oliveira,pedro.oliveira,Senha@789`;
         if (!user.fullName || user.fullName.length < 3) {
           errors.push('Nome inválido');
         }
-        if (!validateEmailPrefix(user.emailPrefix)) {
+        if (!validateEmail(user.email)) {
           errors.push('Email inválido');
         }
         if (!validatePassword(user.password)) {
@@ -170,14 +191,14 @@ Pedro Oliveira,pedro.oliveira,Senha@789`;
 
     for (let i = 0; i < parsedUsers.length; i++) {
       const user = parsedUsers[i];
-      const email = `${user.emailPrefix}@lasalle.org.br`;
+      const email = extractEmailForAPI(user.email);
 
       try {
         // Validate before sending
         if (!user.fullName || user.fullName.length < 3) {
           throw new Error('Nome deve ter pelo menos 3 caracteres');
         }
-        if (!validateEmailPrefix(user.emailPrefix)) {
+        if (!validateEmail(user.email)) {
           throw new Error('Email inválido');
         }
         if (!validatePassword(user.password)) {
@@ -292,9 +313,9 @@ Pedro Oliveira,pedro.oliveira,Senha@789`;
             <div className="bg-muted/50 rounded-lg p-4">
               <h4 className="font-medium text-sm mb-2">Formato do arquivo CSV:</h4>
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• <strong>nome_completo</strong> - Nome completo do usuário (mín. 3 caracteres)</li>
-                <li>• <strong>email_prefixo</strong> - Parte antes do @lasalle.org.br</li>
-                <li>• <strong>senha</strong> - Mín. 8 caracteres, maiúscula, minúscula e número</li>
+                <li>• <strong>Nome Completo</strong> - Nome completo do usuário (mín. 3 caracteres)</li>
+                <li>• <strong>E-mail</strong> - Email completo (ex: joao.silva@lasalle.org.br)</li>
+                <li>• <strong>Senha</strong> - Mín. 8 caracteres, maiúscula, minúscula e número</li>
               </ul>
             </div>
 
@@ -321,7 +342,7 @@ Pedro Oliveira,pedro.oliveira,Senha@789`;
             <ScrollArea className="h-64 rounded-md border p-4">
               <div className="space-y-2">
                 {parsedUsers.map((user, index) => {
-                  const emailValid = validateEmailPrefix(user.emailPrefix);
+                  const emailValid = validateEmail(user.email);
                   const passwordValid = validatePassword(user.password);
                   const nameValid = user.fullName.length >= 3;
                   const isValid = emailValid && passwordValid && nameValid;
@@ -336,7 +357,7 @@ Pedro Oliveira,pedro.oliveira,Senha@789`;
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{user.fullName}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {user.emailPrefix}@lasalle.org.br
+                          {extractEmailForAPI(user.email)}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
