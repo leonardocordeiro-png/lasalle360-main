@@ -69,7 +69,7 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
-  const [sortOrder, setSortOrder] = useState<string>('recent');
+  const [sortOrder, setSortOrder] = useState<string>('alpha-asc');
   const [selectedUser, setSelectedUser] = useState<UserWithProfile | null>(null);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showUserDetails, setShowUserDetails] = useState(false);
