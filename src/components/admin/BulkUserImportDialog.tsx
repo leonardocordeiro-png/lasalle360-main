@@ -38,10 +38,11 @@ export function BulkUserImportDialog({ open, onOpenChange, onUsersCreated }: Bul
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
-    const csvContent = `Nome Completo,E-mail,Senha
-João Silva,joao.silva@lasalle.org.br,Senha@123
-Maria Santos,maria.santos@lasalle.org.br,Senha@456
-Pedro Oliveira,pedro.oliveira@lasalle.org.br,Senha@789`;
+    // Using semicolon as delimiter (standard for Excel in Brazil/Portuguese regions)
+    const csvContent = `Nome Completo;E-mail;Senha
+João Silva;joao.silva@lasalle.org.br;Senha@123
+Maria Santos;maria.santos@lasalle.org.br;Senha@456
+Pedro Oliveira;pedro.oliveira@lasalle.org.br;Senha@789`;
 
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -96,13 +97,17 @@ Pedro Oliveira,pedro.oliveira@lasalle.org.br,Senha@789`;
     const lines = content.split(/\r?\n/).filter(line => line.trim());
     const users: UserRow[] = [];
     
+    // Detect delimiter (semicolon for Brazilian Excel, comma for international)
+    const firstLine = lines[0] || '';
+    const delimiter = firstLine.includes(';') ? ';' : ',';
+    
     // Skip header row
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
       
       // Handle CSV with possible quoted fields
-      const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+      const parts = line.split(delimiter).map(p => p.trim().replace(/^"|"$/g, ''));
       
       if (parts.length >= 3) {
         users.push({
