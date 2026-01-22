@@ -380,17 +380,17 @@ export default function UserManagement() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Gerenciamento de Usuários
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowBulkImportDialog(true)}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setShowBulkImportDialog(true)} className="w-full sm:w-auto">
                 <Upload className="h-4 w-4 mr-2" />
                 Importar em Lote
               </Button>
-              <Button onClick={() => setShowCreateUserDialog(true)}>
+              <Button onClick={() => setShowCreateUserDialog(true)} className="w-full sm:w-auto">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Criar Usuário
               </Button>
