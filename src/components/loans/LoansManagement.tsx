@@ -701,7 +701,14 @@ export function LoansManagement() {
                         {getBorrowerTypeBadge(loan.equipment_type)}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <span className="font-semibold text-foreground">{loan.quantity}</span>
+                        <div className="flex flex-col items-center">
+                          <span className="font-semibold text-foreground">{loan.quantity}</span>
+                          {loan.returned_quantity > 0 && loan.status !== 'devolvido' && (
+                            <span className="text-xs text-green-600">
+                              ({loan.returned_quantity} devolvido)
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-3 hidden xl:table-cell">
                         {loan.expected_return_date ? (
