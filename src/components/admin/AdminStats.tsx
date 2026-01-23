@@ -78,75 +78,44 @@ export default function AdminStats() {
       const weekAgo = format(subDays(now, 7), 'yyyy-MM-dd');
       const monthAgo = format(subDays(now, 30), 'yyyy-MM-dd');
 
-      // Optimize: Get user statistics with count
-      const { count: totalUsersCount, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      // Otimização: executar TODAS as queries em paralelo
+      const [
+        totalUsersResult,
+        adminRolesResult,
+        newUsersResult,
+        totalBookingsResult,
+        activeBookingsResult,
+        cancelledBookingsResult,
+        todayBookingsResult,
+        weekBookingsResult,
+        monthBookingsResult,
+        avgDurationResult
+      ] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('user_roles').select('user_id').eq('role', 'admin'),
+        supabase.from('profiles').select('user_id').gte('created_at', monthAgo),
+        supabase.from('chromebook_bookings').select('*', { count: 'exact', head: true }),
+        supabase.from('chromebook_bookings').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('chromebook_bookings').select('*', { count: 'exact', head: true }).eq('status', 'cancelled'),
+        supabase.from('chromebook_bookings').select('quantity, start_time, end_time').eq('booking_date', today).eq('status', 'active'),
+        supabase.from('chromebook_bookings').select('*', { count: 'exact', head: true }).gte('booking_date', weekAgo).lte('booking_date', today),
+        supabase.from('chromebook_bookings').select('*', { count: 'exact', head: true }).gte('booking_date', monthAgo).lte('booking_date', today),
+        supabase.from('chromebook_bookings').select('start_time, end_time').limit(500)
+      ]);
 
-      if (profilesError) throw profilesError;
+      const totalUsers = totalUsersResult.count || 0;
+      const adminUsers = adminRolesResult.data?.length || 0;
+      const newUsersThisMonth = newUsersResult.data?.length || 0;
 
-      const { data: adminRoles, error: adminError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (adminError) throw adminError;
-
-      const { data: newUsers, error: newUsersError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .gte('created_at', monthAgo);
-
-      if (newUsersError) throw newUsersError;
-
-      // Optimize: Get booking statistics with filters
-      const { count: totalBookingsCount } = await supabase
-        .from('chromebook_bookings')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: activeBookingsCount } = await supabase
-        .from('chromebook_bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
-
-      const { count: cancelledBookingsCount } = await supabase
-        .from('chromebook_bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'cancelled');
-
-      const { data: todayBookingsData } = await supabase
-        .from('chromebook_bookings')
-        .select('quantity, start_time, end_time')
-        .eq('booking_date', today)
-        .eq('status', 'active');
-
-      const { count: weekBookingsCount } = await supabase
-        .from('chromebook_bookings')
-        .select('*', { count: 'exact', head: true })
-        .gte('booking_date', weekAgo)
-        .lte('booking_date', today);
-
-      const { count: monthBookingsCount } = await supabase
-        .from('chromebook_bookings')
-        .select('*', { count: 'exact', head: true })
-        .gte('booking_date', monthAgo)
-        .lte('booking_date', today);
-
-      const { data: allBookingsForAvg } = await supabase
-        .from('chromebook_bookings')
-        .select('start_time, end_time');
-
-      const totalUsers = totalUsersCount || 0;
-      const adminUsers = adminRoles?.length || 0;
-      const newUsersThisMonth = newUsers?.length || 0;
-
-      const totalBookings = totalBookingsCount || 0;
-      const activeBookings = activeBookingsCount || 0;
-      const cancelledBookings = cancelledBookingsCount || 0;
+      const totalBookings = totalBookingsResult.count || 0;
+      const activeBookings = activeBookingsResult.count || 0;
+      const cancelledBookings = cancelledBookingsResult.count || 0;
       
-      const todayBookings = todayBookingsData?.length || 0;
-      const weekBookings = weekBookingsCount || 0;
-      const monthBookings = monthBookingsCount || 0;
+      const todayBookingsData = todayBookingsResult.data || [];
+      const todayBookings = todayBookingsData.length;
+      const weekBookings = weekBookingsResult.count || 0;
+      const monthBookings = monthBookingsResult.count || 0;
+      const allBookingsForAvg = avgDurationResult.data || [];
 
       // Calculate chrome usage today
       const chromeUsageToday = todayBookingsData?.reduce((sum, b) => sum + b.quantity, 0) || 0;

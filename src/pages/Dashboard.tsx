@@ -143,22 +143,24 @@ export default function Dashboard() {
 
   const fetchProfile = async () => {
     try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
+      // Otimização: buscar profile e role em paralelo, selecionando apenas colunas necessárias
+      const [profileResult, roleResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('full_name, email, avatar_url')
+          .eq('user_id', user?.id)
+          .single(),
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user?.id)
+          .eq('role', 'admin')
+          .maybeSingle()
+      ]);
 
-      if (profileError) throw profileError;
+      if (profileResult.error) throw profileResult.error;
 
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user?.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      setProfile({ ...profileData, is_admin: !!roleData });
+      setProfile({ ...profileResult.data, is_admin: !!roleResult.data });
     } catch (error: any) {
       console.error('Error fetching profile:', error);
     }
@@ -168,20 +170,22 @@ export default function Dashboard() {
     try {
       if (!user?.id) return;
 
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+      // Otimização: buscar roles e permissions em paralelo
+      const [rolesResult, permissionsResult] = await Promise.all([
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id),
+        supabase
+          .from('user_permissions' as any)
+          .select('module_name, can_access')
+          .eq('user_id', user.id)
+      ]);
+
+      const roles = rolesResult.data;
+      const permissions = permissionsResult.data;
 
       setUserRoles(roles || []);
-
-      const { data: permissions, error } = await supabase
-        .from('user_permissions' as any)
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
       setUserPermissions(permissions || []);
 
       const isAdmin = roles?.some((r: any) => r.role === 'admin');
@@ -223,42 +227,27 @@ export default function Dashboard() {
 
   const fetchRoomBookings = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
-      const { data: salaGoogle, error: salaError } = await supabase
+      // Otimização: buscar todas as salas em uma única query
+      const { data: allRoomBookings, error } = await supabase
         .from('room_bookings')
-        .select('*')
+        .select('id, room_type, booking_date, start_time, end_time, class_name, observations, status, full_name')
         .eq('user_id', user.id)
-        .eq('room_type', 'auditorio')
         .eq('status', 'active')
+        .in('room_type', ['auditorio', 'laboratorio', 'sala_criativa'])
         .order('booking_date', { ascending: true });
 
-      if (salaError) throw salaError;
+      if (error) throw error;
 
-      const { data: laboratorio, error: labError } = await supabase
-        .from('room_bookings')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('room_type', 'laboratorio')
-        .eq('status', 'active')
-        .order('booking_date', { ascending: true });
+      // Separar por tipo de sala no cliente (mais rápido que 3 queries)
+      const auditorio = allRoomBookings?.filter(b => b.room_type === 'auditorio') || [];
+      const laboratorio = allRoomBookings?.filter(b => b.room_type === 'laboratorio') || [];
+      const salaCriativa = allRoomBookings?.filter(b => b.room_type === 'sala_criativa') || [];
 
-      if (labError) throw labError;
-
-      const { data: salaCriativa, error: criativaError } = await supabase
-        .from('room_bookings')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('room_type', 'sala_criativa')
-        .eq('status', 'active')
-        .order('booking_date', { ascending: true });
-
-      if (criativaError) throw criativaError;
-
-      setAuditorioBookings(salaGoogle || []);
-      setLaboratorioBookings(laboratorio || []);
-      setSalaCriativaBookings(salaCriativa || []);
+      setAuditorioBookings(auditorio);
+      setLaboratorioBookings(laboratorio);
+      setSalaCriativaBookings(salaCriativa);
     } catch (error) {
       console.error('Error fetching room bookings:', error);
     }
@@ -266,10 +255,15 @@ export default function Dashboard() {
 
   const fetchBookings = async () => {
     try {
+      if (!user?.id) return;
+
+      // Otimização: buscar apenas agendamentos do usuário e colunas necessárias
       const { data, error } = await supabase
         .from('chromebook_bookings')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, user_id, full_name, class_name, quantity, booking_date, start_time, end_time, status, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) throw error;
       setBookings(data || []);
@@ -287,13 +281,22 @@ export default function Dashboard() {
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
 
-      const { data: configData, error: configError } = await supabase
-        .from('system_config')
-        .select('config_key, config_value');
+      // Otimização: buscar config e agendamentos de hoje em paralelo
+      const [configResult, todayBookingsResult] = await Promise.all([
+        supabase
+          .from('system_config')
+          .select('config_key, config_value'),
+        supabase
+          .from('chromebook_bookings')
+          .select('user_id, quantity')
+          .eq('booking_date', today)
+          .eq('status', 'active')
+      ]);
 
-      if (configError) throw configError;
+      if (configResult.error) throw configResult.error;
+      if (todayBookingsResult.error) throw todayBookingsResult.error;
 
-      const configMap = configData.reduce((acc, item) => {
+      const configMap = configResult.data.reduce((acc, item) => {
         acc[item.config_key] = item.config_value;
         return acc;
       }, {} as Record<string, any>);
@@ -304,16 +307,8 @@ export default function Dashboard() {
       setTotalInventory(fetchedDefaultInventory);
       setMaxBookingQuantity(fetchedMaxBookingQuantity);
 
-      // Buscar agendamentos de hoje (ativos)
-      const { data: todayBookingsData, error: bookingsDataError } = await supabase
-        .from('chromebook_bookings')
-        .select('*')
-        .eq('booking_date', today)
-        .eq('status', 'active');
-
-      if (bookingsDataError) throw bookingsDataError;
-
-      setTodayBookings(todayBookingsData || []);
+      const todayBookingsData = todayBookingsResult.data || [];
+      setTodayBookings(todayBookingsData as any);
 
       // Calcular uso de hoje somando as quantidades de todos os agendamentos ativos
       // Agrupa por usuário e pega o máximo de cada usuário para evitar contagem dupla
