@@ -34,20 +34,40 @@ interface LoanReturnDialogProps {
 export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanReturnDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [returnQuantity, setReturnQuantity] = useState(1);
+  const [selectedEquipments, setSelectedEquipments] = useState<number[]>([]);
 
   // Calcular quantidade pendente (total - já devolvidos)
   const alreadyReturned = loan?.returned_quantity || 0;
   const pendingQuantity = loan ? loan.quantity - alreadyReturned : 0;
-  const isPartialReturn = returnQuantity < pendingQuantity;
+  const returnQuantity = selectedEquipments.length;
+  const isPartialReturn = returnQuantity > 0 && returnQuantity < pendingQuantity;
 
-  // Reset return quantity when loan changes
+  // Reset selected equipments when loan changes
   useEffect(() => {
     if (loan) {
+      // Por padrão, selecionar todos os equipamentos pendentes
       const pending = loan.quantity - (loan.returned_quantity || 0);
-      setReturnQuantity(pending);
+      const pendingIndexes = Array.from({ length: pending }, (_, i) => alreadyReturned + i);
+      setSelectedEquipments(pendingIndexes);
     }
-  }, [loan]);
+  }, [loan, alreadyReturned]);
+
+  const toggleEquipment = (index: number) => {
+    setSelectedEquipments(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index].sort((a, b) => a - b)
+    );
+  };
+
+  const selectAll = () => {
+    const pendingIndexes = Array.from({ length: pendingQuantity }, (_, i) => alreadyReturned + i);
+    setSelectedEquipments(pendingIndexes);
+  };
+
+  const deselectAll = () => {
+    setSelectedEquipments([]);
+  };
 
   const form = useForm<ReturnFormData>({
     resolver: zodResolver(returnSchema),
@@ -72,10 +92,13 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       const newReturnedQuantity = alreadyReturned + returnQuantity;
       const isFullReturn = newReturnedQuantity >= loan.quantity;
 
-      // Preparar observação
+      // Preparar observação com lista de equipamentos devolvidos
+      const patrimonyNumbers = loan.chromebook_number?.split(',').map((s: string) => s.trim()) || [];
+      const returnedEquipmentsList = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
+      
       const returnObservation = data.observations 
-        ? `Devolução parcial (${returnQuantity}/${pendingQuantity}): ${data.observations}`
-        : `Devolução ${isFullReturn ? 'completa' : 'parcial'} de ${returnQuantity} equipamento(s)`;
+        ? `Devolução ${isFullReturn ? 'completa' : 'parcial'} (${returnQuantity}/${pendingQuantity}): ${returnedEquipmentsList.join(', ')}. ${data.observations}`
+        : `Devolução ${isFullReturn ? 'completa' : 'parcial'} de ${returnQuantity} equipamento(s): ${returnedEquipmentsList.join(', ')}`;
       
       const newObservations = loan.observations 
         ? `${loan.observations}\n\n${format(new Date(), 'dd/MM/yyyy HH:mm')} - ${returnObservation}`
@@ -102,11 +125,11 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
 
       if (updateError) throw updateError;
 
-      // Atualizar status dos equipamentos devolvidos
+      // Atualizar status dos equipamentos devolvidos (usando índices selecionados)
       if (loan.chromebook_number) {
         const patrimonyNumbers = loan.chromebook_number.split(',').map((s: string) => s.trim());
-        // Atualizar apenas os equipamentos que estão sendo devolvidos agora
-        const equipmentsToReturn = patrimonyNumbers.slice(alreadyReturned, alreadyReturned + returnQuantity);
+        // Atualizar apenas os equipamentos selecionados
+        const equipmentsToReturn = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
         
         const updateEquipmentPromises = equipmentsToReturn.map(patrimony =>
           supabase.from('it_equipment')
@@ -159,7 +182,7 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       });
 
       form.reset();
-      setReturnQuantity(1);
+      setSelectedEquipments([]);
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
@@ -215,72 +238,72 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
             </Alert>
           )}
 
-          {/* Seletor de quantidade - apenas se tiver mais de 1 pendente */}
-          {pendingQuantity > 1 && (
-            <div className="space-y-3">
-              <div className="text-sm font-medium">Quantidade a devolver</div>
-              <div className="flex items-center justify-center gap-4 p-4 bg-muted/30 rounded-lg">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setReturnQuantity(Math.max(1, returnQuantity - 1))}
-                  disabled={returnQuantity <= 1}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <div className="text-center min-w-[80px]">
-                  <span className="text-3xl font-bold">{returnQuantity}</span>
-                  <span className="text-lg text-muted-foreground"> / {pendingQuantity}</span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setReturnQuantity(Math.min(pendingQuantity, returnQuantity + 1))}
-                  disabled={returnQuantity >= pendingQuantity}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* Botões rápidos */}
-              <div className="flex gap-2 justify-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setReturnQuantity(1)}
-                  className={returnQuantity === 1 ? "border-primary" : ""}
-                >
-                  Devolver 1
-                </Button>
-                {pendingQuantity > 2 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setReturnQuantity(Math.floor(pendingQuantity / 2))}
-                    className={returnQuantity === Math.floor(pendingQuantity / 2) ? "border-primary" : ""}
-                  >
-                    Devolver {Math.floor(pendingQuantity / 2)}
+          {/* Seleção de equipamentos para devolução */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Selecione os equipamentos a devolver</div>
+              {pendingQuantity > 1 && (
+                <div className="flex gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={selectAll} className="text-xs h-7">
+                    Selecionar todos
                   </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setReturnQuantity(pendingQuantity)}
-                  className={returnQuantity === pendingQuantity ? "border-primary" : ""}
-                >
-                  Devolver Todos
-                </Button>
-              </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={deselectAll} className="text-xs h-7">
+                    Limpar
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+            
+            <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-2">
+              {equipmentsList.map((num: string, index: number) => {
+                const isAlreadyReturned = index < alreadyReturned;
+                const isSelected = selectedEquipments.includes(index);
+                
+                if (isAlreadyReturned) {
+                  return (
+                    <div 
+                      key={index}
+                      className="flex items-center gap-3 p-2 rounded bg-muted/30 opacity-60"
+                    >
+                      <Checkbox checked disabled className="data-[state=checked]:bg-gray-400" />
+                      <span className="font-mono text-sm line-through">{num}</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">Já devolvido</Badge>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div 
+                    key={index}
+                    onClick={() => toggleEquipment(index)}
+                    className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                      isSelected 
+                        ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' 
+                        : 'bg-muted/30 hover:bg-muted/50'
+                    }`}
+                  >
+                    <Checkbox 
+                      checked={isSelected} 
+                      onCheckedChange={() => toggleEquipment(index)}
+                      className={isSelected ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : ""}
+                    />
+                    <span className={`font-mono text-sm ${isSelected ? 'font-medium' : ''}`}>{num}</span>
+                    {isSelected && (
+                      <Badge className="ml-auto text-xs bg-green-600">Será devolvido</Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="text-center text-sm">
+              <span className="font-medium text-primary">{returnQuantity}</span>
+              <span className="text-muted-foreground"> de {pendingQuantity} selecionado(s)</span>
+            </div>
+          </div>
 
           {/* Alerta de devolução parcial */}
-          {isPartialReturn && (
+          {isPartialReturn && returnQuantity > 0 && (
             <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 dark:text-amber-200">
@@ -289,31 +312,6 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Lista de equipamentos */}
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">Equipamentos ({equipmentsList.length} total)</div>
-            <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto">
-              {equipmentsList.map((num: string, index: number) => {
-                const isReturned = index < alreadyReturned;
-                const willReturn = !isReturned && index < alreadyReturned + returnQuantity;
-                return (
-                  <Badge 
-                    key={index} 
-                    variant={isReturned ? "secondary" : willReturn ? "default" : "outline"}
-                    className={`font-mono text-xs ${isReturned ? 'line-through opacity-50' : willReturn ? 'bg-green-600' : ''}`}
-                  >
-                    {num}
-                    {isReturned && " ✓"}
-                  </Badge>
-                );
-              })}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1"><Badge variant="secondary" className="h-4 text-[10px]">cinza</Badge> = já devolvido</span>
-              <span className="inline-flex items-center gap-1 ml-2"><Badge className="h-4 text-[10px] bg-green-600">verde</Badge> = será devolvido agora</span>
-            </div>
-          </div>
 
           {loan.responsible_teacher && (
             <div className="space-y-1">
@@ -388,13 +386,15 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
               </Button>
               <Button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={isLoading || returnQuantity === 0}
                 className={isPartialReturn ? "bg-amber-600 hover:bg-amber-700" : "bg-green-600 hover:bg-green-700"}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isPartialReturn 
-                  ? `Devolver ${returnQuantity} equipamento(s)` 
-                  : "Confirmar Devolução Total"
+                {returnQuantity === 0 
+                  ? "Selecione equipamentos"
+                  : isPartialReturn 
+                    ? `Devolver ${returnQuantity} equipamento(s)` 
+                    : "Confirmar Devolução Total"
                 }
               </Button>
             </div>
