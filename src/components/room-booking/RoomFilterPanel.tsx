@@ -7,8 +7,8 @@ import { Filter, School, FlaskConical, DoorOpen, Lightbulb, MessageSquare } from
 import { ptBR } from "date-fns/locale";
 
 interface RoomFilterPanelProps {
-  roomType: 'sala_google' | 'laboratorio' | 'sala_criativa';
-  onRoomTypeChange: (roomType: 'sala_google' | 'laboratorio' | 'sala_criativa') => void;
+  roomType: 'auditorio' | 'laboratorio' | 'sala_criativa';
+  onRoomTypeChange: (roomType: 'auditorio' | 'laboratorio' | 'sala_criativa') => void;
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   observations: string;
@@ -25,10 +25,10 @@ export function RoomFilterPanel({
 }: RoomFilterPanelProps) {
   const roomOptions = [
     {
-      value: 'sala_google' as const,
-      name: "Sala Google",
+      value: 'auditorio' as const,
+      name: "Auditório",
       icon: School,
-      description: "Sala equipada com tecnologia Google",
+      description: "200 lugares, projetor e som",
     },
     {
       value: 'laboratorio' as const,
@@ -90,7 +90,7 @@ export function RoomFilterPanel({
           <Label className="text-sm font-medium text-muted-foreground">
             Sala Específica
           </Label>
-          <Select value={roomType} onValueChange={(value) => onRoomTypeChange(value as 'sala_google' | 'laboratorio' | 'sala_criativa')}>
+          <Select value={roomType} onValueChange={(value) => onRoomTypeChange(value as 'auditorio' | 'laboratorio' | 'sala_criativa')}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione a sala" />
             </SelectTrigger>

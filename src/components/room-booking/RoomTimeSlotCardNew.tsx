@@ -187,7 +187,7 @@ const RoomTimeSlotCardNew = memo(({
   };
 
   // Preparar booking com room_type para o diálogo de edição
-  const bookingWithRoomType = booking ? { ...booking, room_type: roomType || booking.room_type || 'sala_google' } : null;
+  const bookingWithRoomType = booking ? { ...booking, room_type: roomType || booking.room_type || 'auditorio' } : null;
 
   return (
     <>

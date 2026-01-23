@@ -26,7 +26,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface CalendarBlock {
     id: string;
-    resource_type: 'chromebook' | 'sala_google' | 'laboratorio' | 'sala_criativa';
+    resource_type: 'chromebook' | 'auditorio' | 'laboratorio' | 'sala_criativa';
     block_date: string;
     start_time: string;
     end_time: string;
@@ -40,7 +40,7 @@ interface CalendarBlock {
 
 const RESOURCE_TYPES = [
     { value: 'chromebook', label: 'Chromebooks' },
-    { value: 'sala_google', label: 'Sala Google' },
+    { value: 'auditorio', label: 'Auditório' },
     { value: 'laboratorio', label: 'Laboratório de Informática' },
     { value: 'sala_criativa', label: 'Sala Criativa' }
 ];

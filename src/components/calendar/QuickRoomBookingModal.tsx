@@ -16,7 +16,7 @@ interface QuickRoomBookingModalProps {
   onOpenChange: (open: boolean) => void;
   selectedDate: Date | null;
   selectedTime: { start: string; end: string } | null;
-  roomType: 'sala_google' | 'laboratorio';
+  roomType: 'auditorio' | 'laboratorio';
   roomName: string;
   onBookingCreated: () => void;
 }
@@ -116,7 +116,7 @@ export function QuickRoomBookingModal({
         console.error('Booking error:', error);
         if (error.message.includes('Room is already booked')) {
           toast({
-            title: "Sala já agendada",
+            title: "Auditório já agendada",
             description: "Esta sala já está reservada para este horário",
             variant: "destructive",
           });

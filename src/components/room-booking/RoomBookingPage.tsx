@@ -26,11 +26,11 @@ interface TimeSlot {
 
 interface RoomBookingPageProps {
   onBookingCreated: () => void;
-  initialRoomType?: 'sala_google' | 'laboratorio' | 'sala_criativa';
+  initialRoomType?: 'auditorio' | 'laboratorio' | 'sala_criativa';
 }
 
-export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_google' }: RoomBookingPageProps) {
-  const [roomType, setRoomType] = useState<'sala_google' | 'laboratorio' | 'sala_criativa'>(initialRoomType);
+export function RoomBookingPage({ onBookingCreated, initialRoomType = 'auditorio' }: RoomBookingPageProps) {
+  const [roomType, setRoomType] = useState<'auditorio' | 'laboratorio' | 'sala_criativa'>(initialRoomType);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
@@ -41,11 +41,11 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
 
   // Refs para armazenar valores atuais sem causar re-renders
   const selectedDateRef = useRef<Date>(selectedDate);
-  const roomTypeRef = useRef<'sala_google' | 'laboratorio' | 'sala_criativa'>(roomType);
+  const roomTypeRef = useRef<'auditorio' | 'laboratorio' | 'sala_criativa'>(roomType);
   const isInitialMount = useRef(true);
 
-  const roomNames: Record<'sala_google' | 'laboratorio' | 'sala_criativa', string> = {
-    sala_google: 'Sala Google',
+  const roomNames: Record<'auditorio' | 'laboratorio' | 'sala_criativa', string> = {
+    auditorio: 'Auditório',
     laboratorio: 'Laboratório',
     sala_criativa: 'Sala Criativa',
   };
@@ -142,7 +142,7 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'sala_goog
     fetchBookings(selectedDate, roomType, false);
   }, [selectedDate, fetchBookings, roomType]);
 
-  const handleRoomTypeChange = (newRoomType: 'sala_google' | 'laboratorio' | 'sala_criativa') => {
+  const handleRoomTypeChange = (newRoomType: 'auditorio' | 'laboratorio' | 'sala_criativa') => {
     setRoomType(newRoomType);
     setSelectedSlots([]); // Limpar seleção ao mudar sala
   };

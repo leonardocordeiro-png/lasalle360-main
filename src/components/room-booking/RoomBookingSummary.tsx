@@ -17,7 +17,7 @@ interface TimeSlot {
 }
 
 interface RoomBookingSummaryProps {
-  roomType: 'sala_google' | 'laboratorio' | 'sala_criativa';
+  roomType: 'auditorio' | 'laboratorio' | 'sala_criativa';
   roomName: string;
   selectedDate: Date | null;
   selectedSlots: TimeSlot[];
@@ -42,8 +42,8 @@ export function RoomBookingSummary({
   const { toast } = useToast();
 
   const roomInfo: Record<string, { name: string; icon: typeof School }> = {
-    sala_google: {
-      name: "Sala Google",
+    auditorio: {
+      name: "Auditório",
       icon: School,
     },
     laboratorio: {
@@ -56,7 +56,7 @@ export function RoomBookingSummary({
     },
   };
 
-  const currentRoom = roomInfo[roomType] || roomInfo.sala_google;
+  const currentRoom = roomInfo[roomType] || roomInfo.auditorio;
   const RoomIcon = currentRoom.icon;
 
   useEffect(() => {

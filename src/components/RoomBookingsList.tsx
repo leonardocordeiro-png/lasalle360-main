@@ -24,7 +24,7 @@ interface RoomBookingsListProps {
 
 export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomBookingsListProps) {
   const getRoomTypeLabel = (roomType: string) => {
-    return roomType === 'sala_google' ? 'Sala Google' : 'Laboratório';
+    return roomType === 'auditorio' ? 'Auditório' : 'Laboratório';
   };
 
   if (bookings.length === 0) {

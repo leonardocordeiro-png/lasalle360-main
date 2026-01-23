@@ -66,7 +66,7 @@ export function RoomBookingEditDialog({
   const [selectedUserId, setSelectedUserId] = useState("");
 
   const roomNames: Record<string, { name: string; icon: typeof School }> = {
-    sala_google: { name: "Sala Google", icon: School },
+    auditorio: { name: "Auditório", icon: School },
     laboratorio: { name: "Laboratório", icon: FlaskConical },
     sala_criativa: { name: "Sala Criativa", icon: Lightbulb },
   };
@@ -165,7 +165,7 @@ export function RoomBookingEditDialog({
 
   if (!booking) return null;
 
-  const roomInfo = roomNames[booking.room_type] || roomNames.sala_google;
+  const roomInfo = roomNames[booking.room_type] || roomNames.auditorio;
   const RoomIcon = roomInfo.icon;
 
   return (

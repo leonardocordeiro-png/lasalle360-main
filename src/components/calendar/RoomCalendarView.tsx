@@ -37,7 +37,7 @@ interface CalendarBlock {
 }
 
 interface RoomCalendarViewProps {
-  roomType: 'sala_google' | 'laboratorio';
+  roomType: 'auditorio' | 'laboratorio';
   roomName: string;
   onBookingCreated: () => void;
 }

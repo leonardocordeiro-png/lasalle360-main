@@ -24,7 +24,7 @@ interface TimeSlot {
 }
 
 interface RoomAvailabilityGridProps {
-  roomType: 'sala_google' | 'laboratorio' | 'sala_criativa';
+  roomType: 'auditorio' | 'laboratorio' | 'sala_criativa';
   roomName: string;
   selectedDate: Date;
   bookings: RoomBooking[];
@@ -61,11 +61,11 @@ export function RoomAvailabilityGrid({
   ], []);
 
   const roomInfo = {
-    sala_google: {
-      name: "Sala Google",
+    auditorio: {
+      name: "Auditório",
       icon: School,
-      capacity: 40,
-      resources: ["Projetor", "Chromebooks", "Videoconferência"],
+      capacity: 200,
+      resources: ["Projetor", "Equipamento de Som", "200 lugares"],
     },
     laboratorio: {
       name: "Laboratório",

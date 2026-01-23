@@ -345,7 +345,7 @@ export default function AuditLogs() {
           </div>
         );
       }
-      const roomName = bookingLog.room_type === 'sala_google' ? 'Sala Google' : 'Laboratório';
+      const roomName = bookingLog.room_type === 'auditorio' ? 'Auditório' : 'Laboratório';
       return (
         <div>
           <p className="font-medium text-sm text-foreground">{roomName}</p>
@@ -387,7 +387,7 @@ export default function AuditLogs() {
         if (bookingLog.booking_type === 'chromebook') {
           return `Agendou ${bookingLog.quantity} Chromebook(s) para ${format(new Date(bookingLog.booking_date), 'dd/MM/yyyy')}`;
         }
-        const roomName = bookingLog.room_type === 'sala_google' ? 'Sala Google' : 'Laboratório';
+        const roomName = bookingLog.room_type === 'auditorio' ? 'Auditório' : 'Laboratório';
         return `Reservou ${roomName} para ${format(new Date(bookingLog.booking_date), 'dd/MM/yyyy')}`;
       }
       return `Cancelou agendamento de ${format(new Date(bookingLog.booking_date), 'dd/MM/yyyy')}`;

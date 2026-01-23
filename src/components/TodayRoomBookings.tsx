@@ -70,14 +70,14 @@ export function TodayRoomBookings() {
   };
 
   const getRoomTypeLabel = (type: string) => {
-    if (type === 'sala_google') return 'Sala Google';
+    if (type === 'auditorio') return 'Auditório';
     if (type === 'laboratorio') return 'Laboratório';
     if (type === 'sala_criativa') return 'Sala Criativa';
     return type;
   };
 
   const getRoomTypeBadgeClass = (type: string) => {
-    if (type === 'sala_google') return 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500';
+    if (type === 'auditorio') return 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500';
     if (type === 'laboratorio') return 'bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-500';
     if (type === 'sala_criativa') return 'bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-500';
     return 'bg-gray-600 hover:bg-gray-700 text-white';
@@ -122,7 +122,7 @@ export function TodayRoomBookings() {
     );
   }
 
-  const salaGoogleBookings = bookings.filter(b => b.room_type === 'sala_google');
+  const auditorioBookings = bookings.filter(b => b.room_type === 'auditorio');
   const laboratorioBookings = bookings.filter(b => b.room_type === 'laboratorio');
   const salaCriativaBookings = bookings.filter(b => b.room_type === 'sala_criativa');
   const bookingsWithObservations = bookings.filter(b => b.observations && b.observations.trim());
@@ -140,8 +140,8 @@ export function TodayRoomBookings() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-              <p className="text-sm text-muted-foreground mb-1">Sala Google</p>
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{salaGoogleBookings.length}</p>
+              <p className="text-sm text-muted-foreground mb-1">Auditório</p>
+              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{auditorioBookings.length}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
               <p className="text-sm text-muted-foreground mb-1">Laboratório</p>

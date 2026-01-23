@@ -218,7 +218,7 @@ export default function SystemSettings() {
   };
 
   const deleteAllBookings = async () => {
-    if (!confirm('⚠️ ATENÇÃO: Esta ação irá excluir TODOS os agendamentos (Chromebooks, Sala Google e Laboratório) do sistema. Esta ação NÃO pode ser desfeita. Deseja continuar?')) {
+    if (!confirm('⚠️ ATENÇÃO: Esta ação irá excluir TODOS os agendamentos (Chromebooks, Auditório e Laboratório) do sistema. Esta ação NÃO pode ser desfeita. Deseja continuar?')) {
       return;
     }
 
@@ -640,7 +640,7 @@ export default function SystemSettings() {
                 Excluir Todos os Agendamentos
               </Label>
               <p className="text-sm text-muted-foreground mb-3">
-                Esta ação irá excluir TODOS os agendamentos de Chromebooks, Sala Google e Laboratório do sistema.
+                Esta ação irá excluir TODOS os agendamentos de Chromebooks, Auditório e Laboratório do sistema.
               </p>
               <Button 
                 variant="destructive" 

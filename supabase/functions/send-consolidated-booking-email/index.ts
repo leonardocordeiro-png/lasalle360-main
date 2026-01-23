@@ -165,8 +165,8 @@ const handler = async (req: Request): Promise<Response> => {
         return acc;
       }, {} as Record<string, RoomBooking[]>);
 
-      const roomTypeLabel = rooms[0].room_type === 'sala_google' ? 'SALA GOOGLE' : 'LABORATÓRIO';
-      const roomIcon = rooms[0].room_type === 'sala_google' ? '🏫' : '🔬';
+      const roomTypeLabel = rooms[0].room_type === 'auditorio' ? 'AUDITÓRIO' : 'LABORATÓRIO';
+      const roomIcon = rooms[0].room_type === 'auditorio' ? '🏫' : '🔬';
 
       emailContent += `
         <div class="section">

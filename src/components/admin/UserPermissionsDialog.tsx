@@ -33,8 +33,8 @@ const AVAILABLE_MODULES = [
     icon: '💻'
   },
   { 
-    name: 'sala_google', 
-    label: 'Sala Google', 
+    name: 'auditorio', 
+    label: 'Auditório', 
     category: 'dashboard',
     hasLevels: false,
     icon: '🏫'

@@ -57,7 +57,7 @@ interface Profile {
 
 interface ModulePermissions {
   chromebooks: boolean;
-  sala_google: boolean;
+  auditorio: boolean;
   laboratorio: boolean;
   sala_criativa: boolean;
   loans_management: boolean;
@@ -75,12 +75,12 @@ export default function Dashboard() {
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [salaGoogleBookings, setSalaGoogleBookings] = useState<RoomBooking[]>([]);
+  const [auditorioBookings, setAuditorioBookings] = useState<RoomBooking[]>([]);
   const [laboratorioBookings, setLaboratorioBookings] = useState<RoomBooking[]>([]);
   const [salaCriativaBookings, setSalaCriativaBookings] = useState<RoomBooking[]>([]);
   const [modulePermissions, setModulePermissions] = useState<ModulePermissions>({
     chromebooks: true,
-    sala_google: true,
+    auditorio: true,
     laboratorio: true,
     sala_criativa: true,
     loans_management: true,
@@ -189,7 +189,7 @@ export default function Dashboard() {
       if (isAdmin) {
         setModulePermissions({
           chromebooks: true,
-          sala_google: true,
+          auditorio: true,
           laboratorio: true,
           sala_criativa: true,
           loans_management: true,
@@ -204,7 +204,7 @@ export default function Dashboard() {
 
       setModulePermissions({
         chromebooks: permissionsMap['chromebooks'] ?? true,
-        sala_google: permissionsMap['sala_google'] ?? true,
+        auditorio: permissionsMap['auditorio'] ?? true,
         laboratorio: permissionsMap['laboratorio'] ?? true,
         sala_criativa: permissionsMap['sala_criativa'] ?? true,
         loans_management: permissionsMap['loans_management'] ?? false,
@@ -213,7 +213,7 @@ export default function Dashboard() {
       console.error('Error fetching module permissions:', error);
       setModulePermissions({
         chromebooks: true,
-        sala_google: true,
+        auditorio: true,
         laboratorio: true,
         sala_criativa: true,
         loans_management: false,
@@ -230,7 +230,7 @@ export default function Dashboard() {
         .from('room_bookings')
         .select('*')
         .eq('user_id', user.id)
-        .eq('room_type', 'sala_google')
+        .eq('room_type', 'auditorio')
         .eq('status', 'active')
         .order('booking_date', { ascending: true });
 
@@ -256,7 +256,7 @@ export default function Dashboard() {
 
       if (criativaError) throw criativaError;
 
-      setSalaGoogleBookings(salaGoogle || []);
+      setAuditorioBookings(salaGoogle || []);
       setLaboratorioBookings(laboratorio || []);
       setSalaCriativaBookings(salaCriativa || []);
     } catch (error) {
@@ -392,7 +392,7 @@ export default function Dashboard() {
 
   const defaultTab = modulePermissions.chromebooks ? "chromebooks" :
     modulePermissions.loans_management ? "emprestimos" :
-      (modulePermissions.sala_google || modulePermissions.laboratorio || modulePermissions.sala_criativa) ? "salas" :
+      (modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) ? "salas" :
         "bookings";
 
   // Dados do usuário para o dropdown
@@ -514,9 +514,9 @@ export default function Dashboard() {
                 <h3 className="text-red-700 dark:text-red-400 font-bold text-lg mb-3">AGENDAMENTO OBRIGATÓRIO!</h3>
                 <div className="text-red-900 dark:text-red-300 space-y-2 text-sm">
                   <p><strong>Chromebooks</strong> → entrega exclusiva pela equipe de TI/TE.</p>
-                  <p><strong>Chave da Sala Google e Laboratório</strong> → retirada com a equipe do SCT.</p>
+                  <p><strong>Chave do Auditório</strong> → retirada com a equipe do SCT.</p>
                   <p className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
-                    A entrega de Chromebooks é feita exclusivamente pela equipe técnica mediante agendamento.
+                    A entrega dos Chromebooks é realizada exclusivamente mediante agendamento.
                   </p>
                   <p className="mt-2">
                     <strong>Obs:</strong> Alunos não estão autorizados a retirar os equipamentos.
@@ -543,13 +543,13 @@ export default function Dashboard() {
                   <span>Empréstimos</span>
                 </TabsTrigger>
               )}
-              {(modulePermissions.sala_google || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
+              {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
                 <TabsTrigger value="salas" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <DoorOpen className="h-4 w-4" />
                   <span>Salas</span>
                 </TabsTrigger>
               )}
-              {(modulePermissions.sala_google || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
+              {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
                 <TabsTrigger value="today-rooms" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Eye className="h-4 w-4" />
                   <span>Salas Hoje</span>
@@ -592,30 +592,30 @@ export default function Dashboard() {
             </TabsContent>
           )}
 
-          {(modulePermissions.sala_google || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
+          {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
             <TabsContent value="salas" className="space-y-6">
               <RoomBookingPage
                 onBookingCreated={fetchRoomBookings}
-                initialRoomType={modulePermissions.sala_google ? 'sala_google' : modulePermissions.laboratorio ? 'laboratorio' : 'sala_criativa'}
+                initialRoomType={modulePermissions.auditorio ? 'auditorio' : modulePermissions.laboratorio ? 'laboratorio' : 'sala_criativa'}
               />
               <Card className="border-0 shadow-lg">
                 <CardHeader>
                   <CardTitle>Meus Agendamentos de Salas</CardTitle>
                   <CardDescription>
-                    Todos os seus agendamentos de Sala Google, Laboratório e Sala Criativa
+                    Todos os seus agendamentos de Auditório, Laboratório e Sala Criativa
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {salaGoogleBookings.length > 0 && (
+                  {auditorioBookings.length > 0 && (
                     <div>
                       <h4 className="font-medium text-sm text-muted-foreground mb-3 flex items-center gap-2">
                         <School className="h-4 w-4" />
-                        Sala Google
+                        Auditório
                       </h4>
                       <RoomBookingsList
-                        bookings={salaGoogleBookings}
+                        bookings={auditorioBookings}
                         onBookingDeleted={fetchRoomBookings}
-                        roomName="Sala Google"
+                        roomName="Auditório"
                       />
                     </div>
                   )}
@@ -645,7 +645,7 @@ export default function Dashboard() {
                       />
                     </div>
                   )}
-                  {salaGoogleBookings.length === 0 && laboratorioBookings.length === 0 && salaCriativaBookings.length === 0 && (
+                  {auditorioBookings.length === 0 && laboratorioBookings.length === 0 && salaCriativaBookings.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <DoorOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
                       <p>Você ainda não possui agendamentos de salas.</p>
@@ -657,7 +657,7 @@ export default function Dashboard() {
             </TabsContent>
           )}
 
-          {(modulePermissions.sala_google || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
+          {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
             <TabsContent value="today-rooms" className="space-y-6">
               <Card className="border-0 shadow-lg">
                 <CardHeader>
@@ -666,7 +666,7 @@ export default function Dashboard() {
                     Controle de Chaves - Agendamentos do Dia
                   </CardTitle>
                   <CardDescription>
-                    Visualização simplificada dos agendamentos de hoje para controle de liberação das chaves de Sala Google, Laboratório e Sala Criativa
+                    Visualização simplificada dos agendamentos de hoje para controle de liberação das chaves de Auditório, Laboratório e Sala Criativa
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -681,7 +681,7 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle>Todos os Agendamentos</CardTitle>
                 <CardDescription>
-                  Visualize todos os seus agendamentos de Chromebooks, Sala Google e Laboratório
+                  Visualize todos os seus agendamentos de Chromebooks, Auditório e Laboratório
                 </CardDescription>
               </CardHeader>
               <CardContent>
