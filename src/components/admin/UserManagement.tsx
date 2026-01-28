@@ -80,6 +80,9 @@ export default function UserManagement() {
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
   const [showBulkImportDialog, setShowBulkImportDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editFormData, setEditFormData] = useState({ full_name: '', email: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -278,6 +281,64 @@ export default function UserManagement() {
         title: "Erro",
         description: "Erro ao alterar status de bloqueio",
       });
+    }
+  };
+
+  const handleEditUser = (user: UserWithProfile) => {
+    setSelectedUser(user);
+    setEditFormData({
+      full_name: user.profiles.full_name || '',
+      email: user.profiles.email || user.email || ''
+    });
+    setShowEditDialog(true);
+  };
+
+  const saveUserEdit = async () => {
+    if (!selectedUser) return;
+    
+    setSaving(true);
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editFormData.full_name,
+          email: editFormData.email
+        } as any)
+        .eq('user_id', selectedUser.id);
+
+      if (error) throw error;
+
+      await supabase.rpc('insert_security_audit_log', {
+        p_action: 'user_profile_edited',
+        p_user_id: currentUser?.id,
+        p_resource_type: 'profiles',
+        p_resource_id: selectedUser.id,
+        p_additional_data: JSON.stringify({
+          target_user_id: selectedUser.id,
+          changes: {
+            full_name: editFormData.full_name,
+            email: editFormData.email
+          },
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      await fetchUsers();
+      setShowEditDialog(false);
+      toast({
+        title: "Sucesso",
+        description: "Dados do usuário atualizados com sucesso",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao atualizar dados do usuário",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -546,6 +607,10 @@ export default function UserManagement() {
                             <Eye className="h-4 w-4 mr-2" />
                             Ver Detalhes
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Editar Usuário
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => toggleAdminStatus(user.id, user.profiles.is_admin)}>
                             {user.profiles.is_admin ? (
                               <>
@@ -761,6 +826,45 @@ export default function UserManagement() {
         onOpenChange={setShowBulkImportDialog}
         onUsersCreated={fetchUsers}
       />
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Altere os dados do usuário abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nome Completo</label>
+              <Input
+                value={editFormData.full_name}
+                onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
+                placeholder="Nome completo do usuário"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                value={editFormData.email}
+                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                placeholder="Email do usuário"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={saveUserEdit} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
