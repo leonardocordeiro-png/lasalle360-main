@@ -83,6 +83,7 @@ export function LoansManagement() {
   const [statusFilter, setStatusFilter] = useState("em_uso");
   const [equipmentTypeFilter, setEquipmentTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
 
   // Função para verificar se o patrimônio é válido (não é "SEM PATRIMÔNIO" ou similar)
   const isValidPatrimony = (patrimony: string | null | undefined): boolean => {
@@ -130,6 +131,7 @@ export function LoansManagement() {
 
   useEffect(() => {
     fetchLoans();
+    fetchEquipmentMap();
     checkAdmin();
 
     const channel = supabase
@@ -147,6 +149,28 @@ export function LoansManagement() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Buscar mapa de equipamentos (patrimônio -> id_number)
+  const fetchEquipmentMap = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('it_equipment')
+        .select('patrimony, id_number')
+        .ilike('equipment_type', '%chromebook%');
+      
+      if (error) throw error;
+      
+      const map: Record<string, string> = {};
+      data?.forEach(eq => {
+        if (eq.patrimony && eq.id_number) {
+          map[eq.patrimony.trim()] = eq.id_number;
+        }
+      });
+      setEquipmentMap(map);
+    } catch (error) {
+      console.error('Error fetching equipment map:', error);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -447,19 +471,22 @@ export function LoansManagement() {
     return loan.chromebook_number.split(',').map((num: string) => num.trim()).filter((num: string) => num.length > 0);
   };
 
-  // Função para formatar lista de equipamentos para exibição
+  // Função para formatar lista de equipamentos para exibição (prioriza ID sobre Patrimônio)
   const formatEquipmentForDisplay = (equipment: string, loan: any): string => {
-    const normalizedEquipment = normalizePatrimony(equipment);
+    const trimmedEquipment = equipment.trim();
     
-    // Se o equipamento individual é um patrimônio inválido
-    if (!isValidPatrimony(equipment)) {
-      // Tentar usar o id_number do it_equipment se disponível
-      if (loan.it_equipment?.id_number) {
-        return `ID: ${loan.it_equipment.id_number}`;
-      }
-      return normalizedEquipment; // Fallback
+    // Prioridade 1: Buscar ID no mapa de equipamentos pelo patrimônio
+    if (equipmentMap[trimmedEquipment]) {
+      return equipmentMap[trimmedEquipment];
     }
-    return normalizedEquipment;
+    
+    // Prioridade 2: Tentar usar o id_number do it_equipment se disponível
+    if (loan.it_equipment?.id_number) {
+      return loan.it_equipment.id_number;
+    }
+    
+    // Fallback: usar o patrimônio normalizado
+    return normalizePatrimony(equipment);
   };
 
   const filteredLoans = getFilteredLoans(statusFilter);
@@ -678,11 +705,11 @@ export function LoansManagement() {
                           {loan.equipment_id && loan.it_equipment?.id_number ? (
                             <span className="truncate block">{loan.it_equipment.id_number}</span>
                           ) : loan.equipment_id && loan.it_equipment?.patrimony ? (
-                            <span className="truncate block">{loan.it_equipment.patrimony}</span>
+                            <span className="truncate block">{equipmentMap[loan.it_equipment.patrimony.trim()] || loan.it_equipment.patrimony}</span>
                           ) : hasMultipleEquipments ? (
-                            // Exibição para múltiplos equipamentos
+                            // Exibição para múltiplos equipamentos - prioriza ID
                             <div className="flex flex-col gap-0.5">
-                              <span className="truncate">{equipmentsList[0]}</span>
+                              <span className="truncate">{formatEquipmentForDisplay(equipmentsList[0], loan)}</span>
                               <button
                                 onClick={() => handleViewEquipments(loan)}
                                 className="text-xs text-primary hover:text-primary/80 hover:underline flex items-center gap-1 w-fit"
@@ -692,8 +719,8 @@ export function LoansManagement() {
                               </button>
                             </div>
                           ) : (
-                            // Equipamento único sem it_equipment
-                            <span className="truncate block">{equipmentsList[0] || loan.chromebook_number}</span>
+                            // Equipamento único sem it_equipment - prioriza ID
+                            <span className="truncate block">{formatEquipmentForDisplay(equipmentsList[0] || loan.chromebook_number, loan)}</span>
                           )}
                         </div>
                       </td>
