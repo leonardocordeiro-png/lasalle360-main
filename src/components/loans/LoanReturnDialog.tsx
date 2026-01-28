@@ -104,13 +104,12 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
         ? `${loan.observations}\n\n${format(new Date(), 'dd/MM/yyyy HH:mm')} - ${returnObservation}`
         : `${format(new Date(), 'dd/MM/yyyy HH:mm')} - ${returnObservation}`;
 
-      // Atualizar empréstimo
+      // Preparar dados de atualização do empréstimo
       const updateData: any = {
         returned_quantity: newReturnedQuantity,
         observations: newObservations,
       };
 
-      // Se é devolução completa, marcar como devolvido
       if (isFullReturn) {
         updateData.status = "devolvido";
         updateData.return_time = data.return_time;
@@ -118,60 +117,67 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
         updateData.returned_at = new Date().toISOString();
       }
 
-      const { error: updateError } = await supabase
-        .from("chromebook_loans")
-        .update(updateData)
-        .eq("id", loan.id);
+      // Executar operações principais em paralelo
+      const promises: Promise<any>[] = [];
 
-      if (updateError) throw updateError;
+      // 1. Atualizar empréstimo
+      promises.push(
+        supabase
+          .from("chromebook_loans")
+          .update(updateData)
+          .eq("id", loan.id)
+      );
 
-      // Atualizar status dos equipamentos devolvidos (usando índices selecionados)
-      if (loan.chromebook_number) {
-        const patrimonyNumbers = loan.chromebook_number.split(',').map((s: string) => s.trim());
-        // Atualizar apenas os equipamentos selecionados
-        const equipmentsToReturn = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
-        
-        const updateEquipmentPromises = equipmentsToReturn.map(patrimony =>
-          supabase.from('it_equipment')
+      // 2. Atualizar status dos equipamentos em batch (usando IN ao invés de múltiplas queries)
+      if (returnedEquipmentsList.length > 0) {
+        promises.push(
+          supabase
+            .from('it_equipment')
             .update({ status: 'ATIVO' })
-            .eq('patrimony', patrimony)
+            .in('patrimony', returnedEquipmentsList)
         );
-        await Promise.all(updateEquipmentPromises);
       }
 
-      // Create notification
-      await supabase.from('notifications' as any).insert({
-        user_id: user.id,
-        message: isFullReturn 
-          ? `Devolução completa registrada: ${loan.chromebook_number} (${loan.borrower_name})`
-          : `Devolução parcial registrada: ${returnQuantity} de ${pendingQuantity} equipamentos (${loan.borrower_name})`,
-        type: 'loan_returned',
-        related_id: loan.id,
-      } as any);
+      // 3. Criar notificação interna
+      promises.push(
+        supabase.from('notifications' as any).insert({
+          user_id: user.id,
+          message: isFullReturn 
+            ? `Devolução completa registrada: ${loan.chromebook_number} (${loan.borrower_name})`
+            : `Devolução parcial registrada: ${returnQuantity} de ${pendingQuantity} equipamentos (${loan.borrower_name})`,
+          type: 'loan_returned',
+          related_id: loan.id,
+        } as any)
+      );
 
-      // Enviar notificação se solicitado
+      // Aguardar todas as operações principais
+      const results = await Promise.all(promises);
+      
+      // Verificar erros
+      const updateError = results[0]?.error;
+      if (updateError) throw updateError;
+
+      // Enviar notificação externa em background (não bloqueia)
       if (data.notify_it) {
-        try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("user_id", user.id)
-            .single();
-
-          await supabase.functions.invoke("notify-loan-return", {
-            body: {
-              loanId: loan.id,
-              borrowerName: loan.borrower_name,
-              chromebookNumber: loan.chromebook_number,
-              returnedBy: profile?.full_name || "Usuário",
-              isPartialReturn: !isFullReturn,
-              returnedQuantity: returnQuantity,
-              totalQuantity: loan.quantity,
-            },
-          });
-        } catch (notifError) {
-          console.error("Error sending notification:", notifError);
-        }
+        supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", user.id)
+          .single()
+          .then(({ data: profile }) => {
+            supabase.functions.invoke("notify-loan-return", {
+              body: {
+                loanId: loan.id,
+                borrowerName: loan.borrower_name,
+                chromebookNumber: loan.chromebook_number,
+                returnedBy: profile?.full_name || "Usuário",
+                isPartialReturn: !isFullReturn,
+                returnedQuantity: returnQuantity,
+                totalQuantity: loan.quantity,
+              },
+            }).catch(err => console.error("Error sending notification:", err));
+          })
+          .catch(err => console.error("Error fetching profile:", err));
       }
 
       toast({
