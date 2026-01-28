@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Clock, User, MoreVertical, Trash2, X, ArrowRightLeft, Chrome, Lock } from "lucide-react";
+import { Clock, User, MoreVertical, Trash2, X, ArrowRightLeft, Chrome, Lock, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -257,10 +257,10 @@ export function ChromebookTimeSlotCard({
                                   setSelectedBooking(booking);
                                   setDeleteDialogOpen(true);
                                 }}
-                                className="text-red-600"
+                                className="text-green-600"
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir Permanentemente
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Devolver
                               </DropdownMenuItem>
                             </>
                           )}
@@ -330,9 +330,9 @@ export function ChromebookTimeSlotCard({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Permanentemente</AlertDialogTitle>
+            <AlertDialogTitle>Devolver Chromebooks</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O agendamento será removido permanentemente do sistema.
+              Confirma a devolução dos Chromebooks deste agendamento?
               <br /><br />
               <strong>Solicitante:</strong> {selectedBooking?.full_name}<br />
               <strong>Turma:</strong> {selectedBooking?.class_name}<br />
@@ -344,9 +344,9 @@ export function ChromebookTimeSlotCard({
             <AlertDialogAction
               onClick={handleDeleteBooking}
               disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-green-600 hover:bg-green-700"
             >
-              {isLoading ? "Excluindo..." : "Excluir Permanentemente"}
+              {isLoading ? "Devolvendo..." : "Confirmar Devolução"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
