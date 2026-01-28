@@ -122,6 +122,9 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showUserResults, setShowUserResults] = useState(false);
+  const [teacherSearchResults, setTeacherSearchResults] = useState<any[]>([]);
+  const [isSearchingTeachers, setIsSearchingTeachers] = useState(false);
+  const [showTeacherResults, setShowTeacherResults] = useState(false);
 
   const form = useForm<LoanFormData>({
     resolver: zodResolver(loanSchema),
@@ -159,6 +162,9 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
       setUserSearchResults([]);
       setSelectedUser(null);
       setShowUserResults(false);
+      setTeacherSearchResults([]);
+      setIsSearchingTeachers(false);
+      setShowTeacherResults(false);
     }
   }, [open, form]);
 
@@ -239,6 +245,42 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     setShowUserResults(false);
     setIsSearchingUsers(false);
     setSelectedUser(user);
+  };
+
+  // Handler para busca de professor responsável
+  const handleTeacherInputChange = async (value: string) => {
+    form.setValue("responsible_teacher", value);
+    
+    if (value.length >= 2) {
+      setIsSearchingTeachers(true);
+      setShowTeacherResults(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email, avatar_url')
+          .ilike('full_name', `%${value}%`)
+          .limit(10);
+        
+        if (error) throw error;
+        setTeacherSearchResults(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar professores:', error);
+        setTeacherSearchResults([]);
+      } finally {
+        setIsSearchingTeachers(false);
+      }
+    } else {
+      setTeacherSearchResults([]);
+      setIsSearchingTeachers(false);
+      setShowTeacherResults(false);
+    }
+  };
+
+  const handleTeacherSelect = (teacher: any) => {
+    form.setValue("responsible_teacher", teacher.full_name);
+    setTeacherSearchResults([]);
+    setShowTeacherResults(false);
+    setIsSearchingTeachers(false);
   };
 
   const handleEquipmentSelect = async (equipment: any) => {
@@ -648,8 +690,37 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
                           placeholder="Nome do professor" 
                           className="pl-10" 
                           disabled={borrowerType !== "aluno"}
-                          {...field} 
+                          value={field.value || ''}
+                          onChange={(e) => handleTeacherInputChange(e.target.value)}
+                          onBlur={() => setTimeout(() => setShowTeacherResults(false), 200)}
+                          onFocus={() => field.value && field.value.length >= 2 && setShowTeacherResults(true)}
                         />
+                        {isSearchingTeachers && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                        
+                        {/* Dropdown de sugestões de professores */}
+                        {showTeacherResults && teacherSearchResults.length > 0 && borrowerType === "aluno" && (
+                          <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            {teacherSearchResults.map((teacher) => (
+                              <button
+                                key={teacher.user_id}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2"
+                                onClick={() => handleTeacherSelect(teacher)}
+                              >
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={teacher.avatar_url} />
+                                  <AvatarFallback className="text-xs">{getInitials(teacher.full_name)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{teacher.full_name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{teacher.email}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </FormControl>
                     <FormMessage />
