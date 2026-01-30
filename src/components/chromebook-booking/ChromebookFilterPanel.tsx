@@ -136,22 +136,28 @@ export function ChromebookFilterPanel({
 
         {/* Quantidade */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-            <span>Quantidade de Chromebooks</span>
-            <span className="text-primary font-bold">{quantity}</span>
+          <Label htmlFor="chromebook-quantity" className="text-sm font-medium text-muted-foreground">
+            Quantidade de Chromebooks
           </Label>
-          <Slider
-            value={[quantity]}
-            onValueChange={(value) => onQuantityChange(value[0])}
-            min={1}
-            max={maxQuantity}
-            step={1}
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>1</span>
-            <span>{maxQuantity}</span>
+          <div className="flex items-center gap-2">
+            <Laptop className="h-4 w-4 text-muted-foreground" />
+            <Input
+              id="chromebook-quantity"
+              type="number"
+              min={1}
+              max={maxQuantity}
+              value={quantity}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1;
+                onQuantityChange(Math.min(Math.max(value, 1), maxQuantity));
+              }}
+              className="w-full"
+              placeholder="Digite a quantidade"
+            />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Máximo disponível: <span className="font-medium text-primary">{maxQuantity}</span>
+          </p>
         </div>
 
         {/* Dica */}
