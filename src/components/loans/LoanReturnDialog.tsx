@@ -35,6 +35,45 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedEquipments, setSelectedEquipments] = useState<number[]>([]);
+  const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
+
+  // Buscar mapa de IDs dos equipamentos
+  useEffect(() => {
+    const fetchEquipmentIds = async () => {
+      if (!loan?.chromebook_number) return;
+      
+      const patrimonyList = loan.chromebook_number.split(',').map((s: string) => s.trim());
+      
+      try {
+        const { data, error } = await supabase
+          .from('it_equipment')
+          .select('patrimony, id_number')
+          .in('patrimony', patrimonyList);
+        
+        if (error) throw error;
+        
+        const map: Record<string, string> = {};
+        data?.forEach(eq => {
+          if (eq.patrimony && eq.id_number) {
+            map[eq.patrimony.trim()] = eq.id_number;
+          }
+        });
+        setEquipmentMap(map);
+      } catch (error) {
+        console.error('Error fetching equipment IDs:', error);
+      }
+    };
+    
+    if (open && loan) {
+      fetchEquipmentIds();
+    }
+  }, [open, loan]);
+
+  // Função para obter o identificador do equipamento (prioriza ID sobre patrimônio)
+  const getEquipmentDisplay = (patrimony: string): string => {
+    const trimmed = patrimony.trim();
+    return equipmentMap[trimmed] || trimmed;
+  };
 
   // Calcular quantidade pendente (total - já devolvidos)
   const alreadyReturned = loan?.returned_quantity || 0;
@@ -272,7 +311,7 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
                       className="flex items-center gap-3 p-2 rounded bg-muted/30 opacity-60"
                     >
                       <Checkbox checked disabled className="data-[state=checked]:bg-gray-400" />
-                      <span className="font-mono text-sm line-through">{num}</span>
+                      <span className="font-mono text-sm line-through">{getEquipmentDisplay(num)}</span>
                       <Badge variant="secondary" className="ml-auto text-xs">Já devolvido</Badge>
                     </div>
                   );
@@ -293,7 +332,7 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
                       onCheckedChange={() => toggleEquipment(index)}
                       className={isSelected ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : ""}
                     />
-                    <span className={`font-mono text-sm ${isSelected ? 'font-medium' : ''}`}>{num}</span>
+                    <span className={`font-mono text-sm ${isSelected ? 'font-medium' : ''}`}>{getEquipmentDisplay(num)}</span>
                     {isSelected && (
                       <Badge className="ml-auto text-xs bg-green-600">Será devolvido</Badge>
                     )}
