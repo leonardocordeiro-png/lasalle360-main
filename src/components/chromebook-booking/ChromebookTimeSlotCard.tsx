@@ -152,23 +152,40 @@ export function ChromebookTimeSlotCard({
     setIsLoading(true);
 
     try {
+      // Buscar TODOS os agendamentos do mesmo usuário, mesma data e mesma turma
+      // para devolver todos os horários juntos
+      const { data: relatedBookings, error: fetchError } = await supabase
+        .from('chromebook_bookings')
+        .select('id')
+        .eq('user_id', selectedBooking.user_id)
+        .eq('booking_date', selectedBooking.booking_date)
+        .eq('class_name', selectedBooking.class_name)
+        .eq('status', 'active');
+
+      if (fetchError) throw fetchError;
+
+      const bookingIds = relatedBookings?.map(b => b.id) || [selectedBooking.id];
+
       const { error } = await supabase
         .from('chromebook_bookings')
         .delete()
-        .eq('id', selectedBooking.id);
+        .in('id', bookingIds);
 
       if (error) throw error;
 
+      const deleteCount = bookingIds.length;
       toast({
-        title: "Agendamento excluído",
-        description: "O agendamento foi excluído permanentemente.",
+        title: "Devolução realizada!",
+        description: deleteCount > 1 
+          ? `${deleteCount} horários foram devolvidos com sucesso.`
+          : "O agendamento foi devolvido com sucesso.",
       });
 
       onBookingCancelled();
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao excluir agendamento",
+        description: error.message || "Erro ao devolver agendamento",
         variant: "destructive",
       });
     } finally {
