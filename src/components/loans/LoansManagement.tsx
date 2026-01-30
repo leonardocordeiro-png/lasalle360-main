@@ -700,23 +700,27 @@ export function LoansManagement() {
                         </span>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="font-mono text-xs text-foreground max-w-[100px]">
+                        <div className="font-mono text-xs text-foreground">
                           {/* Exibição para equipamento único com it_equipment */}
                           {loan.equipment_id && loan.it_equipment?.id_number ? (
                             <span className="truncate block">{loan.it_equipment.id_number}</span>
                           ) : loan.equipment_id && loan.it_equipment?.patrimony ? (
                             <span className="truncate block">{equipmentMap[loan.it_equipment.patrimony.trim()] || loan.it_equipment.patrimony}</span>
                           ) : hasMultipleEquipments ? (
-                            // Exibição para múltiplos equipamentos - prioriza ID
+                            // Exibição para múltiplos equipamentos - mostra até 10
                             <div className="flex flex-col gap-0.5">
-                              <span className="truncate">{formatEquipmentForDisplay(equipmentsList[0], loan)}</span>
-                              <button
-                                onClick={() => handleViewEquipments(loan)}
-                                className="text-xs text-primary hover:text-primary/80 hover:underline flex items-center gap-1 w-fit"
-                              >
-                                <Eye className="h-3 w-3" />
-                                +{equipmentsList.length - 1}
-                              </button>
+                              {equipmentsList.slice(0, 10).map((eq: string, idx: number) => (
+                                <span key={idx} className="truncate block">{formatEquipmentForDisplay(eq, loan)}</span>
+                              ))}
+                              {equipmentsList.length > 10 && (
+                                <button
+                                  onClick={() => handleViewEquipments(loan)}
+                                  className="text-xs text-primary hover:text-primary/80 hover:underline flex items-center gap-1 w-fit mt-1"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  +{equipmentsList.length - 10} mais
+                                </button>
+                              )}
                             </div>
                           ) : (
                             // Equipamento único sem it_equipment - prioriza ID
