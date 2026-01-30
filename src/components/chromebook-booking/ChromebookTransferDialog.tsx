@@ -107,19 +107,36 @@ export function ChromebookTransferDialog({
 
     setIsTransferring(true);
     try {
+      // Transferir TODOS os agendamentos do mesmo usuário, mesma data e mesma turma
+      // Isso garante que múltiplos horários sejam transferidos juntos
+      const { data: relatedBookings, error: fetchError } = await supabase
+        .from('chromebook_bookings')
+        .select('id')
+        .eq('user_id', booking.user_id)
+        .eq('booking_date', booking.booking_date)
+        .eq('class_name', booking.class_name)
+        .eq('status', 'active');
+
+      if (fetchError) throw fetchError;
+
+      const bookingIds = relatedBookings?.map(b => b.id) || [booking.id];
+
       const { error } = await supabase
         .from('chromebook_bookings')
         .update({
           user_id: selectedUser.user_id,
           full_name: selectedUser.full_name,
         })
-        .eq('id', booking.id);
+        .in('id', bookingIds);
 
       if (error) throw error;
 
+      const transferCount = bookingIds.length;
       toast({
         title: "Transferência realizada!",
-        description: `O agendamento foi transferido para ${selectedUser.full_name}.`,
+        description: transferCount > 1 
+          ? `${transferCount} horários foram transferidos para ${selectedUser.full_name}.`
+          : `O agendamento foi transferido para ${selectedUser.full_name}.`,
       });
 
       onTransferComplete();
