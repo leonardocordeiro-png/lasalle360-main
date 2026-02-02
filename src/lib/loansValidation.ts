@@ -1,19 +1,64 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Buscar equipamento por múltiplos campos (ID, Patrimônio ou Série)
+// Prioridade: 1) Match exato por ID, 2) Match exato por Patrimônio/Série, 3) Match parcial
 export async function searchEquipmentForLoan(searchTerm: string) {
   const trimmedSearch = searchTerm.trim();
   
-  const { data, error } = await supabase
+  if (!trimmedSearch) return [];
+
+  // 1) Primeiro: buscar match EXATO por id_number (prioridade máxima)
+  const { data: exactIdMatch, error: exactIdError } = await supabase
     .from('it_equipment')
     .select('id, id_number, patrimony, serial_number, brand, model, status, equipment_type')
     .eq('status', 'ATIVO')
     .ilike('equipment_type', '%chromebook%')
-    .or(`id_number.ilike.%${trimmedSearch}%,patrimony.ilike.%${trimmedSearch}%,serial_number.ilike.%${trimmedSearch}%`)
+    .eq('id_number', trimmedSearch)
     .limit(10);
 
-  if (error) throw error;
-  return data || [];
+  if (exactIdError) throw exactIdError;
+  
+  // Se encontrou match exato por ID, retorna apenas esses
+  if (exactIdMatch && exactIdMatch.length > 0) {
+    return exactIdMatch;
+  }
+
+  // 2) Segundo: buscar match EXATO por patrimônio ou serial
+  const { data: exactOtherMatch, error: exactOtherError } = await supabase
+    .from('it_equipment')
+    .select('id, id_number, patrimony, serial_number, brand, model, status, equipment_type')
+    .eq('status', 'ATIVO')
+    .ilike('equipment_type', '%chromebook%')
+    .or(`patrimony.eq.${trimmedSearch},serial_number.eq.${trimmedSearch}`)
+    .limit(10);
+
+  if (exactOtherError) throw exactOtherError;
+  
+  // Se encontrou match exato por patrimônio/série, retorna esses
+  if (exactOtherMatch && exactOtherMatch.length > 0) {
+    return exactOtherMatch;
+  }
+
+  // 3) Terceiro: busca parcial (fallback) - mas prioriza id_number no início
+  const { data: partialMatch, error: partialError } = await supabase
+    .from('it_equipment')
+    .select('id, id_number, patrimony, serial_number, brand, model, status, equipment_type')
+    .eq('status', 'ATIVO')
+    .ilike('equipment_type', '%chromebook%')
+    .or(`id_number.ilike.${trimmedSearch}%,patrimony.ilike.%${trimmedSearch}%,serial_number.ilike.%${trimmedSearch}%`)
+    .limit(15);
+
+  if (partialError) throw partialError;
+  
+  // Ordenar resultados: priorizar matches de id_number que começam com o termo
+  const results = partialMatch || [];
+  results.sort((a, b) => {
+    const aIdStartsWith = a.id_number?.toLowerCase().startsWith(trimmedSearch.toLowerCase()) ? 0 : 1;
+    const bIdStartsWith = b.id_number?.toLowerCase().startsWith(trimmedSearch.toLowerCase()) ? 0 : 1;
+    return aIdStartsWith - bIdStartsWith;
+  });
+  
+  return results.slice(0, 10);
 }
 
 // NOVO: validação por ID único (quando usuário seleciona um item da lista)
