@@ -15,15 +15,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { RoomBookingEditDialog } from "./RoomBookingEditDialog";
+
+interface ConsecutiveBooking {
+  id: string;
+  start_time: string;
+  end_time: string;
+}
 
 interface RoomBooking {
   id: string;
@@ -66,6 +82,11 @@ const RoomTimeSlotCardNew = memo(({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [consecutiveBookings, setConsecutiveBookings] = useState<ConsecutiveBooking[]>([]);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [groupAction, setGroupAction] = useState<'cancel' | 'delete' | null>(null);
+  const [applyToAll, setApplyToAll] = useState<'all' | 'single'>('single');
+  const [isLoadingConsecutive, setIsLoadingConsecutive] = useState(false);
 
   const isOwner = booking && booking.user_id === currentUserId;
   const canCancelBooking = booking && (isAdmin || isOwner);
@@ -85,6 +106,85 @@ const RoomTimeSlotCardNew = memo(({
 
   const duration = calculateDuration();
 
+  // Buscar agendamentos consecutivos do mesmo usuário/sala/data
+  const findConsecutiveBookings = async (): Promise<ConsecutiveBooking[]> => {
+    if (!booking) return [];
+    
+    setIsLoadingConsecutive(true);
+    try {
+      const { data, error } = await supabase
+        .from('room_bookings')
+        .select('id, start_time, end_time')
+        .eq('booking_date', booking.booking_date)
+        .eq('room_type', roomType || 'auditorio')
+        .eq('user_id', booking.user_id)
+        .eq('class_name', booking.class_name)
+        .eq('status', 'active')
+        .order('start_time');
+
+      if (error) throw error;
+      
+      if (!data || data.length <= 1) return [];
+      
+      // Encontrar grupo consecutivo que inclui o booking atual
+      const sorted = data.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      const groups: ConsecutiveBooking[][] = [];
+      let currentGroup: ConsecutiveBooking[] = [sorted[0]];
+      
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i].start_time === currentGroup[currentGroup.length - 1].end_time) {
+          currentGroup.push(sorted[i]);
+        } else {
+          if (currentGroup.length > 1) groups.push(currentGroup);
+          currentGroup = [sorted[i]];
+        }
+      }
+      if (currentGroup.length > 1) groups.push(currentGroup);
+      
+      // Encontrar o grupo que contém o booking atual
+      for (const group of groups) {
+        if (group.some(b => b.id === booking.id)) {
+          return group;
+        }
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error finding consecutive bookings:', error);
+      return [];
+    } finally {
+      setIsLoadingConsecutive(false);
+    }
+  };
+
+  const handleActionClick = async (action: 'cancel' | 'delete') => {
+    const consecutive = await findConsecutiveBookings();
+    setConsecutiveBookings(consecutive);
+    setGroupAction(action);
+    setApplyToAll('single');
+    
+    if (consecutive.length > 1) {
+      // Mostrar dialog de escolha
+      setShowGroupDialog(true);
+    } else {
+      // Apenas um agendamento, ir direto para confirmação
+      if (action === 'cancel') {
+        setShowCancelDialog(true);
+      } else {
+        setShowDeleteDialog(true);
+      }
+    }
+  };
+
+  const handleGroupActionConfirm = () => {
+    setShowGroupDialog(false);
+    if (groupAction === 'cancel') {
+      setShowCancelDialog(true);
+    } else if (groupAction === 'delete') {
+      setShowDeleteDialog(true);
+    }
+  };
+
   const handleClick = () => {
     if (isPast) return;
     
@@ -102,19 +202,27 @@ const RoomTimeSlotCardNew = memo(({
     if (!booking) return;
 
     try {
+      const idsToCancel = applyToAll === 'all' && consecutiveBookings.length > 1
+        ? consecutiveBookings.map(b => b.id)
+        : [booking.id];
+
       const { error } = await supabase
         .from('room_bookings')
         .update({ status: 'cancelled' })
-        .eq('id', booking.id);
+        .in('id', idsToCancel);
 
       if (error) throw error;
 
+      const count = idsToCancel.length;
       toast({
         title: "Agendamento cancelado!",
-        description: "O agendamento foi cancelado com sucesso.",
+        description: count > 1 
+          ? `${count} horários foram cancelados com sucesso.`
+          : "O agendamento foi cancelado com sucesso.",
       });
 
       setShowCancelDialog(false);
+      setConsecutiveBookings([]);
       onBookingCancelled?.();
     } catch (error) {
       console.error('Error cancelling booking:', error);
@@ -131,19 +239,27 @@ const RoomTimeSlotCardNew = memo(({
 
     setIsDeleting(true);
     try {
+      const idsToDelete = applyToAll === 'all' && consecutiveBookings.length > 1
+        ? consecutiveBookings.map(b => b.id)
+        : [booking.id];
+
       const { error } = await supabase
         .from('room_bookings')
         .delete()
-        .eq('id', booking.id);
+        .in('id', idsToDelete);
 
       if (error) throw error;
 
+      const count = idsToDelete.length;
       toast({
         title: "Agendamento excluído!",
-        description: "O agendamento foi excluído permanentemente.",
+        description: count > 1 
+          ? `${count} horários foram excluídos permanentemente.`
+          : "O agendamento foi excluído permanentemente.",
       });
 
       setShowDeleteDialog(false);
+      setConsecutiveBookings([]);
       onBookingCancelled?.();
     } catch (error) {
       console.error('Error deleting booking:', error);
@@ -233,8 +349,9 @@ const RoomTimeSlotCardNew = memo(({
                 )}
                 {canCancelBooking && (
                   <DropdownMenuItem 
-                    onClick={() => setShowCancelDialog(true)}
+                    onClick={() => handleActionClick('cancel')}
                     className="text-amber-600"
+                    disabled={isLoadingConsecutive}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Cancelar Agendamento
@@ -244,8 +361,9 @@ const RoomTimeSlotCardNew = memo(({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
-                      onClick={() => setShowDeleteDialog(true)}
+                      onClick={() => handleActionClick('delete')}
                       className="text-destructive"
+                      disabled={isLoadingConsecutive}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Excluir Permanentemente
@@ -299,20 +417,78 @@ const RoomTimeSlotCardNew = memo(({
         </div>
       </Card>
 
+      {/* Diálogo de escolha de grupo */}
+      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {groupAction === 'cancel' ? 'Cancelar agendamento' : 'Excluir agendamento'}
+            </DialogTitle>
+            <DialogDescription>
+              Este horário faz parte de um grupo de <strong>{consecutiveBookings.length} horários consecutivos</strong> agendados.
+              <br /><br />
+              Período completo: <strong>
+                {consecutiveBookings.length > 0 && `${consecutiveBookings[0]?.start_time?.slice(0, 5)} - ${consecutiveBookings[consecutiveBookings.length - 1]?.end_time?.slice(0, 5)}`}
+              </strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <RadioGroup value={applyToAll} onValueChange={(v) => setApplyToAll(v as 'all' | 'single')} className="mt-4">
+            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+              <RadioGroupItem value="single" id="single" className="mt-0.5" />
+              <Label htmlFor="single" className="cursor-pointer flex-1">
+                <span className="font-medium">Apenas este horário</span>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {groupAction === 'cancel' ? 'Cancelar' : 'Excluir'} apenas {timeSlot.start} - {timeSlot.end}
+                </p>
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+              <RadioGroupItem value="all" id="all" className="mt-0.5" />
+              <Label htmlFor="all" className="cursor-pointer flex-1">
+                <span className="font-medium">Todos os {consecutiveBookings.length} horários</span>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {groupAction === 'cancel' ? 'Cancelar' : 'Excluir'} todo o período agendado
+                </p>
+              </Label>
+            </div>
+          </RadioGroup>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowGroupDialog(false)}>
+              Voltar
+            </Button>
+            <Button 
+              onClick={handleGroupActionConfirm}
+              variant={groupAction === 'delete' ? 'destructive' : 'default'}
+              className={groupAction === 'cancel' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+            >
+              Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Diálogo de Cancelamento */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja cancelar o agendamento de{' '}
+              Tem certeza que deseja cancelar {applyToAll === 'all' && consecutiveBookings.length > 1 
+                ? `${consecutiveBookings.length} horários` 
+                : 'o agendamento'} de{' '}
               <strong>{booking?.full_name}</strong>?
               <br />
               Turma: {booking?.class_name}
               <br />
-              Horário: {timeSlot.label}
+              Horário: {applyToAll === 'all' && consecutiveBookings.length > 1
+                ? `${consecutiveBookings[0]?.start_time?.slice(0, 5)} - ${consecutiveBookings[consecutiveBookings.length - 1]?.end_time?.slice(0, 5)}`
+                : timeSlot.label}
               <br /><br />
-              O horário ficará disponível para outras reservas.
+              {applyToAll === 'all' && consecutiveBookings.length > 1 
+                ? 'Os horários ficarão disponíveis para outras reservas.'
+                : 'O horário ficará disponível para outras reservas.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -321,7 +497,7 @@ const RoomTimeSlotCardNew = memo(({
               onClick={handleCancelBooking} 
               className="bg-amber-600 hover:bg-amber-700"
             >
-              Sim, cancelar
+              Sim, cancelar{applyToAll === 'all' && consecutiveBookings.length > 1 ? ` ${consecutiveBookings.length} horários` : ''}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -337,11 +513,15 @@ const RoomTimeSlotCardNew = memo(({
                 Esta ação não pode ser desfeita!
               </span>
               <br /><br />
-              O agendamento de <strong>{booking?.full_name}</strong> será excluído permanentemente do sistema.
+              {applyToAll === 'all' && consecutiveBookings.length > 1
+                ? `${consecutiveBookings.length} horários`
+                : 'O agendamento'} de <strong>{booking?.full_name}</strong> {applyToAll === 'all' && consecutiveBookings.length > 1 ? 'serão excluídos' : 'será excluído'} permanentemente do sistema.
               <br />
               Turma: {booking?.class_name}
               <br />
-              Horário: {timeSlot.label}
+              Horário: {applyToAll === 'all' && consecutiveBookings.length > 1
+                ? `${consecutiveBookings[0]?.start_time?.slice(0, 5)} - ${consecutiveBookings[consecutiveBookings.length - 1]?.end_time?.slice(0, 5)}`
+                : timeSlot.label}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -351,7 +531,7 @@ const RoomTimeSlotCardNew = memo(({
               className="bg-destructive hover:bg-destructive/90"
               disabled={isDeleting}
             >
-              {isDeleting ? "Excluindo..." : "Excluir Permanentemente"}
+              {isDeleting ? "Excluindo..." : `Excluir${applyToAll === 'all' && consecutiveBookings.length > 1 ? ` ${consecutiveBookings.length} horários` : ''}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
