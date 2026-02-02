@@ -88,6 +88,14 @@ const AVAILABLE_MODULES = [
     icon: '📚',
     description: 'Gerenciar atas de conselho de classe'
   },
+  { 
+    name: 'admin_salas_hoje', 
+    label: 'Salas Hoje', 
+    category: 'admin',
+    hasLevels: false,
+    icon: '🔑',
+    description: 'Visualizar agendamentos do dia para controle de chaves'
+  },
 ];
 
 export function UserPermissionsDialog({ open, onOpenChange, userId, userName }: UserPermissionsDialogProps) {

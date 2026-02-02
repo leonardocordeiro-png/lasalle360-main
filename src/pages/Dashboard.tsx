@@ -61,6 +61,7 @@ interface ModulePermissions {
   laboratorio: boolean;
   sala_criativa: boolean;
   loans_management: boolean;
+  admin_salas_hoje: boolean;
 }
 
 export default function Dashboard() {
@@ -84,6 +85,7 @@ export default function Dashboard() {
     laboratorio: true,
     sala_criativa: true,
     loans_management: true,
+    admin_salas_hoje: false,
   });
 
   const [userRoles, setUserRoles] = useState<any[]>([]);
@@ -225,6 +227,7 @@ export default function Dashboard() {
           laboratorio: true,
           sala_criativa: true,
           loans_management: true,
+          admin_salas_hoje: true,
         });
         return;
       }
@@ -240,6 +243,7 @@ export default function Dashboard() {
         laboratorio: permissionsMap['laboratorio'] ?? true,
         sala_criativa: permissionsMap['sala_criativa'] ?? true,
         loans_management: permissionsMap['loans_management'] ?? false,
+        admin_salas_hoje: permissionsMap['admin_salas_hoje'] ?? false,
       });
     } catch (error: any) {
       console.error('Error fetching module permissions:', error);
@@ -249,6 +253,7 @@ export default function Dashboard() {
         laboratorio: true,
         sala_criativa: true,
         loans_management: false,
+        admin_salas_hoje: false,
       });
     }
   };
@@ -582,7 +587,7 @@ export default function Dashboard() {
                   <span>Salas</span>
                 </TabsTrigger>
               )}
-              {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
+              {modulePermissions.admin_salas_hoje && (
                 <TabsTrigger value="today-rooms" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Eye className="h-4 w-4" />
                   <span>Salas Hoje</span>
@@ -690,7 +695,7 @@ export default function Dashboard() {
             </TabsContent>
           )}
 
-          {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
+          {modulePermissions.admin_salas_hoje && (
             <TabsContent value="today-rooms" className="space-y-6">
               <Card className="border-0 shadow-lg">
                 <CardHeader>
