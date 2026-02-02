@@ -38,7 +38,7 @@ export function ChromebookFilterPanel({
     return checkDate < today;
   };
 
-  const maxQuantity = Math.min(50, totalInventory);
+  const maxQuantity = Math.min(200, totalInventory);
 
   return (
     <Card className="h-fit sticky top-4 overflow-hidden">
@@ -146,10 +146,23 @@ export function ChromebookFilterPanel({
               type="number"
               min={1}
               max={maxQuantity}
-              value={quantity}
+              value={quantity || ''}
               onChange={(e) => {
-                const value = parseInt(e.target.value) || 1;
-                onQuantityChange(Math.min(Math.max(value, 1), maxQuantity));
+                const inputValue = e.target.value;
+                if (inputValue === '') {
+                  onQuantityChange(0);
+                  return;
+                }
+                const value = parseInt(inputValue);
+                if (!isNaN(value)) {
+                  onQuantityChange(Math.min(Math.max(value, 1), maxQuantity));
+                }
+              }}
+              onBlur={(e) => {
+                const value = parseInt(e.target.value);
+                if (isNaN(value) || value < 1) {
+                  onQuantityChange(1);
+                }
               }}
               className="w-full"
               placeholder="Digite a quantidade"
