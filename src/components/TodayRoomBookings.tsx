@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Calendar as CalendarIcon, MessageSquare, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Clock, User, Calendar as CalendarIcon, MessageSquare, AlertTriangle } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,7 +20,72 @@ interface RoomBooking {
   status: string;
 }
 
+// Interface para agrupamento de horários consecutivos
+interface GroupedBooking {
+  ids: string[];
+  room_type: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  class_name: string;
+  full_name: string;
+  observations: string[];
+  slots_count: number;
+}
+
 type DateFilter = 'today' | 'week' | 'month';
+
+// Função para agrupar horários consecutivos do mesmo usuário/sala/data
+function groupConsecutiveBookings(bookings: RoomBooking[]): GroupedBooking[] {
+  if (bookings.length === 0) return [];
+  
+  // Ordenar por data, sala, usuário e horário
+  const sorted = [...bookings].sort((a, b) => {
+    if (a.booking_date !== b.booking_date) return a.booking_date.localeCompare(b.booking_date);
+    if (a.room_type !== b.room_type) return a.room_type.localeCompare(b.room_type);
+    if (a.full_name !== b.full_name) return a.full_name.localeCompare(b.full_name);
+    return a.start_time.localeCompare(b.start_time);
+  });
+
+  const grouped: GroupedBooking[] = [];
+  let current: GroupedBooking | null = null;
+
+  for (const booking of sorted) {
+    // Verifica se pode agrupar com o anterior
+    const canGroup = current && 
+      current.booking_date === booking.booking_date &&
+      current.room_type === booking.room_type &&
+      current.full_name === booking.full_name &&
+      current.end_time === booking.start_time;
+
+    if (canGroup && current) {
+      // Estende o grupo atual
+      current.ids.push(booking.id);
+      current.end_time = booking.end_time;
+      current.slots_count++;
+      if (booking.observations?.trim()) {
+        current.observations.push(booking.observations.trim());
+      }
+    } else {
+      // Salva o grupo anterior e inicia um novo
+      if (current) grouped.push(current);
+      current = {
+        ids: [booking.id],
+        room_type: booking.room_type,
+        booking_date: booking.booking_date,
+        start_time: booking.start_time,
+        end_time: booking.end_time,
+        class_name: booking.class_name,
+        full_name: booking.full_name,
+        observations: booking.observations?.trim() ? [booking.observations.trim()] : [],
+        slots_count: 1
+      };
+    }
+  }
+  
+  if (current) grouped.push(current);
+  return grouped;
+}
 
 export function TodayRoomBookings() {
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
@@ -99,7 +164,9 @@ export function TodayRoomBookings() {
     return 'bg-gray-600 hover:bg-gray-700 text-white';
   };
 
-  const isCurrentlyActive = (startTime: string, endTime: string) => {
+  const isCurrentlyActive = (bookingDate: string, startTime: string, endTime: string) => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    if (bookingDate !== today) return false;
     const now = new Date();
     const currentTime = format(now, 'HH:mm:ss');
     return currentTime >= startTime && currentTime <= endTime;
@@ -110,11 +177,11 @@ export function TodayRoomBookings() {
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
           <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-6 w-3/4" />
+            <CardHeader className="pb-2">
+              <Skeleton className="h-5 w-1/2" />
             </CardHeader>
             <CardContent>
-              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-12 w-full" />
             </CardContent>
           </Card>
         ))}
@@ -128,20 +195,26 @@ export function TodayRoomBookings() {
     return 'nos próximos 30 dias';
   };
 
-  const auditorioBookings = bookings.filter(b => b.room_type === 'auditorio');
-  const laboratorioBookings = bookings.filter(b => b.room_type === 'laboratorio');
-  const salaCriativaBookings = bookings.filter(b => b.room_type === 'sala_criativa');
-  const bookingsWithObservations = bookings.filter(b => b.observations && b.observations.trim());
+  // Agrupar horários consecutivos
+  const groupedBookings = groupConsecutiveBookings(bookings);
+  
+  // Contar por tipo de sala (usando agrupados para contagem mais precisa)
+  const auditorioCount = groupedBookings.filter(b => b.room_type === 'auditorio').length;
+  const laboratorioCount = groupedBookings.filter(b => b.room_type === 'laboratorio').length;
+  const salaCriativaCount = groupedBookings.filter(b => b.room_type === 'sala_criativa').length;
+  
+  // Agendamentos com observações
+  const bookingsWithObservations = groupedBookings.filter(b => b.observations.length > 0);
 
   // Agrupar por data
-  const bookingsByDate = bookings.reduce((acc, booking) => {
+  const bookingsByDate = groupedBookings.reduce((acc, booking) => {
     const date = booking.booking_date;
     if (!acc[date]) {
       acc[date] = [];
     }
     acc[date].push(booking);
     return acc;
-  }, {} as Record<string, RoomBooking[]>);
+  }, {} as Record<string, GroupedBooking[]>);
 
   const sortedDates = Object.keys(bookingsByDate).sort();
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -177,184 +250,115 @@ export function TodayRoomBookings() {
         </Card>
       )}
 
-      {/* Resumo */}
-      {bookings.length > 0 && (
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              Resumo - {dateFilter === 'today' ? format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : `Próximos ${dateFilter === 'week' ? '7' : '30'} dias`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-                <p className="text-sm text-muted-foreground mb-1">Auditório</p>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{auditorioBookings.length}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-                <p className="text-sm text-muted-foreground mb-1">Laboratório</p>
-                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{laboratorioBookings.length}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-                <p className="text-sm text-muted-foreground mb-1">Sala Criativa</p>
-                <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{salaCriativaBookings.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Resumo compacto */}
+      {groupedBookings.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center">
+            <p className="text-xs text-muted-foreground">Auditório</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{auditorioCount}</p>
+          </div>
+          <div className="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-3 text-center">
+            <p className="text-xs text-muted-foreground">Laboratório</p>
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{laboratorioCount}</p>
+          </div>
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-center">
+            <p className="text-xs text-muted-foreground">Sala Criativa</p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{salaCriativaCount}</p>
+          </div>
+        </div>
       )}
 
-      {/* Alerta de solicitações especiais */}
+      {/* Alerta compacto de solicitações especiais */}
       {bookingsWithObservations.length > 0 && (
-        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-300 dark:border-amber-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="h-5 w-5" />
-              Atenção: {bookingsWithObservations.length} reserva(s) com solicitações especiais
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-amber-800 dark:text-amber-300 mb-4">
-              Os agendamentos abaixo possuem observações ou solicitações de recursos. Organize com antecedência!
-            </p>
-            <div className="space-y-3">
-              {bookingsWithObservations.map((booking) => {
-                const isBookingToday = booking.booking_date === todayStr;
-                const bookingDateFormatted = format(new Date(booking.booking_date + 'T12:00:00'), "dd/MM (EEEE)", { locale: ptBR });
-                
-                return (
-                  <div 
-                    key={booking.id} 
-                    className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-amber-200 dark:border-amber-700"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Badge className={getRoomTypeBadgeClass(booking.room_type)}>
-                            {getRoomTypeLabel(booking.room_type)}
-                          </Badge>
-                          <Badge variant={isBookingToday ? "default" : "outline"} className={isBookingToday ? "bg-green-600" : ""}>
-                            {isBookingToday ? '📍 Hoje' : bookingDateFormatted}
-                          </Badge>
-                          <span className="text-sm font-medium">
-                            {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
-                          </span>
-                        </div>
-                        <p className="font-medium">{booking.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{booking.class_name}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-md">
-                      <div className="flex items-start gap-2">
-                        <MessageSquare className="h-4 w-4 text-amber-700 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-amber-800 dark:text-amber-300">
-                          {booking.observations}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 rounded-lg p-3">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="text-sm font-medium">
+              {bookingsWithObservations.length} reserva(s) com solicitações especiais
+            </span>
+          </div>
+        </div>
       )}
 
       {/* Lista de agendamentos agrupados por data */}
       {sortedDates.map((date) => {
         const dateBookings = bookingsByDate[date];
         const isToday = date === todayStr;
-        const formattedDate = format(new Date(date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR });
-        const dateObservations = dateBookings.filter(b => b.observations && b.observations.trim());
+        const formattedDate = format(new Date(date + 'T12:00:00'), "EEEE, dd/MM", { locale: ptBR });
         
         return (
-          <div key={date} className="space-y-3">
-            {/* Cabeçalho da data */}
-            <div className={`flex items-center gap-3 p-3 rounded-lg ${isToday ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
-              <CalendarIcon className={`h-5 w-5 ${isToday ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`} />
-              <div className="flex-1">
-                <p className={`font-semibold capitalize ${isToday ? 'text-green-700 dark:text-green-300' : ''}`}>
-                  {isToday ? '📍 Hoje - ' : ''}{formattedDate}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {dateBookings.length} agendamento(s)
-                  {dateObservations.length > 0 && (
-                    <span className="text-amber-600 dark:text-amber-400 ml-2">
-                      • {dateObservations.length} com solicitações
-                    </span>
-                  )}
-                </p>
+          <div key={date} className="space-y-2">
+            {/* Cabeçalho da data - apenas se não for hoje ou se houver múltiplas datas */}
+            {(sortedDates.length > 1 || !isToday) && (
+              <div className={`flex items-center gap-2 px-2 py-1 rounded ${isToday ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                <CalendarIcon className={`h-4 w-4 ${isToday ? 'text-green-600' : 'text-gray-500'}`} />
+                <span className={`text-sm font-medium capitalize ${isToday ? 'text-green-700 dark:text-green-300' : ''}`}>
+                  {isToday ? '📍 Hoje' : formattedDate}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  ({dateBookings.length} reserva{dateBookings.length > 1 ? 's' : ''})
+                </span>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
+            )}
 
-            {/* Bookings do dia */}
-            {dateBookings.map((booking) => {
-              const isActive = isToday && isCurrentlyActive(booking.start_time, booking.end_time);
-              const hasObservations = booking.observations && booking.observations.trim();
-              
-              return (
-                <Card 
-                  key={booking.id} 
-                  className={`transition-all ml-4 ${isActive ? 'border-2 border-green-500 shadow-lg bg-green-50 dark:bg-green-950' : ''} ${hasObservations ? 'border-l-4 border-l-amber-500' : ''}`}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Badge className={getRoomTypeBadgeClass(booking.room_type)}>
-                            {getRoomTypeLabel(booking.room_type)}
+            {/* Cards dos agendamentos - agrupados */}
+            <div className="space-y-2">
+              {dateBookings.map((booking) => {
+                const isActive = isCurrentlyActive(booking.booking_date, booking.start_time, booking.end_time);
+                const hasObservations = booking.observations.length > 0;
+                const uniqueObservations = [...new Set(booking.observations)];
+                
+                return (
+                  <div 
+                    key={booking.ids.join('-')} 
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      isActive 
+                        ? 'border-green-500 bg-green-50 dark:bg-green-950 shadow-md' 
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
+                    }`}
+                  >
+                    {/* Badge da sala */}
+                    <Badge className={`${getRoomTypeBadgeClass(booking.room_type)} shrink-0`}>
+                      {getRoomTypeLabel(booking.room_type)}
+                    </Badge>
+                    
+                    {/* Informações principais */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm truncate">{booking.full_name}</span>
+                        {booking.slots_count > 1 && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {booking.slots_count} horários
                           </Badge>
-                          {isActive && (
-                            <Badge className="bg-green-600 hover:bg-green-700 text-white animate-pulse">
-                              EM USO AGORA
-                            </Badge>
-                          )}
-                          {hasObservations && (
-                            <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400">
-                              <MessageSquare className="h-3 w-3 mr-1" />
-                              Tem solicitação
-                            </Badge>
-                          )}
-                        </div>
-                        <h3 className="font-semibold text-lg">{booking.class_name}</h3>
+                        )}
+                        {isActive && (
+                          <Badge className="bg-green-600 text-white text-xs animate-pulse shrink-0">
+                            EM USO
+                          </Badge>
+                        )}
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
                           {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
                         </span>
+                        <span>{booking.class_name}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{booking.full_name}</span>
-                      </div>
-                    </div>
-                    
-                    {hasObservations && (
-                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-3 rounded-md">
-                        <div className="flex items-start gap-2">
-                          <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">
-                              Observações / Solicitações:
-                            </p>
-                            <p className="text-sm text-amber-800 dark:text-amber-300">
-                              {booking.observations}
-                            </p>
+                      
+                      {/* Observações inline */}
+                      {hasObservations && (
+                        <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-xs text-amber-800 dark:text-amber-300">
+                          <div className="flex items-start gap-1">
+                            <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span>{uniqueObservations.join(' | ')}</span>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       })}
