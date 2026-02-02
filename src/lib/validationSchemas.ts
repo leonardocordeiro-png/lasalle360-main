@@ -65,7 +65,7 @@ export const bookingSchema = z.object({
     .number()
     .int({ message: "Quantidade deve ser um número inteiro" })
     .min(1, { message: "Quantidade deve ser pelo menos 1" })
-    .max(50, { message: "Máximo de 50 Chromebooks por agendamento" }),
+    .max(200, { message: "Máximo de 200 Chromebooks por agendamento" }),
   bookingDate: z
     .date({
       required_error: "Data é obrigatória",
@@ -147,7 +147,7 @@ export const loanSchema = z.object({
   class_name: z.string().optional(),
   equipment_type: z.enum(["professor", "aluno"]),
   chromebook_number: z.string().optional(),
-  quantity: z.number().int().min(1).max(50),
+  quantity: z.number().int().min(1).max(200),
   loan_date: z.date(),
   pickup_time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
   expected_return_date: z.date().nullable().optional(),
