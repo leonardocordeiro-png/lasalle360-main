@@ -91,15 +91,43 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      Promise.all([
-        fetchProfile(),
-        fetchModulePermissions(),
-        fetchBookings(),
-        fetchSystemConfigAndAvailability(),
-        fetchRoomBookings()
-      ]).finally(() => {
+      // Primeiro verificar se é admin, depois buscar agendamentos
+      const initializeData = async () => {
+        // Verificar se é admin
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        
+        const isUserAdmin = !!roleData;
+
+        // Agora buscar dados com a informação de admin
+        await Promise.all([
+          fetchProfile(),
+          fetchModulePermissions(),
+          fetchBookings(isUserAdmin),
+          fetchSystemConfigAndAvailability(),
+          fetchRoomBookings(isUserAdmin)
+        ]);
+        
         setLoading(false);
-      });
+      };
+
+      initializeData();
+
+      // Armazenar referência do status admin para os channels
+      let isAdminRef = false;
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle()
+        .then(({ data }) => {
+          isAdminRef = !!data;
+        });
 
       const chromebookChannel = supabase
         .channel('chromebook-bookings-changes')
@@ -111,7 +139,7 @@ export default function Dashboard() {
             table: 'chromebook_bookings'
           },
           () => {
-            fetchBookings();
+            fetchBookings(isAdminRef);
             fetchSystemConfigAndAvailability();
           }
         )
@@ -127,7 +155,7 @@ export default function Dashboard() {
             table: 'room_bookings'
           },
           () => {
-            fetchRoomBookings();
+            fetchRoomBookings(isAdminRef);
           }
         )
         .subscribe();
@@ -225,18 +253,23 @@ export default function Dashboard() {
     }
   };
 
-  const fetchRoomBookings = async () => {
+  const fetchRoomBookings = async (isUserAdmin = false) => {
     try {
       if (!user?.id) return;
 
-      // Otimização: buscar todas as salas em uma única query
-      const { data: allRoomBookings, error } = await supabase
+      // Admins veem todos os agendamentos, usuários normais veem apenas os seus
+      let query = supabase
         .from('room_bookings')
-        .select('id, room_type, booking_date, start_time, end_time, class_name, observations, status, full_name')
-        .eq('user_id', user.id)
+        .select('id, room_type, booking_date, start_time, end_time, class_name, observations, status, full_name, user_id')
         .eq('status', 'active')
         .in('room_type', ['auditorio', 'laboratorio', 'sala_criativa'])
         .order('booking_date', { ascending: true });
+
+      if (!isUserAdmin) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data: allRoomBookings, error } = await query;
 
       if (error) throw error;
 
@@ -253,17 +286,22 @@ export default function Dashboard() {
     }
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (isUserAdmin = false) => {
     try {
       if (!user?.id) return;
 
-      // Otimização: buscar apenas agendamentos do usuário e colunas necessárias
-      const { data, error } = await supabase
+      // Admins veem todos os agendamentos, usuários normais veem apenas os seus
+      let query = supabase
         .from('chromebook_bookings')
         .select('id, user_id, full_name, class_name, quantity, booking_date, start_time, end_time, status, created_at')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100);
+
+      if (!isUserAdmin) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setBookings(data || []);
