@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, School, FlaskConical, User, Mail, CheckCircle2, Loader2, Lightbulb, MessageSquare, X, Volume2, Monitor, Projector, Droplets, Sparkles, PresentationIcon } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar, Clock, School, FlaskConical, User, Mail, CheckCircle2, Loader2, Lightbulb, MessageSquare, X, Volume2, Monitor, Projector, Droplets, Sparkles, PresentationIcon, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -330,26 +329,28 @@ export function RoomBookingSummary({
                   {AUDITORIO_RESOURCES.map((resource) => {
                     const ResourceIcon = resource.icon;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={resource.id}
                         className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
                           selectedResources.includes(resource.id)
                             ? 'bg-primary/10 border-primary'
                             : 'bg-muted/30 border-transparent hover:bg-muted/50'
                         }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleResource(resource.id);
-                        }}
+                        onClick={() => toggleResource(resource.id)}
                       >
-                        <Checkbox
-                          checked={selectedResources.includes(resource.id)}
-                          className="pointer-events-none"
-                        />
+                        <div className={`h-4 w-4 rounded border flex items-center justify-center ${
+                          selectedResources.includes(resource.id)
+                            ? 'bg-primary border-primary'
+                            : 'border-muted-foreground/30'
+                        }`}>
+                          {selectedResources.includes(resource.id) && (
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          )}
+                        </div>
                         <ResourceIcon className="h-4 w-4 text-muted-foreground" />
                         <span className="text-xs">{resource.label}</span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
