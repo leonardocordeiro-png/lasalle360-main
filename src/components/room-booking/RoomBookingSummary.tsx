@@ -211,7 +211,7 @@ export function RoomBookingSummary({
       // Se for Auditório, enviar e-mail para aprovadores
       if (isAuditorio && newBookings && newBookings.length > 0) {
         try {
-          await supabase.functions.invoke('send-approval-request-email', {
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-approval-request-email', {
             body: {
               bookings: newBookings,
               userName: fullName,
@@ -221,8 +221,14 @@ export function RoomBookingSummary({
               observations: observations.trim() || null,
             },
           });
+          
+          if (emailError) {
+            console.error('Error sending approval email:', emailError);
+          } else {
+            console.log('Approval email sent:', emailResult);
+          }
         } catch (emailError) {
-          console.error('Error sending approval email:', emailError);
+          console.error('Error invoking approval email function:', emailError);
         }
       }
 
