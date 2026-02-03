@@ -96,6 +96,17 @@ export function PendingApprovalsTab() {
     return !error && data?.is_active === true;
   }, []);
 
+  const markNotificationsAsRead = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from('approval_notifications')
+      .update({ is_read: true })
+      .eq('approver_id', user.id)
+      .eq('is_read', false);
+  }, []);
+
   const fetchPendingBookings = useCallback(async () => {
     try {
       setLoading(true);
@@ -107,6 +118,9 @@ export function PendingApprovalsTab() {
         setPendingBookings([]);
         return;
       }
+
+      // Mark notifications as read when viewing
+      markNotificationsAsRead();
 
       const { data, error } = await supabase
         .from('room_bookings')

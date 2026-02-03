@@ -92,6 +92,7 @@ export default function Dashboard() {
 
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [userPermissions, setUserPermissions] = useState<any[]>([]);
+  const [unreadApprovals, setUnreadApprovals] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -113,7 +114,8 @@ export default function Dashboard() {
           fetchModulePermissions(),
           fetchBookings(isUserAdmin),
           fetchSystemConfigAndAvailability(),
-          fetchRoomBookings(isUserAdmin)
+          fetchRoomBookings(isUserAdmin),
+          fetchUnreadApprovals()
         ]);
         
         setLoading(false);
@@ -257,6 +259,24 @@ export default function Dashboard() {
         loans_management: false,
         admin_salas_hoje: false,
       });
+    }
+  };
+
+  const fetchUnreadApprovals = async () => {
+    try {
+      if (!user?.id) return;
+      
+      const { count, error } = await supabase
+        .from('approval_notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('approver_id', user.id)
+        .eq('is_read', false);
+      
+      if (!error) {
+        setUnreadApprovals(count || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching unread approvals:', error);
     }
   };
 
@@ -595,9 +615,14 @@ export default function Dashboard() {
                   <span>Salas Hoje</span>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
                 <ClipboardCheck className="h-4 w-4" />
                 <span>Aprovações</span>
+                {unreadApprovals > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                    {unreadApprovals > 9 ? '9+' : unreadApprovals}
+                  </span>
+                )}
               </TabsTrigger>
               <TabsTrigger value="bookings" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <ListChecks className="h-4 w-4" />
