@@ -3,9 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Clock, X, AlertCircle, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, X, Calendar, ChevronLeft, ChevronRight, Laptop, Users } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -22,20 +21,21 @@ interface Booking {
   created_at: string;
 }
 
-interface ConsolidatedBooking {
+interface GroupedByDate {
+  date: string;
+  dateFormatted: string;
+  dayOfWeek: string;
+  bookings: DayBooking[];
+}
+
+interface DayBooking {
   user_id: string;
   full_name: string;
   quantity: number;
-  booking_date: string;
   status: string;
-  created_at: string;
-  bookings: Booking[];
-  classTimeSlots: Array<{
-    class_name: string;
-    start_time: string;
-    end_time: string;
-    id: string;
-  }>;
+  classes: string[];
+  timeRange: string;
+  bookingIds: string[];
 }
 
 interface ConsolidatedBookingsListProps {
@@ -65,51 +65,64 @@ export default function ConsolidatedBookingsList({
     });
   }, [bookings, selectedMonth]);
 
-  // Consolidar agendamentos por usuário, data e quantidade
-  const consolidatedBookings: ConsolidatedBooking[] = filteredBookings.reduce((acc: ConsolidatedBooking[], booking: Booking) => {
-    const existingGroup = acc.find(group => 
-      group.user_id === booking.user_id &&
-      group.booking_date === booking.booking_date &&
-      group.quantity === booking.quantity &&
-      group.status === booking.status
-    );
+  // Agrupar por data, depois por usuário/quantidade/status
+  const groupedByDate = useMemo((): GroupedByDate[] => {
+    const dateMap = new Map<string, Map<string, DayBooking>>();
+    
+    filteredBookings.forEach(booking => {
+      const date = booking.booking_date;
+      const key = `${booking.user_id}-${booking.quantity}-${booking.status}`;
+      
+      if (!dateMap.has(date)) {
+        dateMap.set(date, new Map());
+      }
+      
+      const dayMap = dateMap.get(date)!;
+      
+      if (dayMap.has(key)) {
+        const existing = dayMap.get(key)!;
+        if (!existing.classes.includes(booking.class_name)) {
+          existing.classes.push(booking.class_name);
+        }
+        existing.bookingIds.push(booking.id);
+        // Atualizar range de horários
+        const times = [...existing.bookingIds, booking.id]
+          .map(id => filteredBookings.find(b => b.id === id))
+          .filter(Boolean)
+          .map(b => ({ start: b!.start_time, end: b!.end_time }))
+          .sort((a, b) => a.start.localeCompare(b.start));
+        
+        if (times.length > 0) {
+          const firstTime = times[0].start.substring(0, 5);
+          const lastTime = times[times.length - 1].end.substring(0, 5);
+          existing.timeRange = `${firstTime} - ${lastTime}`;
+        }
+      } else {
+        dayMap.set(key, {
+          user_id: booking.user_id,
+          full_name: booking.full_name,
+          quantity: booking.quantity,
+          status: booking.status,
+          classes: [booking.class_name],
+          timeRange: `${booking.start_time.substring(0, 5)} - ${booking.end_time.substring(0, 5)}`,
+          bookingIds: [booking.id]
+        });
+      }
+    });
+    
+    // Converter para array e ordenar por data (mais recente primeiro)
+    return Array.from(dateMap.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([date, dayMap]) => ({
+        date,
+        dateFormatted: format(parseISO(date), "dd/MM", { locale: ptBR }),
+        dayOfWeek: format(parseISO(date), "EEE", { locale: ptBR }),
+        bookings: Array.from(dayMap.values())
+      }));
+  }, [filteredBookings]);
 
-    if (existingGroup) {
-      existingGroup.bookings.push(booking);
-      existingGroup.classTimeSlots.push({
-        class_name: booking.class_name,
-        start_time: booking.start_time,
-        end_time: booking.end_time,
-        id: booking.id
-      });
-    } else {
-      acc.push({
-        user_id: booking.user_id,
-        full_name: booking.full_name,
-        quantity: booking.quantity,
-        booking_date: booking.booking_date,
-        status: booking.status,
-        created_at: booking.created_at,
-        bookings: [booking],
-        classTimeSlots: [{
-          class_name: booking.class_name,
-          start_time: booking.start_time,
-          end_time: booking.end_time,
-          id: booking.id
-        }]
-      });
-    }
-
-    return acc;
-  }, []);
-
-  // Ordenar por data (mais recentes primeiro)
-  const sortedConsolidatedBookings = consolidatedBookings.sort((a, b) => 
-    new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
-  );
-
-  const handleCancelBookingGroup = async (consolidatedBooking: ConsolidatedBooking) => {
-    if (!isAdmin && consolidatedBooking.user_id !== currentUserId) {
+  const handleCancelBooking = async (dayBooking: DayBooking) => {
+    if (!isAdmin && dayBooking.user_id !== currentUserId) {
       toast({
         variant: "destructive",
         title: "Acesso negado",
@@ -118,23 +131,22 @@ export default function ConsolidatedBookingsList({
       return;
     }
 
-    const bookingIds = consolidatedBooking.bookings.map(b => b.id);
-    bookingIds.forEach(id => setCancellingBookings(prev => new Set(prev).add(id)));
+    dayBooking.bookingIds.forEach(id => setCancellingBookings(prev => new Set(prev).add(id)));
 
     try {
       const { error } = await supabase
         .from('chromebook_bookings')
         .update({ status: 'cancelled' })
-        .in('id', bookingIds);
+        .in('id', dayBooking.bookingIds);
 
       if (error) throw error;
 
       toast({
-        title: "Agendamentos cancelados",
-        description: `${bookingIds.length} agendamentos de ${consolidatedBooking.quantity} chromebooks foram cancelados`,
+        title: "Cancelado",
+        description: `${dayBooking.quantity} chromebooks cancelados`,
       });
 
-      bookingIds.forEach(id => onBookingCancelled(id));
+      dayBooking.bookingIds.forEach(id => onBookingCancelled(id));
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -142,7 +154,7 @@ export default function ConsolidatedBookingsList({
         description: error.message,
       });
     } finally {
-      bookingIds.forEach(id => 
+      dayBooking.bookingIds.forEach(id => 
         setCancellingBookings(prev => {
           const newSet = new Set(prev);
           newSet.delete(id);
@@ -152,182 +164,148 @@ export default function ConsolidatedBookingsList({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      active: { label: 'Ativo', variant: 'default' as const, className: 'bg-success text-success-foreground' },
-      cancelled: { label: 'Cancelado', variant: 'secondary' as const, className: 'bg-muted text-muted-foreground' }
-    };
-    
-    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.active;
-    
-    return (
-      <Badge variant={statusInfo.variant} className={statusInfo.className}>
-        {statusInfo.label}
-      </Badge>
-    );
+  const canCancel = (dayBooking: DayBooking) => {
+    return dayBooking.status === 'active' && (isAdmin || dayBooking.user_id === currentUserId);
   };
 
-  const canCancelBooking = (consolidatedBooking: ConsolidatedBooking) => {
-    return consolidatedBooking.status === 'active' && (isAdmin || consolidatedBooking.user_id === currentUserId);
+  const isCancelling = (dayBooking: DayBooking) => {
+    return dayBooking.bookingIds.some(id => cancellingBookings.has(id));
   };
 
-  const isUpcoming = (bookingDate: string) => {
-    const today = new Date();
-    const booking = parseISO(bookingDate);
-    return booking >= today;
-  };
+  const handlePreviousMonth = () => setSelectedMonth(prev => subMonths(prev, 1));
+  const handleNextMonth = () => setSelectedMonth(prev => addMonths(prev, 1));
+  const handleCurrentMonth = () => setSelectedMonth(new Date());
 
-  const hasCancellingBookings = (consolidatedBooking: ConsolidatedBooking) => {
-    return consolidatedBooking.bookings.some(booking => cancellingBookings.has(booking.id));
-  };
-
-  const handlePreviousMonth = () => {
-    setSelectedMonth(prev => subMonths(prev, 1));
-  };
-
-  const handleNextMonth = () => {
-    setSelectedMonth(prev => addMonths(prev, 1));
-  };
-
-  const handleCurrentMonth = () => {
-    setSelectedMonth(new Date());
-  };
-
-  // Contar agendamentos ativos e cancelados do mês
-  const activeCount = sortedConsolidatedBookings.filter(b => b.status === 'active').length;
-  const cancelledCount = sortedConsolidatedBookings.filter(b => b.status === 'cancelled').length;
+  // Contagem
+  const totalBookings = filteredBookings.length;
+  const activeCount = filteredBookings.filter(b => b.status === 'active').length;
+  const cancelledCount = filteredBookings.filter(b => b.status === 'cancelled').length;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-0 shadow-none">
+      <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            Agendamentos de Chromebooks
-          </CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Laptop className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Chromebooks</CardTitle>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  {activeCount} ativos
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-gray-400" />
+                  {cancelledCount} cancelados
+                </span>
+              </div>
+            </div>
+          </div>
           
           {/* Navegação de Mês */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePreviousMonth}
-              className="h-8 w-8"
-            >
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
-            <Button
-              variant="outline"
-              onClick={handleCurrentMonth}
-              className="min-w-[140px] capitalize"
-            >
-              {format(selectedMonth, "MMMM 'de' yyyy", { locale: ptBR })}
+            <Button variant="ghost" onClick={handleCurrentMonth} className="h-8 px-3 text-sm font-medium">
+              {format(selectedMonth, "MMM yyyy", { locale: ptBR })}
             </Button>
-            
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNextMonth}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
-
-        {/* Resumo do mês */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
-            <span className="whitespace-nowrap">{activeCount} ativo(s)</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-muted-foreground flex-shrink-0" />
-            <span className="whitespace-nowrap">{cancelledCount} cancelado(s)</span>
-          </span>
-          <span className="text-xs whitespace-nowrap">
-            Total: {sortedConsolidatedBookings.length} agendamento(s)
-          </span>
-        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {sortedConsolidatedBookings.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum agendamento encontrado em {format(selectedMonth, "MMMM 'de' yyyy", { locale: ptBR })}</p>
-            <Button
-              variant="link"
-              onClick={handleCurrentMonth}
-              className="mt-2"
-            >
-              Ir para o mês atual
-            </Button>
+
+      <CardContent className="pt-0">
+        {groupedByDate.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Calendar className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">Nenhum agendamento em {format(selectedMonth, "MMMM", { locale: ptBR })}</p>
           </div>
         ) : (
-          sortedConsolidatedBookings.map((consolidatedBooking, index) => (
-            <div
-              key={`${consolidatedBooking.user_id}-${consolidatedBooking.booking_date}-${index}`}
-              className={`p-4 border rounded-lg transition-colors ${
-                consolidatedBooking.status === 'active' 
-                  ? 'border-border hover:bg-muted/50' 
-                  : 'border-muted bg-muted/30'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium text-sm">
-                      {consolidatedBooking.classTimeSlots.length === 1 
-                        ? consolidatedBooking.classTimeSlots[0].class_name
-                        : `${consolidatedBooking.classTimeSlots.length} turmas`
-                      }
-                    </h4>
-                    {getStatusBadge(consolidatedBooking.status)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {consolidatedBooking.full_name}
-                  </p>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {format(parseISO(consolidatedBooking.booking_date), "dd/MM/yyyy (EEEE)", { locale: ptBR })}
-                    </div>
-                    {consolidatedBooking.classTimeSlots.map((slot, slotIndex) => (
-                      <div key={slotIndex} className="ml-4 text-xs">
-                        {slot.class_name} • {slot.start_time} - {slot.end_time}
-                      </div>
-                    ))}
-                  </div>
+          <div className="space-y-1">
+            {groupedByDate.map((dateGroup) => (
+              <div key={dateGroup.date} className="rounded-lg overflow-hidden">
+                {/* Cabeçalho da Data */}
+                <div className="flex items-center gap-2 py-2 px-3 bg-muted/50 sticky top-0">
+                  <span className="text-sm font-semibold text-foreground">
+                    {dateGroup.dateFormatted}
+                  </span>
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {dateGroup.dayOfWeek}
+                  </span>
                 </div>
                 
-                <div className="text-right">
-                  <div className="text-sm font-medium text-primary">
-                    {consolidatedBooking.quantity} chromebooks
-                  </div>
-                  {canCancelBooking(consolidatedBooking) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCancelBookingGroup(consolidatedBooking)}
-                      disabled={hasCancellingBookings(consolidatedBooking)}
-                      className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 mt-1"
+                {/* Bookings do dia */}
+                <div className="divide-y divide-border/50">
+                  {dateGroup.bookings.map((booking, idx) => (
+                    <div
+                      key={`${booking.user_id}-${idx}`}
+                      className={`flex items-center justify-between py-3 px-3 ${
+                        booking.status === 'cancelled' ? 'opacity-50' : 'hover:bg-muted/30'
+                      }`}
                     >
-                      <X className="h-3 w-3 mr-1" />
-                      {hasCancellingBookings(consolidatedBooking) ? 'Cancelando...' : 'Cancelar'}
-                    </Button>
-                  )}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Horário */}
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-24">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span className="font-mono">{booking.timeRange}</span>
+                        </div>
+                        
+                        {/* Turma(s) */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">
+                              {booking.classes.length === 1 
+                                ? booking.classes[0] 
+                                : `${booking.classes.length} turmas`}
+                            </span>
+                            {booking.status === 'cancelled' && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                Cancelado
+                              </Badge>
+                            )}
+                          </div>
+                          {booking.classes.length > 1 && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {booking.classes.join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Quantidade e Ações */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <span className="text-sm font-semibold text-primary">
+                            {booking.quantity}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            un.
+                          </span>
+                        </div>
+                        
+                        {canCancel(booking) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCancelBooking(booking)}
+                            disabled={isCancelling(booking)}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {consolidatedBooking.status === 'active' && !isUpcoming(consolidatedBooking.booking_date) && (
-                <div className="flex items-center gap-1 text-xs text-warning mt-2 p-2 bg-warning/10 rounded">
-                  <AlertCircle className="h-3 w-3" />
-                  <span>Agendamento passado</span>
-                </div>
-              )}
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
