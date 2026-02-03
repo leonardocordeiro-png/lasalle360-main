@@ -255,7 +255,7 @@ export default function ConsolidatedBookingsList({
                           <span className="font-mono">{booking.timeRange}</span>
                         </div>
                         
-                        {/* Turma(s) */}
+                        {/* Turma(s) e Usuário */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium truncate">
@@ -269,11 +269,13 @@ export default function ConsolidatedBookingsList({
                               </Badge>
                             )}
                           </div>
-                          {booking.classes.length > 1 && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {booking.classes.join(', ')}
-                            </p>
-                          )}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Users className="h-3 w-3" />
+                            <span className="truncate">{booking.full_name}</span>
+                            {booking.classes.length > 1 && (
+                              <span className="truncate hidden sm:inline">• {booking.classes.join(', ')}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
