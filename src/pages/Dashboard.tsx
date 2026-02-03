@@ -166,11 +166,26 @@ export default function Dashboard() {
         )
         .subscribe();
 
-      // Removido polling de 30s - realtime subscriptions já cuidam das atualizações
+      // Subscription para notificações de aprovação (atualiza badge em tempo real)
+      const approvalNotificationsChannel = supabase
+        .channel('approval-notifications-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'approval_notifications'
+          },
+          () => {
+            fetchUnreadApprovals();
+          }
+        )
+        .subscribe();
 
       return () => {
         chromebookChannel.unsubscribe();
         roomChannel.unsubscribe();
+        approvalNotificationsChannel.unsubscribe();
       };
     }
   }, [user]);
