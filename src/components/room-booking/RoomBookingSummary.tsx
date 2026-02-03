@@ -337,7 +337,11 @@ export function RoomBookingSummary({
                             ? 'bg-primary/10 border-primary'
                             : 'bg-muted/30 border-transparent hover:bg-muted/50'
                         }`}
-                        onClick={() => toggleResource(resource.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleResource(resource.id);
+                        }}
                       >
                         <Checkbox
                           checked={selectedResources.includes(resource.id)}
