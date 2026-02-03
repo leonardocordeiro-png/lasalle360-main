@@ -12,6 +12,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { bookingEmailQueue } from "@/lib/bookingEmailQueue";
 
+const AUDITORIO_RESOURCES = [
+  { id: 'som', label: 'Som', icon: Volume2 },
+  { id: 'computador', label: 'Computador', icon: Monitor },
+  { id: 'projetor', label: 'Projetor', icon: Projector },
+  { id: 'agua', label: 'Água', icon: Droplets },
+  { id: 'limpeza', label: 'Limpeza do Ambiente', icon: Sparkles },
+  { id: 'quadro_branco', label: 'Quadro Branco', icon: PresentationIcon },
+];
+
 interface TimeSlot {
   start: string;
   end: string;
@@ -41,15 +50,6 @@ export function RoomBookingSummary({
   const [fullName, setFullName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
-
-  const AUDITORIO_RESOURCES = [
-    { id: 'som', label: 'Som', icon: Volume2 },
-    { id: 'computador', label: 'Computador', icon: Monitor },
-    { id: 'projetor', label: 'Projetor', icon: Projector },
-    { id: 'agua', label: 'Água', icon: Droplets },
-    { id: 'limpeza', label: 'Limpeza do Ambiente', icon: Sparkles },
-    { id: 'quadro_branco', label: 'Quadro Branco', icon: PresentationIcon },
-  ];
 
   const toggleResource = (resourceId: string) => {
     setSelectedResources(prev => 
@@ -341,7 +341,6 @@ export function RoomBookingSummary({
                       >
                         <Checkbox
                           checked={selectedResources.includes(resource.id)}
-                          onCheckedChange={() => toggleResource(resource.id)}
                           className="pointer-events-none"
                         />
                         <ResourceIcon className="h-4 w-4 text-muted-foreground" />
