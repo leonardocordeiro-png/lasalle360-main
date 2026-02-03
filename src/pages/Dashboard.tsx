@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Chrome, Calendar, Clock, Users, LogOut, School, FlaskConical, ListChecks, Eye, Package, DoorOpen, Lightbulb, Shield } from 'lucide-react';
+import { Chrome, Calendar, Clock, Users, LogOut, School, FlaskConical, ListChecks, Eye, Package, DoorOpen, Lightbulb, Shield, ClipboardCheck } from 'lucide-react';
 import estrelaLogo from '@/assets/Estrela_La_Salle.png';
 import { toast } from '@/hooks/use-toast';
 import BookingDialog from '@/components/BookingDialog';
@@ -15,6 +15,7 @@ import ConsolidatedBookingsList from '@/components/ConsolidatedBookingsList';
 import { RoomBookingPage } from '@/components/room-booking/RoomBookingPage';
 import { RoomBookingsList } from '@/components/RoomBookingsList';
 import { TodayRoomBookings } from '@/components/TodayRoomBookings';
+import { PendingApprovalsTab } from '@/components/PendingApprovalsTab';
 import { TodayChromebookBookings } from '@/components/TodayChromebookBookings';
 import { LoansManagement } from '@/components/loans/LoansManagement';
 import { ChromebookBookingPage } from '@/components/chromebook-booking';
@@ -46,6 +47,7 @@ interface RoomBooking {
   observations: string | null;
   status: string;
   full_name: string;
+  approval_status?: string;
 }
 
 interface Profile {
@@ -593,6 +595,10 @@ export default function Dashboard() {
                   <span>Salas Hoje</span>
                 </TabsTrigger>
               )}
+              <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <ClipboardCheck className="h-4 w-4" />
+                <span>Aprovações</span>
+              </TabsTrigger>
               <TabsTrigger value="bookings" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <ListChecks className="h-4 w-4" />
                 <span>Todos Agendamentos</span>
@@ -713,6 +719,10 @@ export default function Dashboard() {
               </Card>
             </TabsContent>
           )}
+
+          <TabsContent value="approvals" className="space-y-6">
+            <PendingApprovalsTab />
+          </TabsContent>
 
           <TabsContent value="bookings" className="space-y-6">
             <Card className="border-0 shadow-lg">

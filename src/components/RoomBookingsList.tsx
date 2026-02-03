@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, MessageSquare } from "lucide-react";
+import { Calendar, Clock, Users, MessageSquare, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -14,6 +14,7 @@ interface RoomBooking {
   observations: string | null;
   status: string;
   full_name: string;
+  approval_status?: string;
 }
 
 interface GroupedBooking {
@@ -27,6 +28,7 @@ interface GroupedBooking {
   status: string;
   full_name: string;
   slots_count: number;
+  approval_status?: string;
 }
 
 interface RoomBookingsListProps {
@@ -75,7 +77,8 @@ function groupConsecutiveBookings(bookings: RoomBooking[]): GroupedBooking[] {
         observations: booking.observations?.trim() ? [booking.observations.trim()] : [],
         status: booking.status,
         full_name: booking.full_name,
-        slots_count: 1
+        slots_count: 1,
+        approval_status: booking.approval_status
       };
     }
   }
@@ -165,9 +168,37 @@ export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomB
             </div>
             
             {/* Status */}
-            <Badge variant={booking.status === 'active' ? 'default' : 'secondary'} className="shrink-0">
-              {booking.status === 'active' ? 'Ativo' : 'Cancelado'}
-            </Badge>
+            {booking.room_type === 'auditorio' && booking.approval_status && booking.approval_status !== 'approved' ? (
+              <Badge 
+                variant={booking.approval_status === 'pending' ? 'secondary' : 'destructive'} 
+                className={`shrink-0 flex items-center gap-1 ${
+                  booking.approval_status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-300' : ''
+                }`}
+              >
+                {booking.approval_status === 'pending' && <Loader2 className="h-3 w-3 animate-spin" />}
+                {booking.approval_status === 'rejected' && <XCircle className="h-3 w-3" />}
+                {booking.approval_status === 'expired' && <XCircle className="h-3 w-3" />}
+                {booking.approval_status === 'pending' ? 'Aguardando' : 
+                 booking.approval_status === 'rejected' ? 'Rejeitado' : 
+                 booking.approval_status === 'expired' ? 'Expirado' : booking.approval_status}
+              </Badge>
+            ) : (
+              <Badge 
+                variant={booking.status === 'active' ? 'default' : 'secondary'} 
+                className={`shrink-0 flex items-center gap-1 ${
+                  booking.approval_status === 'approved' && booking.room_type === 'auditorio' 
+                    ? 'bg-green-100 text-green-800 border-green-300' 
+                    : ''
+                }`}
+              >
+                {booking.approval_status === 'approved' && booking.room_type === 'auditorio' && (
+                  <CheckCircle2 className="h-3 w-3" />
+                )}
+                {booking.status === 'active' 
+                  ? (booking.approval_status === 'approved' && booking.room_type === 'auditorio' ? 'Aprovado' : 'Ativo')
+                  : 'Cancelado'}
+              </Badge>
+            )}
           </div>
         );
       })}

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Shield, Eye } from 'lucide-react';
+import { Loader2, Shield, Eye, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserPermission {
@@ -102,12 +102,37 @@ export function UserPermissionsDialog({ open, onOpenChange, userId, userName }: 
   const [permissions, setPermissions] = useState<UserPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isApprover, setIsApprover] = useState(false);
 
   useEffect(() => {
     if (open && userId) {
       fetchPermissions();
+      fetchApproverStatus();
     }
   }, [open, userId]);
+
+  const fetchApproverStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('room_booking_approvers')
+        .select('id, is_active')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!error && data) {
+        setIsApprover(data.is_active);
+      } else {
+        setIsApprover(false);
+      }
+    } catch (error) {
+      console.error('Error fetching approver status:', error);
+      setIsApprover(false);
+    }
+  };
+
+  const toggleApprover = async (checked: boolean) => {
+    setIsApprover(checked);
+  };
 
   const fetchPermissions = async () => {
     try {
@@ -201,6 +226,30 @@ export function UserPermissionsDialog({ open, onOpenChange, userId, userName }: 
 
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) throw new Error("Usuário não autenticado para salvar permissões.");
+
+      // Save approver status
+      if (isApprover) {
+        const { error: approverError } = await supabase
+          .from('room_booking_approvers')
+          .upsert({
+            user_id: userId,
+            is_active: true,
+          }, { onConflict: 'user_id' });
+
+        if (approverError) {
+          console.error('Error saving approver status:', approverError);
+        }
+      } else {
+        // Remove or deactivate approver
+        const { error: deleteError } = await supabase
+          .from('room_booking_approvers')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteError) {
+          console.error('Error removing approver:', deleteError);
+        }
+      }
 
       // Upsert all permissions
       for (const permission of permissions) {
@@ -383,6 +432,48 @@ export function UserPermissionsDialog({ open, onOpenChange, userId, userName }: 
                       </div>
                     );
                   })}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Aprovador do Auditório */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                ✅ Aprovações
+              </h3>
+              <div className="rounded-lg border p-4 space-y-3">
+                <div className="flex flex-wrap items-start gap-2">
+                  <span className="text-xl">🏫</span>
+                  <div className="flex-1">
+                    <h4 className="font-medium">Aprovador do Auditório</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Receber e-mails e aprovar reservas do Auditório
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label htmlFor="approver-switch" className="text-sm flex items-center gap-2">
+                    {isApprover ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        Este usuário é um aprovador
+                      </>
+                    ) : (
+                      'Não é aprovador'
+                    )}
+                  </Label>
+                  <Switch
+                    id="approver-switch"
+                    checked={isApprover}
+                    onCheckedChange={toggleApprover}
+                  />
+                </div>
+                {isApprover && (
+                  <p className="text-xs text-muted-foreground bg-amber-50 p-2 rounded">
+                    📧 Este usuário receberá e-mails quando alguém solicitar reserva do Auditório e poderá aprovar/rejeitar no sistema.
+                  </p>
+                )}
               </div>
             </div>
           </div>

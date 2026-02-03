@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, School, FlaskConical, User, Mail, CheckCircle2, Loader2, Lightbulb, MessageSquare, X } from "lucide-react";
+import { Calendar, Clock, School, FlaskConical, User, Mail, CheckCircle2, Loader2, Lightbulb, MessageSquare, X, Volume2, Monitor, Projector, Droplets, Sparkles, PresentationIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,24 @@ export function RoomBookingSummary({
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [selectedResources, setSelectedResources] = useState<string[]>([]);
+
+  const AUDITORIO_RESOURCES = [
+    { id: 'som', label: 'Som', icon: Volume2 },
+    { id: 'computador', label: 'Computador', icon: Monitor },
+    { id: 'projetor', label: 'Projetor', icon: Projector },
+    { id: 'agua', label: 'Água', icon: Droplets },
+    { id: 'limpeza', label: 'Limpeza do Ambiente', icon: Sparkles },
+    { id: 'quadro_branco', label: 'Quadro Branco', icon: PresentationIcon },
+  ];
+
+  const toggleResource = (resourceId: string) => {
+    setSelectedResources(prev => 
+      prev.includes(resourceId) 
+        ? prev.filter(r => r !== resourceId)
+        : [...prev, resourceId]
+    );
+  };
   const { toast } = useToast();
 
   const roomInfo: Record<string, { name: string; icon: typeof School }> = {
@@ -82,6 +101,7 @@ export function RoomBookingSummary({
   useEffect(() => {
     if (selectedSlots.length === 0) {
       setClassName("");
+      setSelectedResources([]);
     }
   }, [selectedSlots]);
 
@@ -120,6 +140,12 @@ export function RoomBookingSummary({
         return;
       }
 
+      // Para Auditório: precisa de aprovação e tem prazo de 48h
+      const isAuditorio = roomType === 'auditorio';
+      const approvalDeadline = isAuditorio 
+        ? new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() 
+        : null;
+
       // Criar múltiplas reservas
       const bookingsToCreate = selectedSlots.map(slot => ({
         user_id: user.id,
@@ -131,6 +157,9 @@ export function RoomBookingSummary({
         class_name: className.trim(),
         observations: observations.trim() || null,
         status: 'active',
+        resources: isAuditorio ? selectedResources : [],
+        approval_status: isAuditorio ? 'pending' : 'approved',
+        approval_deadline: approvalDeadline,
       }));
 
       const { data: newBookings, error } = await supabase
@@ -180,12 +209,33 @@ export function RoomBookingSummary({
         ? `às ${selectedSlots[0].start}` 
         : `em ${selectedSlots.length} horários`;
 
+      // Se for Auditório, enviar e-mail para aprovadores
+      if (isAuditorio && newBookings && newBookings.length > 0) {
+        try {
+          await supabase.functions.invoke('send-approval-request-email', {
+            body: {
+              bookings: newBookings,
+              userName: fullName,
+              userEmail: user.email,
+              roomName,
+              resources: selectedResources,
+              observations: observations.trim() || null,
+            },
+          });
+        } catch (emailError) {
+          console.error('Error sending approval email:', emailError);
+        }
+      }
+
       toast({
-        title: "Reserva(s) confirmada(s)!",
-        description: `${roomName} reservada com sucesso para ${format(selectedDate, "dd/MM/yyyy")} ${slotsText}`,
+        title: isAuditorio ? "Reserva enviada para aprovação!" : "Reserva(s) confirmada(s)!",
+        description: isAuditorio 
+          ? `Aguardando aprovação. Você será notificado em até 48 horas.`
+          : `${roomName} reservada com sucesso para ${format(selectedDate, "dd/MM/yyyy")} ${slotsText}`,
       });
 
       setClassName("");
+      setSelectedResources([]);
       onClearSelection();
       onBookingCreated();
     } catch (error) {
@@ -270,6 +320,44 @@ export function RoomBookingSummary({
               />
             </div>
 
+            {/* Recursos do Auditório */}
+            {roomType === 'auditorio' && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">
+                  Recursos Necessários
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {AUDITORIO_RESOURCES.map((resource) => {
+                    const ResourceIcon = resource.icon;
+                    return (
+                      <div
+                        key={resource.id}
+                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                          selectedResources.includes(resource.id)
+                            ? 'bg-primary/10 border-primary'
+                            : 'bg-muted/30 border-transparent hover:bg-muted/50'
+                        }`}
+                        onClick={() => toggleResource(resource.id)}
+                      >
+                        <Checkbox
+                          checked={selectedResources.includes(resource.id)}
+                          onCheckedChange={() => toggleResource(resource.id)}
+                          className="pointer-events-none"
+                        />
+                        <ResourceIcon className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs">{resource.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {selectedResources.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedResources.length} recurso(s) selecionado(s)
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Observações (se houver) */}
             {observations.trim() && (
               <div className="space-y-2">
@@ -280,6 +368,17 @@ export function RoomBookingSummary({
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
                   {observations}
                 </div>
+              </div>
+            )}
+
+            {/* Aviso de aprovação para Auditório */}
+            {roomType === 'auditorio' && (
+              <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                <Clock className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong>Atenção:</strong> Reservas do Auditório necessitam de aprovação. 
+                  Você será notificado em até 48 horas.
+                </span>
               </div>
             )}
 
