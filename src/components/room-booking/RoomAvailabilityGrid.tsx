@@ -76,8 +76,8 @@ export function RoomAvailabilityGrid({
     sala_criativa: {
       name: "Sala Criativa",
       icon: Lightbulb,
-      capacity: 30,
-      resources: ["Materiais Criativos", "Projetor", "Mesas Colaborativas"],
+      capacity: 0,
+      resources: ["Materiais Criativos", "Computadores", "Mesas Colaborativas"],
     },
   };
 
@@ -161,10 +161,12 @@ export function RoomAvailabilityGrid({
           <div className="flex-1">
             <h3 className="font-semibold text-lg">{currentRoom.name}</h3>
             <div className="flex flex-wrap items-center gap-3 mt-1">
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>{currentRoom.capacity} lugares</span>
-              </div>
+              {currentRoom.capacity > 0 && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>{currentRoom.capacity} lugares</span>
+                </div>
+              )}
               {currentRoom.resources.map((resource, idx) => (
                 <Badge key={idx} variant="secondary" className="text-xs">
                   {resource}
