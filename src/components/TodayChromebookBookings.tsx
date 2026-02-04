@@ -28,6 +28,16 @@ interface GroupedBooking {
   user_id: string;
 }
 
+// Função para formatar nome: primeiro nome + último sobrenome
+const formatUserName = (fullName: string) => {
+  if (!fullName) return '';
+  
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName;
+  
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
 interface TodayChromebookBookingsProps {
   totalInventory: number;
   selectedDate?: Date;
@@ -182,7 +192,7 @@ export function TodayChromebookBookings({ totalInventory, selectedDate }: TodayC
                   <div className="flex items-start gap-2">
                     <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{group.full_name}</p>
+                      <p className="text-sm font-medium truncate">{formatUserName(group.full_name)}</p>
                       <p className="text-xs text-muted-foreground">{group.class_name}</p>
                     </div>
                   </div>
