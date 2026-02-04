@@ -131,6 +131,15 @@ const DashboardComponent = () => {
         
         setIsUserApprover(!!approverData);
 
+        // Debug: Log para verificar status do usuário
+        console.log('Debug - User Status:', {
+          userId: user.id,
+          userEmail: user.email,
+          isAdmin: isUserAdmin,
+          isApprover: !!approverData,
+          shouldShowApprovals: isUserAdmin || !!approverData
+        });
+
         // Agora buscar dados com a informação de admin
         await Promise.all([
           fetchProfile(),
@@ -654,15 +663,18 @@ const DashboardComponent = () => {
                 </TabsTrigger>
               )}
               {(isUserAdmin || isUserApprover) && (
-                <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
-                  <ClipboardCheck className="h-4 w-4" />
-                  <span>Aprovações</span>
-                  {unreadApprovals > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                      {unreadApprovals > 9 ? '9+' : unreadApprovals}
-                    </span>
-                  )}
-                </TabsTrigger>
+                <>
+                  {console.log('Debug - Rendering Approvals Tab:', { isUserAdmin, isUserApprover })}
+                  <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
+                    <ClipboardCheck className="h-4 w-4" />
+                    <span>Aprovações</span>
+                    {unreadApprovals > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                        {unreadApprovals > 9 ? '9+' : unreadApprovals}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </>
               )}
               <TabsTrigger value="bookings" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <ListChecks className="h-4 w-4" />
