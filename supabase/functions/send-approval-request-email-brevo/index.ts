@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-const SENDER_EMAIL = Deno.env.get("BREVO_SENDER_EMAIL") || "sistema@lasalle360.com";
+const SENDER_EMAIL = "sistema@lasalle360.com";
 const SENDER_NAME = Deno.env.get("BREVO_SENDER_NAME") || "Sistema de Agendamentos La Salle";
 
 const buildCorsHeaders = (origin: string | null) => {
