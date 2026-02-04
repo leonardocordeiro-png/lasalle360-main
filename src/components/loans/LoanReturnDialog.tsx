@@ -420,26 +420,27 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
               )}
             />
 
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isLoading}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isLoading || returnQuantity === 0}
-                className={isPartialReturn ? "bg-amber-600 hover:bg-amber-700" : "bg-green-600 hover:bg-green-700"}
+                className={`w-full sm:w-auto ${isPartialReturn ? "bg-amber-600 hover:bg-amber-700" : "bg-green-600 hover:bg-green-700"}`}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {returnQuantity === 0 
-                  ? "Selecione equipamentos"
+                  ? "Selecione"
                   : isPartialReturn 
-                    ? `Devolver ${returnQuantity} equipamento(s)` 
-                    : "Confirmar Devolução Total"
+                    ? `Devolver ${returnQuantity}` 
+                    : "Confirmar Devolução"
                 }
               </Button>
             </div>
