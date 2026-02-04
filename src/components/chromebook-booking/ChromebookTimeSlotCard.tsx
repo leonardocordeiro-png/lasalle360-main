@@ -232,7 +232,13 @@ export function ChromebookTimeSlotCard({
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                     <div className="truncate">
-                      <span className="font-medium">{booking.full_name?.split(' ')[0]}</span>
+                      <span className="font-medium">
+                        {(() => {
+                          const parts = booking.full_name?.split(' ') || [];
+                          if (parts.length <= 2) return booking.full_name;
+                          return `${parts[0]} ${parts[parts.length - 1]}`;
+                        })()}
+                      </span>
                       <span className="text-muted-foreground ml-1">({booking.class_name})</span>
                     </div>
                   </div>
