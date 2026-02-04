@@ -184,7 +184,7 @@ export default function Dashboard() {
           {
             event: '*',
             schema: 'public',
-            table: 'approval_notifications'
+            table: 'approval_notifications' as any
           },
           () => {
             fetchUnreadApprovals();
@@ -292,7 +292,7 @@ export default function Dashboard() {
       if (!user?.id) return;
       
       const { count, error } = await supabase
-        .from('approval_notifications')
+        .from('approval_notifications' as any)
         .select('*', { count: 'exact', head: true })
         .eq('approver_id', user.id)
         .eq('is_read', false);

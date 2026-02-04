@@ -14,6 +14,7 @@ export function useNotificationPermission() {
     default: true,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
     if (!('Notification' in window)) {
@@ -51,7 +52,14 @@ export function useNotificationPermission() {
       return false;
     }
 
+    // Check if we're in a secure context (HTTPS or localhost)
+    if (window.isSecureContext === false) {
+      console.warn('Notifications require a secure context (HTTPS or localhost)');
+      return false;
+    }
+
     try {
+      setIsRequesting(true);
       const result = await Notification.requestPermission();
       const granted = result === 'granted';
       
@@ -63,18 +71,24 @@ export function useNotificationPermission() {
 
       if (granted) {
         // Send a welcome notification
-        new Notification('🔔 Notificações Ativadas', {
-          body: 'Você receberá alertas sobre novas aprovações pendentes!',
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
-          tag: 'welcome',
-        });
+        try {
+          new Notification('🔔 Notificações Ativadas', {
+            body: 'Você receberá alertas sobre novas aprovações pendentes!',
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            tag: 'welcome',
+          });
+        } catch (notificationError) {
+          console.warn('Could not show welcome notification:', notificationError);
+        }
       }
 
       return granted;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
       return false;
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -94,6 +108,7 @@ export function useNotificationPermission() {
   return {
     permission,
     isLoading,
+    isRequesting,
     requestPermission,
     showNotification,
     isSupported: 'Notification' in window,

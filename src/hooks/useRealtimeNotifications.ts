@@ -17,7 +17,7 @@ export function useRealtimeNotifications() {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'approval_notifications',
+          table: 'approval_notifications' as any,
           filter: 'is_read=eq.false'
         },
         async (payload) => {

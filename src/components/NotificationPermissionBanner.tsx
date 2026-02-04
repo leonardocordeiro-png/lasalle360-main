@@ -1,7 +1,8 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Bell, BellOff, X } from 'lucide-react';
+import { Bell, BellOff, X, Loader2 } from 'lucide-react';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { useState } from 'react';
 
 interface NotificationPermissionBannerProps {
   onDismiss?: () => void;
@@ -9,15 +10,25 @@ interface NotificationPermissionBannerProps {
 
 export function NotificationPermissionBanner({ onDismiss }: NotificationPermissionBannerProps) {
   const { permission, isLoading, requestPermission, isSupported } = useNotificationPermission();
+  const [isRequesting, setIsRequesting] = useState(false);
 
   if (!isSupported || isLoading || permission.granted || permission.denied) {
     return null;
   }
 
   const handleEnable = async () => {
-    const granted = await requestPermission();
-    if (granted && onDismiss) {
-      onDismiss();
+    if (isRequesting) return;
+    
+    setIsRequesting(true);
+    try {
+      const granted = await requestPermission();
+      if (granted && onDismiss) {
+        onDismiss();
+      }
+    } catch (error) {
+      console.error('Error requesting permission:', error);
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -45,10 +56,20 @@ export function NotificationPermissionBanner({ onDismiss }: NotificationPermissi
                 <Button 
                   size="sm" 
                   onClick={handleEnable}
+                  disabled={isRequesting}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Ativar Notificações
+                  {isRequesting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Solicitando...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Ativar Notificações
+                    </>
+                  )}
                 </Button>
                 <Button 
                   size="sm" 
