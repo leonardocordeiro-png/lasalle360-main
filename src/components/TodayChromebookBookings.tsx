@@ -30,18 +30,22 @@ interface GroupedBooking {
 
 interface TodayChromebookBookingsProps {
   totalInventory: number;
+  selectedDate?: Date;
 }
 
-export function TodayChromebookBookings({ totalInventory }: TodayChromebookBookingsProps) {
+export function TodayChromebookBookings({ totalInventory, selectedDate }: TodayChromebookBookingsProps) {
   const [bookings, setBookings] = useState<ChromebookBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const dateToFetch = selectedDate || new Date();
+  const dateStr = format(dateToFetch, 'yyyy-MM-dd');
 
   useEffect(() => {
-    fetchTodayBookings();
+    fetchBookings();
 
     // Set up realtime subscription
     const channel = supabase
-      .channel('today-chromebook-bookings')
+      .channel('selected-date-chromebook-bookings')
       .on(
         'postgres_changes',
         {
@@ -50,7 +54,7 @@ export function TodayChromebookBookings({ totalInventory }: TodayChromebookBooki
           table: 'chromebook_bookings'
         },
         () => {
-          fetchTodayBookings();
+          fetchBookings();
         }
       )
       .subscribe();
@@ -58,23 +62,23 @@ export function TodayChromebookBookings({ totalInventory }: TodayChromebookBooki
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [dateStr]);
 
-  const fetchTodayBookings = async () => {
+  const fetchBookings = async () => {
     try {
-      const today = format(new Date(), 'yyyy-MM-dd');
+      setLoading(true);
       
       const { data, error } = await supabase
         .from('chromebook_bookings')
         .select('*')
-        .eq('booking_date', today)
+        .eq('booking_date', dateStr)
         .eq('status', 'active')
         .order('start_time', { ascending: true });
 
       if (error) throw error;
       setBookings(data || []);
     } catch (error) {
-      console.error('Error fetching today chromebook bookings:', error);
+      console.error('Error fetching chromebook bookings:', error);
     } finally {
       setLoading(false);
     }
@@ -137,11 +141,15 @@ export function TodayChromebookBookings({ totalInventory }: TodayChromebookBooki
     );
   }
 
+  // Verificar se é hoje
+  const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+  const dateLabel = isToday ? 'hoje' : format(dateToFetch, "dd/MM", { locale: ptBR });
+
   if (groupedBookings.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <Chrome className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>Nenhum agendamento de Chromebooks para hoje</p>
+        <p>Nenhum agendamento para {isToday ? 'hoje' : format(dateToFetch, "dd 'de' MMMM", { locale: ptBR })}</p>
       </div>
     );
   }
@@ -150,7 +158,7 @@ export function TodayChromebookBookings({ totalInventory }: TodayChromebookBooki
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {groupedBookings.length} {groupedBookings.length === 1 ? 'agendamento' : 'agendamentos'} hoje
+          {groupedBookings.length} {groupedBookings.length === 1 ? 'agendamento' : 'agendamentos'} {isToday ? 'hoje' : `em ${dateLabel}`}
         </div>
       </div>
 

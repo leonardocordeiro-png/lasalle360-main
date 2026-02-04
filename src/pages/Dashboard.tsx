@@ -93,6 +93,7 @@ export default function Dashboard() {
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [userPermissions, setUserPermissions] = useState<any[]>([]);
   const [unreadApprovals, setUnreadApprovals] = useState(0);
+  const [selectedChromebookDate, setSelectedChromebookDate] = useState<Date>(new Date());
 
   useEffect(() => {
     if (user) {
@@ -652,6 +653,7 @@ export default function Dashboard() {
                 <ChromebookBookingPage
                   onBookingCreated={handleBookingCreated}
                   totalInventory={totalInventory}
+                  onDateChange={setSelectedChromebookDate}
                 />
               </div>
               <div>
@@ -659,11 +661,13 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Chrome className="h-5 w-5 text-primary" />
-                      Agendamentos de Hoje
+                      Agendamentos {format(selectedChromebookDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') 
+                        ? 'de Hoje' 
+                        : `de ${format(selectedChromebookDate, "dd/MM", { locale: ptBR })}`}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <TodayChromebookBookings totalInventory={totalInventory} />
+                    <TodayChromebookBookings totalInventory={totalInventory} selectedDate={selectedChromebookDate} />
                   </CardContent>
                 </Card>
               </div>

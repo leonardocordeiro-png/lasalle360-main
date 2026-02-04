@@ -27,9 +27,10 @@ interface TimeSlot {
 interface ChromebookBookingPageProps {
   onBookingCreated: () => void;
   totalInventory: number;
+  onDateChange?: (date: Date) => void;
 }
 
-export function ChromebookBookingPage({ onBookingCreated, totalInventory }: ChromebookBookingPageProps) {
+export function ChromebookBookingPage({ onBookingCreated, totalInventory, onDateChange }: ChromebookBookingPageProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [bookings, setBookings] = useState<ChromebookBooking[]>([]);
@@ -43,10 +44,11 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory }: Chro
   const selectedDateRef = useRef<Date>(selectedDate);
   const isInitialMount = useRef(true);
 
-  // Atualizar ref quando a data muda
+  // Atualizar ref quando a data muda e notificar parent
   useEffect(() => {
     selectedDateRef.current = selectedDate;
-  }, [selectedDate]);
+    onDateChange?.(selectedDate);
+  }, [selectedDate, onDateChange]);
 
   useEffect(() => {
     const fetchUserData = async () => {
