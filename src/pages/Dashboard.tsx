@@ -23,6 +23,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { UserDropdown } from '@/components/ui/user-dropdown';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Booking {
   id: string;
