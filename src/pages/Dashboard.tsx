@@ -131,7 +131,19 @@ const DashboardComponent = () => {
           .eq('is_active', true)
           .maybeSingle();
         
-        setIsUserApprover(!!approverData);
+        const approverStatus = !!approverData;
+        setIsUserApprover(approverStatus);
+
+        // Debug: Verificar valores reais
+        console.log('DEBUG - Status do Usuário:', {
+          userId: user.id,
+          userEmail: user.email,
+          adminStatus,
+          approverStatus,
+          shouldShowApprovals: adminStatus || approverStatus,
+          roleData,
+          approverData
+        });
 
         // Agora buscar dados com a informação de admin
         await Promise.all([
@@ -486,7 +498,8 @@ const DashboardComponent = () => {
       (modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) ? "salas" :
         modulePermissions.admin_salas_hoje ? "today-rooms" :
           (isUserAdmin || isUserApprover) ? "approvals" :
-            "bookings";
+            isUserAdmin ? "bookings" :
+              "chromebooks";
 
   // Dados do usuário para o dropdown
   const userDropdownData = {
@@ -656,20 +669,28 @@ const DashboardComponent = () => {
                 </TabsTrigger>
               )}
               {(isUserAdmin || isUserApprover) && (
-                <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
-                  <ClipboardCheck className="h-4 w-4" />
-                  <span>Aprovações</span>
-                  {unreadApprovals > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                      {unreadApprovals > 9 ? '9+' : unreadApprovals}
-                    </span>
-                  )}
-                </TabsTrigger>
+                <>
+                  {console.log('DEBUG - Renderizando Aba Aprovações:', { isUserAdmin, isUserApprover })}
+                  <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
+                    <ClipboardCheck className="h-4 w-4" />
+                    <span>Aprovações</span>
+                    {unreadApprovals > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                        {unreadApprovals > 9 ? '9+' : unreadApprovals}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </>
               )}
-              <TabsTrigger value="bookings" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <ListChecks className="h-4 w-4" />
-                <span>Todos Agendamentos</span>
-              </TabsTrigger>
+              {isUserAdmin && (
+                <>
+                  {console.log('DEBUG - Renderizando Aba Todos Agendamentos:', { isUserAdmin })}
+                  <TabsTrigger value="bookings" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                    <ListChecks className="h-4 w-4" />
+                    <span>Todos Agendamentos</span>
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
           </div>
 
@@ -796,24 +817,26 @@ const DashboardComponent = () => {
             </TabsContent>
           )}
 
-          <TabsContent value="bookings" className="space-y-6">
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle>Todos os Agendamentos</CardTitle>
-                <CardDescription>
-                  Visualize todos os seus agendamentos de Chromebooks, Auditório e Laboratório
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ConsolidatedBookingsList
-                  bookings={bookings}
-                  onBookingCancelled={handleBookingCancelled}
-                  isAdmin={profile?.is_admin || false}
-                  currentUserId={user?.id || ''}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {isUserAdmin && (
+            <TabsContent value="bookings" className="space-y-6">
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle>Todos os Agendamentos</CardTitle>
+                  <CardDescription>
+                    Visualize todos os seus agendamentos de Chromebooks, Auditório e Laboratório
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ConsolidatedBookingsList
+                    bookings={bookings}
+                    onBookingCancelled={handleBookingCancelled}
+                    isAdmin={profile?.is_admin || false}
+                    currentUserId={user?.id || ''}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
