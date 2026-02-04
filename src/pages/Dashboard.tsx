@@ -22,6 +22,9 @@ import { ChromebookBookingPage } from '@/components/chromebook-booking';
 import { NotificationBell } from '@/components/NotificationBell';
 import { UserDropdown } from '@/components/ui/user-dropdown';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
+import { NotificationPermissionBanner } from '@/components/NotificationPermissionBanner';
+import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -95,6 +98,11 @@ export default function Dashboard() {
   const [userPermissions, setUserPermissions] = useState<any[]>([]);
   const [unreadApprovals, setUnreadApprovals] = useState(0);
   const [selectedChromebookDate, setSelectedChromebookDate] = useState<Date>(new Date());
+  const [showNotificationBanner, setShowNotificationBanner] = useState(true);
+
+  // Initialize notification hooks
+  const { permission: notificationPermission } = useNotificationPermission();
+  const { lastNotification } = useRealtimeNotifications();
 
   useEffect(() => {
     if (user) {
@@ -581,6 +589,13 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Notification Permission Banner */}
+        {showNotificationBanner && (
+          <div className="mb-8">
+            <NotificationPermissionBanner onDismiss={() => setShowNotificationBanner(false)} />
+          </div>
+        )}
 
         {/* Alert Message */}
         <Card className="mb-8 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950 dark:to-orange-950 border-red-200 dark:border-red-800 shadow-lg">
