@@ -211,7 +211,7 @@ export function RoomBookingSummary({
       // Se for Auditório, enviar e-mail para aprovadores
       if (isAuditorio && newBookings && newBookings.length > 0) {
         try {
-          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-approval-request-email', {
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-approval-request-email-brevo', {
             body: {
               bookings: newBookings,
               userName: fullName,
