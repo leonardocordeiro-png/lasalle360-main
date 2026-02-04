@@ -100,6 +100,7 @@ const DashboardComponent = () => {
   const [unreadApprovals, setUnreadApprovals] = useState(0);
   const [selectedChromebookDate, setSelectedChromebookDate] = useState<Date>(new Date());
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
+  const [isUserApprover, setIsUserApprover] = useState(false);
 
   // Initialize notification hooks
   const { permission: notificationPermission } = useNotificationPermission();
@@ -119,6 +120,16 @@ const DashboardComponent = () => {
           .maybeSingle();
         
         isUserAdmin = !!roleData;
+
+        // Verificar se é aprovador
+        const { data: approverData } = await supabase
+          .from('room_booking_approvers')
+          .select('is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        setIsUserApprover(!!approverData);
 
         // Agora buscar dados com a informação de admin
         await Promise.all([
@@ -471,7 +482,9 @@ const DashboardComponent = () => {
   const defaultTab = modulePermissions.chromebooks ? "chromebooks" :
     modulePermissions.loans_management ? "emprestimos" :
       (modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) ? "salas" :
-        "bookings";
+        modulePermissions.admin_salas_hoje ? "today-rooms" :
+          (isUserAdmin || isUserApprover) ? "approvals" :
+            "bookings";
 
   // Dados do usuário para o dropdown
   const userDropdownData = {
@@ -640,15 +653,17 @@ const DashboardComponent = () => {
                   <span>Salas Hoje</span>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
-                <ClipboardCheck className="h-4 w-4" />
-                <span>Aprovações</span>
-                {unreadApprovals > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                    {unreadApprovals > 9 ? '9+' : unreadApprovals}
-                  </span>
-                )}
-              </TabsTrigger>
+              {(isUserAdmin || isUserApprover) && (
+                <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
+                  <ClipboardCheck className="h-4 w-4" />
+                  <span>Aprovações</span>
+                  {unreadApprovals > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                      {unreadApprovals > 9 ? '9+' : unreadApprovals}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
               <TabsTrigger value="bookings" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <ListChecks className="h-4 w-4" />
                 <span>Todos Agendamentos</span>
@@ -773,9 +788,11 @@ const DashboardComponent = () => {
             </TabsContent>
           )}
 
-          <TabsContent value="approvals" className="space-y-6">
-            <PendingApprovalsTab />
-          </TabsContent>
+          {(isUserAdmin || isUserApprover) && (
+            <TabsContent value="approvals" className="space-y-6">
+              <PendingApprovalsTab />
+            </TabsContent>
+          )}
 
           <TabsContent value="bookings" className="space-y-6">
             <Card className="border-0 shadow-lg">
