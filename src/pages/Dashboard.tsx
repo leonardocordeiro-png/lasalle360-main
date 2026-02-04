@@ -107,6 +107,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       // Primeiro verificar se é admin, depois buscar agendamentos
+      let isUserAdmin = false;
       const initializeData = async () => {
         // Verificar se é admin
         const { data: roleData } = await supabase
@@ -116,7 +117,7 @@ export default function Dashboard() {
           .eq('role', 'admin')
           .maybeSingle();
         
-        const isUserAdmin = !!roleData;
+        isUserAdmin = !!roleData;
 
         // Agora buscar dados com a informação de admin
         await Promise.all([
@@ -133,17 +134,8 @@ export default function Dashboard() {
 
       initializeData();
 
-      // Armazenar referência do status admin para os channels
-      let isAdminRef = false;
-      supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle()
-        .then(({ data }) => {
-          isAdminRef = !!data;
-        });
+      // Usar status admin já determinado nos channels
+      // Nota: isUserAdmin está disponível aqui por closure
 
       const chromebookChannel = supabase
         .channel('chromebook-bookings-changes')
@@ -155,7 +147,7 @@ export default function Dashboard() {
             table: 'chromebook_bookings'
           },
           () => {
-            fetchBookings(isAdminRef);
+            fetchBookings(isUserAdmin);
             fetchSystemConfigAndAvailability();
           }
         )
@@ -171,7 +163,7 @@ export default function Dashboard() {
             table: 'room_bookings'
           },
           () => {
-            fetchRoomBookings(isAdminRef);
+            fetchRoomBookings(isUserAdmin);
           }
         )
         .subscribe();
