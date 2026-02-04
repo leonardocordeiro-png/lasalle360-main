@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +27,7 @@ import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import type { Database } from '@/types/database';
 
 interface Booking {
   id: string;
@@ -70,7 +71,7 @@ interface ModulePermissions {
   admin_salas_hoje: boolean;
 }
 
-export default function Dashboard() {
+const DashboardComponent = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -176,7 +177,7 @@ export default function Dashboard() {
           {
             event: '*',
             schema: 'public',
-            table: 'approval_notifications' as any
+            table: 'approval_notifications'
           },
           () => {
             fetchUnreadApprovals();
@@ -228,7 +229,7 @@ export default function Dashboard() {
           .select('role')
           .eq('user_id', user.id),
         supabase
-          .from('user_permissions' as any)
+          .from('user_permissions')
           .select('module_name, can_access')
           .eq('user_id', user.id)
       ]);
@@ -254,7 +255,7 @@ export default function Dashboard() {
       }
 
       const permissionsMap: Record<string, boolean> = {};
-      (permissions as any)?.forEach((p: any) => {
+      permissions?.forEach((p: Database['public']['Tables']['user_permissions']['Row']) => {
         permissionsMap[p.module_name] = p.can_access;
       });
 
@@ -284,8 +285,8 @@ export default function Dashboard() {
       if (!user?.id) return;
       
       const { count, error } = await supabase
-        .from('approval_notifications' as any)
-        .select('*', { count: 'exact', head: true })
+        .from('approval_notifications')
+        .select('id', { count: 'exact', head: true })
         .eq('approver_id', user.id)
         .eq('is_read', false);
       
@@ -390,12 +391,12 @@ export default function Dashboard() {
       setMaxBookingQuantity(fetchedMaxBookingQuantity);
 
       const todayBookingsData = todayBookingsResult.data || [];
-      setTodayBookings(todayBookingsData as any);
+      setTodayBookings(todayBookingsData);
 
       // Calcular uso de hoje somando as quantidades de todos os agendamentos ativos
       // Agrupa por usuário e pega o máximo de cada usuário para evitar contagem dupla
       const userMaxQuantities = new Map<string, number>();
-      (todayBookingsData || []).forEach((booking: Booking) => {
+      (todayBookingsData || []).forEach((booking) => {
         const currentMax = userMaxQuantities.get(booking.user_id) || 0;
         if (booking.quantity > currentMax) {
           userMaxQuantities.set(booking.user_id, booking.quantity);
@@ -822,4 +823,6 @@ export default function Dashboard() {
       )}
     </div>
   );
-}
+};
+
+export default memo(DashboardComponent);
