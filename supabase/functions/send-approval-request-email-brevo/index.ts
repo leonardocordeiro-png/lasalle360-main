@@ -116,6 +116,34 @@ const handler = async (req: Request): Promise<Response> => {
       ? `<p style="margin: 8px 0;"><strong>Observações:</strong> ${observations}</p>` 
       : '';
 
+    // Versão texto plano para clientes de e-mail que não suportam HTML
+    const textContent = `
+Nova Solicitação de Reserva - ${roomName}
+
+Olá!
+
+${userName} solicitou uma reserva do ${roomName} e está aguardando sua aprovação.
+
+DETALHES DA SOLICITAÇÃO:
+Solicitante: ${userName}
+E-mail: ${userEmail}
+Turma: ${firstBooking.class_name}
+Data: ${formattedDate}
+Horários: ${timeSlots}
+${resources ? `Recursos: ${resources.join(', ')}` : ''}
+${observations ? `Observações: ${observations}` : ''}
+
+PRAZO DE APROVAÇÃO:
+Por favor, aprova ou rejeite esta solicitação em até 48 horas.
+
+ACESSE O SISTEMA:
+https://lasalle360.vercel.app
+
+---
+Este é um e-mail automático do Sistema de Agendamentos La Salle.
+Por favor, não responda a este e-mail.
+    `.trim();
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -125,6 +153,13 @@ const handler = async (req: Request): Promise<Response> => {
         <title>Nova Solicitação de Aprovação</title>
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <!-- Lista de desinscrição para evitar spam -->
+        <div style="display:none;max-height:0px;overflow:hidden;">
+          Sistema de Agendamentos La Salle - Notificação automática de aprovação
+          Nova solicitação de reserva ${roomName} aguardando aprovação
+          ${userName} ${userEmail} ${firstBooking.class_name} ${formattedDate}
+        </div>
+        
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 24px;">🔔 Nova Solicitação de Reserva</h1>
           <p style="color: white; margin: 10px 0 0 0; font-size: 14px;">Aguardando sua aprovação</p>
@@ -188,13 +223,16 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="color: #718096; font-size: 12px; margin: 10px 0 0 0;">
               Por favor, não responda a este e-mail.
             </p>
+            <p style="color: #718096; font-size: 10px; margin: 5px 0 0 0;">
+              <a href="https://lasalle360.vercel.app" style="color: #718096;">Sistema de Agendamentos La Salle</a>
+            </p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    // Send email via Brevo API
+    // Send email via Brevo API com melhorias anti-spam
     const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -207,9 +245,20 @@ const handler = async (req: Request): Promise<Response> => {
           name: SENDER_NAME,
           email: SENDER_EMAIL,
         },
-        to: approverEmails.map(email => ({ email })),
-        subject: `🔔 Nova solicitação de reserva - ${roomName}`,
+        to: approverEmails.map(email => ({ 
+          email,
+          name: email.split('@')[0] // Nome personalizado do destinatário
+        })),
+        subject: `[La Salle 360] Nova solicitação de reserva - ${roomName}`,
         htmlContent: emailHtml,
+        textContent: textContent, // Adiciona versão texto
+        headers: {
+          "X-Mailer": "La Salle 360 Sistema de Agendamentos",
+          "X-Priority": "3", // Prioridade normal
+          "Reply-To": SENDER_EMAIL,
+        },
+        // Tags para melhor rastreamento
+        tags: ["agendamento", "aprovacao", roomName.toLowerCase().replace(/\s+/g, '-')],
       }),
     });
 
