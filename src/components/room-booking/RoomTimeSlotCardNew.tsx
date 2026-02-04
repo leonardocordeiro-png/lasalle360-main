@@ -393,7 +393,13 @@ const RoomTimeSlotCardNew = memo(({
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium truncate">{booking.full_name}</span>
+                <span className="font-medium truncate">
+                  {(() => {
+                    const parts = booking.full_name?.split(' ') || [];
+                    if (parts.length <= 2) return booking.full_name;
+                    return `${parts[0]} ${parts[parts.length - 1]}`;
+                  })()}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground truncate pl-6">
                 {booking.class_name}
