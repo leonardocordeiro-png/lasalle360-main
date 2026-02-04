@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-const SENDER_EMAIL = Deno.env.get("BREVO_SENDER_EMAIL") || "leonardo.cordeiro@lasalle.org.br";
+const SENDER_EMAIL = Deno.env.get("BREVO_SENDER_EMAIL") || "noreply@brevo.com";
 const SENDER_NAME = Deno.env.get("BREVO_SENDER_NAME") || "Sistema de Agendamentos La Salle";
 
 const buildCorsHeaders = (origin: string | null) => {
@@ -221,10 +221,10 @@ Por favor, não responda a este e-mail.
               Este é um e-mail automático do Sistema de Agendamentos La Salle.
             </p>
             <p style="color: #718096; font-size: 12px; margin: 10px 0 0 0;">
-              Por favor, não responda a este e-mail.
+              Por favor, não responda a este e-mail. Enviado via Sistema La Salle 360.
             </p>
             <p style="color: #718096; font-size: 10px; margin: 5px 0 0 0;">
-              <a href="https://lasalle360.vercel.app" style="color: #718096;">Sistema de Agendamentos La Salle</a>
+              Contato: leonardo.cordeiro@lasalle.org.br | <a href="https://lasalle360.vercel.app" style="color: #718096;">Sistema de Agendamentos La Salle</a>
             </p>
           </div>
         </div>
