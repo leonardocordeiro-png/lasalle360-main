@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-const SENDER_EMAIL = Deno.env.get("BREVO_SENDER_EMAIL") || "noreply@brevo.com";
+const SENDER_EMAIL = Deno.env.get("BREVO_SENDER_EMAIL") || "sistema@lasalle360.com";
 const SENDER_NAME = Deno.env.get("BREVO_SENDER_NAME") || "Sistema de Agendamentos La Salle";
 
 const buildCorsHeaders = (origin: string | null) => {
@@ -152,81 +152,48 @@ Por favor, não responda a este e-mail.
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Nova Solicitação de Aprovação</title>
       </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <!-- Lista de desinscrição para evitar spam -->
-        <div style="display:none;max-height:0px;overflow:hidden;">
-          Sistema de Agendamentos La Salle - Notificação automática de aprovação
-          Nova solicitação de reserva ${roomName} aguardando aprovação
-          ${userName} ${userEmail} ${firstBooking.class_name} ${formattedDate}
-        </div>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
         
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">🔔 Nova Solicitação de Reserva</h1>
-          <p style="color: white; margin: 10px 0 0 0; font-size: 14px;">Aguardando sua aprovação</p>
-        </div>
-        
-        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
-          <p style="margin-bottom: 20px;">Olá!</p>
+        <div style="background-color: #f8f9fa; border: 1px solid #e2e8f0; padding: 20px; border-radius: 5px;">
+          <h2 style="color: #2d3748; margin-bottom: 20px;">Nova Solicitação de Reserva - ${roomName}</h2>
           
-          <p style="margin-bottom: 20px;">
-            <strong>${userName}</strong> solicitou uma reserva do <strong>${roomName}</strong> e está aguardando sua aprovação.
-          </p>
+          <p>Olá,</p>
+          
+          <p><strong>${userName}</strong> solicitou uma reserva do <strong>${roomName}</strong> e está aguardando sua aprovação.</p>
 
-          <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h3 style="color: #2d3748; margin-bottom: 15px; font-size: 18px;">📋 Detalhes da Solicitação</h3>
+          <div style="background-color: #ffffff; border: 1px solid #ddd; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #2d3748; margin-bottom: 15px;">Detalhes da Solicitação</h3>
             
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; color: #666; width: 120px;"><strong>Solicitante:</strong></td>
-                <td style="padding: 8px 0;">${userName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;"><strong>E-mail:</strong></td>
-                <td style="padding: 8px 0;">${userEmail}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;"><strong>Turma:</strong></td>
-                <td style="padding: 8px 0;">${firstBooking.class_name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;"><strong>Data:</strong></td>
-                <td style="padding: 8px 0;">${formattedDate}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;"><strong>Horários:</strong></td>
-                <td style="padding: 8px 0;">${timeSlots}</td>
-              </tr>
-            </table>
-            
-            ${resourcesText}
-            ${observationsText}
+            <p><strong>Solicitante:</strong> ${userName}</p>
+            <p><strong>E-mail:</strong> ${userEmail}</p>
+            <p><strong>Turma:</strong> ${firstBooking.class_name}</p>
+            <p><strong>Data:</strong> ${formattedDate}</p>
+            <p><strong>Horários:</strong> ${timeSlots}</p>
+            ${resourcesText ? `<p><strong>Recursos:</strong> ${resources.join(', ')}</p>` : ''}
+            ${observationsText ? `<p><strong>Observações:</strong> ${observations}</p>` : ''}
           </div>
 
-          <div style="background: #e6fffa; border-left: 4px solid #38b2ac; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <h4 style="color: #2c7a7b; margin: 0 0 10px 0;">⏰ Prazo de Aprovação</h4>
-            <p style="margin: 0; color: #2c7a7b;">
+          <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0;">
+            <h4 style="color: #856404; margin: 0 0 10px 0;">Prazo de Aprovação</h4>
+            <p style="margin: 0; color: #856404;">
               Por favor, aprove ou rejeite esta solicitação em até 48 horas.
             </p>
           </div>
 
-          <div style="text-align: center; margin: 30px 0;">
+          <p style="margin: 30px 0;">
             <a href="https://lasalle360.vercel.app" 
-               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-              Acessar Sistema de Aprovações
+               style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px;">
+              Acessar Sistema
             </a>
-          </div>
+          </p>
 
-          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-            <p style="color: #718096; font-size: 14px; margin: 0;">
-              Este é um e-mail automático do Sistema de Agendamentos La Salle.
-            </p>
-            <p style="color: #718096; font-size: 12px; margin: 10px 0 0 0;">
-              Por favor, não responda a este e-mail. Enviado via Sistema La Salle 360.
-            </p>
-            <p style="color: #718096; font-size: 10px; margin: 5px 0 0 0;">
-              Contato: leonardo.cordeiro@lasalle.org.br | <a href="https://lasalle360.vercel.app" style="color: #718096;">Sistema de Agendamentos La Salle</a>
-            </p>
-          </div>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+          
+          <p style="color: #666; font-size: 14px; margin: 0;">
+            Este é um e-mail automático do Sistema de Agendamentos La Salle.<br>
+            Contato: leonardo.cordeiro@lasalle.org.br<br>
+            Por favor, não responda a este e-mail.
+          </p>
         </div>
       </body>
       </html>
