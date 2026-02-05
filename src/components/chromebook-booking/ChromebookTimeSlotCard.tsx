@@ -19,8 +19,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Clock, User, MoreVertical, Trash2, X, ArrowRightLeft, Chrome, Lock, RotateCcw } from "lucide-react";
+import { Clock, User, MoreVertical, Trash2, X, ArrowRightLeft, Chrome, Lock, RotateCcw, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -77,8 +87,10 @@ export function ChromebookTimeSlotCard({
 }: ChromebookTimeSlotCardProps) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<ChromebookBooking | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [editQuantity, setEditQuantity] = useState(1);
 
   const hasBookings = bookings.length > 0;
   const isFull = availableCount === 0;
@@ -195,8 +207,45 @@ export function ChromebookTimeSlotCard({
     }
   };
 
+  const handleEditBooking = async () => {
+    if (!selectedBooking) return;
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('chromebook_bookings')
+        .update({ quantity: editQuantity })
+        .eq('id', selectedBooking.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento atualizado!",
+        description: `Quantidade alterada para ${editQuantity} Chromebook(s).`,
+      });
+
+      onBookingCancelled();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar agendamento",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setEditDialogOpen(false);
+      setSelectedBooking(null);
+    }
+  };
+
   const canManageBooking = (booking: ChromebookBooking) => {
     return isAdmin || booking.user_id === currentUserId;
+  };
+
+  const openEditDialog = (booking: ChromebookBooking) => {
+    setSelectedBooking(booking);
+    setEditQuantity(booking.quantity);
+    setEditDialogOpen(true);
   };
 
   return (
@@ -255,6 +304,12 @@ export function ChromebookTimeSlotCard({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => openEditDialog(booking)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedBooking(booking);
@@ -374,6 +429,52 @@ export function ChromebookTimeSlotCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Agendamento</DialogTitle>
+            <DialogDescription>
+              Altere a quantidade de Chromebooks para este agendamento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantidade de Chromebooks</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                max={totalInventory}
+                value={editQuantity}
+                onChange={(e) => setEditQuantity(Math.max(1, Math.min(totalInventory, parseInt(e.target.value) || 1)))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Disponível: {availableCount} Chromebook(s)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditBooking} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
