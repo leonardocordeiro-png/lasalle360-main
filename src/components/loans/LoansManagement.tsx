@@ -28,6 +28,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// Função para formatar nome: primeiro nome + último sobrenome
+const formatUserName = (fullName: string) => {
+  if (!fullName) return '';
+  
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName;
+  
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -689,28 +700,34 @@ export function LoansManagement() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <p className="font-medium text-sm text-foreground truncate max-w-[150px]">{loan.borrower_name}</p>
+                            <p className="font-medium text-sm text-foreground truncate max-w-[150px]">{formatUserName(loan.borrower_name)}</p>
                             <p className="text-xs text-muted-foreground capitalize">{loan.borrower_type}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-3 hidden lg:table-cell">
                         <span className="text-sm text-foreground truncate max-w-[120px] block">
-                          {loan.responsible_teacher || "—"}
+                          {formatUserName(loan.responsible_teacher) || "—"}
                         </span>
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="font-mono text-xs text-foreground">
+                      <td className="py-3 px-3 text-center">
+                        <div className="flex justify-center">
                           {/* Exibição para equipamento único com it_equipment */}
                           {loan.equipment_id && loan.it_equipment?.id_number ? (
-                            <span className="truncate block">{loan.it_equipment.id_number}</span>
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-mono text-sm px-2 py-1">
+                              {loan.it_equipment.id_number}
+                            </Badge>
                           ) : loan.equipment_id && loan.it_equipment?.patrimony ? (
-                            <span className="truncate block">{equipmentMap[loan.it_equipment.patrimony.trim()] || loan.it_equipment.patrimony}</span>
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-mono text-sm px-2 py-1">
+                              {equipmentMap[loan.it_equipment.patrimony.trim()] || loan.it_equipment.patrimony}
+                            </Badge>
                           ) : hasMultipleEquipments ? (
                             // Exibição para múltiplos equipamentos - mostra até 10
-                            <div className="flex flex-col gap-0.5">
+                            <div className="flex flex-col gap-0.5 items-center">
                               {equipmentsList.slice(0, 10).map((eq: string, idx: number) => (
-                                <span key={idx} className="truncate block">{formatEquipmentForDisplay(eq, loan)}</span>
+                                <Badge key={idx} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-mono text-xs px-1.5 py-0.5">
+                                  {formatEquipmentForDisplay(eq, loan)}
+                                </Badge>
                               ))}
                               {equipmentsList.length > 10 && (
                                 <button
@@ -724,7 +741,9 @@ export function LoansManagement() {
                             </div>
                           ) : (
                             // Equipamento único sem it_equipment - prioriza ID
-                            <span className="truncate block">{formatEquipmentForDisplay(equipmentsList[0] || loan.chromebook_number, loan)}</span>
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-mono text-sm px-2 py-1">
+                              {formatEquipmentForDisplay(equipmentsList[0] || loan.chromebook_number, loan)}
+                            </Badge>
                           )}
                         </div>
                       </td>
