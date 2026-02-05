@@ -611,8 +611,8 @@ const DashboardComponent = () => {
           </Card>
         </div>
 
-        {/* Notification Permission Banner */}
-        {showNotificationBanner && (
+        {/* Notification Permission Banner - Only for Auditório Approvers */}
+        {showNotificationBanner && (isUserAdmin || isUserApprover) && (
           <div className="mb-8">
             <NotificationPermissionBanner onDismiss={() => setShowNotificationBanner(false)} />
           </div>

@@ -46,10 +46,10 @@ export function NotificationPermissionBanner({ onDismiss }: NotificationPermissi
           <AlertDescription className="text-blue-800">
             <div className="space-y-2">
               <p className="font-medium">
-                Ative as notificações do navegador
+                Ative as notificações do navegador para aprovações do Auditório
               </p>
               <p className="text-sm text-blue-700">
-                Receba alertas em tempo real quando houver novas aprovações pendentes. 
+                Receba alertas em tempo real quando houver novas solicitações de reserva do Auditório. 
                 Fique sempre atualizado sem precisar ficar verificando o sistema!
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
