@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import BookingDialog from '@/components/BookingDialog';
 import { AvailabilityTable } from '@/components/AvailabilityTable';
 import ConsolidatedBookingsList from '@/components/ConsolidatedBookingsList';
+import ModernConsolidatedBookingsList from '@/components/ModernConsolidatedBookingsList';
 import { RoomBookingPage } from '@/components/room-booking/RoomBookingPage';
 import { RoomBookingsList } from '@/components/RoomBookingsList';
 import { CurrentRoomBookingsList } from '@/components/CurrentRoomBookingsList';
@@ -828,22 +829,12 @@ const DashboardComponent = () => {
 
           {isUserAdmin && (
             <TabsContent value="bookings" className="space-y-6">
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle>Todos os Agendamentos</CardTitle>
-                  <CardDescription>
-                    Visualize todos os seus agendamentos de Chromebooks, Auditório e Laboratório
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ConsolidatedBookingsList
-                    bookings={bookings}
-                    onBookingCancelled={handleBookingCancelled}
-                    isAdmin={profile?.is_admin || false}
-                    currentUserId={user?.id || ''}
-                  />
-                </CardContent>
-              </Card>
+              <ModernConsolidatedBookingsList
+                bookings={bookings}
+                onBookingCancelled={handleBookingCancelled}
+                isAdmin={profile?.is_admin || false}
+                currentUserId={user?.id || ''}
+              />
             </TabsContent>
           )}
         </Tabs>
