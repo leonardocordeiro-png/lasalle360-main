@@ -110,9 +110,20 @@ export default function ModernConsolidatedBookingsList({
       const bookingEndDateTime = new Date(`${booking.booking_date}T${booking.end_time}`);
       const now = new Date();
       
-      // Se a data/hora do agendamento já passou, considera devolvido
+      // Se a data/hora do agendamento já passou, considera devolvido pelo sistema
       if (isPast(bookingEndDateTime)) {
-        return 'returned';
+        return 'returned_system';
+      }
+      
+      // Se é hoje, considera ativo hoje
+      const bookingDate = parseISO(booking.booking_date);
+      if (isToday(bookingDate)) {
+        return 'active_today';
+      }
+      
+      // Se é futuro, considera ativo futuro
+      if (isFuture(bookingDate)) {
+        return 'active_future';
       }
     }
     
@@ -323,8 +334,11 @@ export default function ModernConsolidatedBookingsList({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      case 'active_today': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      case 'active_future': return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-300';
       case 'returned': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'returned_system': return 'bg-amber-100 text-amber-800 border-amber-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
@@ -332,8 +346,11 @@ export default function ModernConsolidatedBookingsList({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active': return <CheckCircle2 className="h-3 w-3" />;
+      case 'active_today': return <CheckCircle2 className="h-3 w-3" />;
+      case 'active_future': return <CheckCircle2 className="h-3 w-3" />;
       case 'cancelled': return <XCircle className="h-3 w-3" />;
       case 'returned': return <PackageCheck className="h-3 w-3" />;
+      case 'returned_system': return <PackageCheck className="h-3 w-3" />;
       default: return <AlertCircle className="h-3 w-3" />;
     }
   };
@@ -341,8 +358,11 @@ export default function ModernConsolidatedBookingsList({
   const getStatusText = (status: string) => {
     switch (status) {
       case 'active': return 'Ativo';
+      case 'active_today': return 'Ativo';
+      case 'active_future': return 'Ativo';
       case 'cancelled': return 'Cancelado';
       case 'returned': return 'Devolvido';
+      case 'returned_system': return 'Devolvido';
       default: return status;
     }
   };
@@ -544,9 +564,9 @@ export default function ModernConsolidatedBookingsList({
                     <div
                       key={`${booking.user_id}-${idx}`}
                       className={`p-4 transition-colors ${
-                        booking.status === 'cancelled' 
+                        getRealStatus(booking) === 'cancelled' 
                           ? 'opacity-50 bg-gray-50/50' 
-                          : booking.status.includes('returned')
+                          : getRealStatus(booking).includes('returned')
                           ? 'opacity-75 bg-blue-50/30'
                           : 'hover:bg-muted/30'
                       }`}
@@ -573,12 +593,11 @@ export default function ModernConsolidatedBookingsList({
                                 </h4>
                                 <Badge 
                                   variant="outline" 
-                                  className={`text-xs ${getStatusColor(booking.status)}`}
+                                  className={`text-xs ${getStatusColor(getRealStatus(booking))}`}
                                 >
                                   <span className="flex items-center gap-1">
-                                    {getStatusIcon(booking.status)}
-                                    {booking.status === 'active' ? 'Ativo' : 
-                                     booking.status === 'cancelled' ? 'Cancelado' : booking.status}
+                                    {getStatusIcon(getRealStatus(booking))}
+                                    {getStatusText(getRealStatus(booking))}
                                   </span>
                                 </Badge>
                               </div>
@@ -595,7 +614,7 @@ export default function ModernConsolidatedBookingsList({
                               </div>
                               
                               {/* Informações de devolução */}
-                              {booking.status.includes('returned') && (
+                              {getRealStatus(booking).includes('returned') && (
                                 <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
                                   <PackageCheck className="h-3 w-3" />
                                   <span>
