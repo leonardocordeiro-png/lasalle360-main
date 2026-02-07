@@ -14,6 +14,8 @@ import { AvailabilityTable } from '@/components/AvailabilityTable';
 import ConsolidatedBookingsList from '@/components/ConsolidatedBookingsList';
 import { RoomBookingPage } from '@/components/room-booking/RoomBookingPage';
 import { RoomBookingsList } from '@/components/RoomBookingsList';
+import { CurrentRoomBookingsList } from '@/components/CurrentRoomBookingsList';
+import { RoomBookingsArchive } from '@/components/RoomBookingsArchive';
 import { TodayRoomBookings } from '@/components/TodayRoomBookings';
 import { PendingApprovalsTab } from '@/components/PendingApprovalsTab';
 import { TodayChromebookBookings } from '@/components/TodayChromebookBookings';
@@ -737,7 +739,7 @@ const DashboardComponent = () => {
                 <CardHeader>
                   <CardTitle>Meus Agendamentos de Salas</CardTitle>
                   <CardDescription>
-                    Todos os seus agendamentos de Auditório, Laboratório e Sala Criativa
+                    Seus agendamentos atuais e futuros de Auditório, Laboratório e Sala Criativa
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -747,7 +749,7 @@ const DashboardComponent = () => {
                         <School className="h-4 w-4" />
                         Auditório
                       </h4>
-                      <RoomBookingsList
+                      <CurrentRoomBookingsList
                         bookings={auditorioBookings}
                         onBookingDeleted={fetchRoomBookings}
                         roomName="Auditório"
@@ -760,7 +762,7 @@ const DashboardComponent = () => {
                         <FlaskConical className="h-4 w-4" />
                         Laboratório
                       </h4>
-                      <RoomBookingsList
+                      <CurrentRoomBookingsList
                         bookings={laboratorioBookings}
                         onBookingDeleted={fetchRoomBookings}
                         roomName="Laboratório"
@@ -773,7 +775,7 @@ const DashboardComponent = () => {
                         <Lightbulb className="h-4 w-4" />
                         Sala Criativa
                       </h4>
-                      <RoomBookingsList
+                      <CurrentRoomBookingsList
                         bookings={salaCriativaBookings}
                         onBookingDeleted={fetchRoomBookings}
                         roomName="Sala Criativa"
@@ -783,12 +785,19 @@ const DashboardComponent = () => {
                   {auditorioBookings.length === 0 && laboratorioBookings.length === 0 && salaCriativaBookings.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <DoorOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Você ainda não possui agendamentos de salas.</p>
+                      <p>Você não possui agendamentos futuros de salas.</p>
                       <p className="text-sm">Selecione uma sala e data acima para fazer sua reserva.</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Componente de Arquivo com agendamentos passados */}
+              <RoomBookingsArchive
+                auditorioBookings={auditorioBookings}
+                laboratorioBookings={laboratorioBookings}
+                salaCriativaBookings={salaCriativaBookings}
+              />
             </TabsContent>
           )}
 
