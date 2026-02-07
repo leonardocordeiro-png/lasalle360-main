@@ -96,7 +96,6 @@ export default function ModernConsolidatedBookingsList({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("all");
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Lógica para determinar status real (incluindo devolvido automaticamente)
   const getRealStatus = (booking: Booking): string => {
@@ -111,34 +110,25 @@ export default function ModernConsolidatedBookingsList({
       const bookingEndDateTime = new Date(`${booking.booking_date}T${booking.end_time}`);
       const now = new Date();
       
-      // Se a data/hora do agendamento já passou, considera devolvido automaticamente
+      // Se a data/hora do agendamento já passou, considera devolvido
       if (isPast(bookingEndDateTime)) {
-        return 'returned_auto';
+        return 'returned';
       }
     }
     
     return booking.status;
   };
 
-  // Filtrar agendamentos pelo mês selecionado e data específica
+  // Filtrar agendamentos pelo mês selecionado
   const filteredBookings = useMemo(() => {
     return bookings.filter(booking => {
       const bookingDate = parseISO(booking.booking_date);
       
-      // Filtro de data específica (se selecionada)
-      if (selectedDate) {
-        const selectedStart = startOfDay(selectedDate);
-        const selectedEnd = endOfDay(selectedDate);
-        if (!isWithinInterval(bookingDate, { start: selectedStart, end: selectedEnd })) {
-          return false;
-        }
-      } else {
-        // Filtro de mês (se nenhuma data específica selecionada)
-        const monthStart = startOfMonth(selectedMonth);
-        const monthEnd = endOfMonth(selectedMonth);
-        if (!isWithinInterval(bookingDate, { start: monthStart, end: monthEnd })) {
-          return false;
-        }
+      // Filtro de mês
+      const monthStart = startOfMonth(selectedMonth);
+      const monthEnd = endOfMonth(selectedMonth);
+      if (!isWithinInterval(bookingDate, { start: monthStart, end: monthEnd })) {
+        return false;
       }
       
       // Filtro de busca
@@ -173,7 +163,7 @@ export default function ModernConsolidatedBookingsList({
       
       return true;
     });
-  }, [bookings, selectedMonth, selectedDate, searchTerm, statusFilter, typeFilter]);
+  }, [bookings, selectedMonth, searchTerm, statusFilter, typeFilter]);
 
   // Agrupar por data
   const groupedByDate = useMemo((): GroupedByDate[] => {
@@ -298,7 +288,6 @@ export default function ModernConsolidatedBookingsList({
   const handleNextMonth = () => setSelectedMonth(prev => addMonths(prev, 1));
   const handleCurrentMonth = () => {
     setSelectedMonth(new Date());
-    setSelectedDate(undefined); // Limpa data específica ao voltar ao mês atual
   };
 
   // Estatísticas
@@ -336,7 +325,6 @@ export default function ModernConsolidatedBookingsList({
       case 'active': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-300';
       case 'returned': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'returned_auto': return 'bg-amber-100 text-amber-800 border-amber-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
@@ -346,7 +334,6 @@ export default function ModernConsolidatedBookingsList({
       case 'active': return <CheckCircle2 className="h-3 w-3" />;
       case 'cancelled': return <XCircle className="h-3 w-3" />;
       case 'returned': return <PackageCheck className="h-3 w-3" />;
-      case 'returned_auto': return <RotateCcw className="h-3 w-3" />;
       default: return <AlertCircle className="h-3 w-3" />;
     }
   };
@@ -356,7 +343,6 @@ export default function ModernConsolidatedBookingsList({
       case 'active': return 'Ativo';
       case 'cancelled': return 'Cancelado';
       case 'returned': return 'Devolvido';
-      case 'returned_auto': return 'Devolvido (Auto)';
       default: return status;
     }
   };
@@ -460,141 +446,27 @@ export default function ModernConsolidatedBookingsList({
         </CardHeader>
       </Card>
 
-      {/* Navegação de Mês e Calendário */}
+      {/* Navegação de Mês */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <div className="flex flex-col gap-4">
-            {/* Navegação Desktop */}
-            <div className="hidden sm:flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                {/* Seletor de Data com Calendário */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" className="h-8 px-4 text-sm font-medium min-w-0">
-                      <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">
-                        {selectedDate 
-                          ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                          : format(selectedMonth, "MMMM yyyy", { locale: ptBR })
-                        }
-                      </span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[100]" align="center" side="bottom" sideOffset={4} collisionPadding={8}>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        setSelectedDate(date);
-                        if (date) {
-                          setSelectedMonth(date);
-                        }
-                      }}
-                      initialFocus={false}
-                      locale={ptBR}
-                      className="rounded-md border shadow-lg bg-background"
-                      showOutsideDays={false}
-                      fixedWeeks
-                    />
-                  </PopoverContent>
-                </Popover>
-                
-                <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                
-                {selectedDate && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setSelectedDate(undefined)}
-                    className="h-6 px-2 text-xs ml-2"
-                  >
-                    Limpar Data
-                  </Button>
-                )}
-              </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
               
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Eye className="h-4 w-4" />
-                <span>{filteredBookings.length} agendamentos</span>
-                {selectedDate && (
-                  <Badge variant="secondary" className="text-xs">
-                    {format(selectedDate, "dd/MM/yyyy")}
-                  </Badge>
-                )}
-              </div>
+              <Button variant="ghost" onClick={handleCurrentMonth} className="h-8 px-4 text-sm font-medium">
+                {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
+              </Button>
+              
+              <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-
-            {/* Navegação Mobile */}
-            <div className="sm:hidden space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  {/* Seletor de Data Mobile */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" className="h-8 px-3 text-sm font-medium min-w-0 flex-1">
-                        <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span className="truncate text-xs">
-                          {selectedDate 
-                            ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
-                            : format(selectedMonth, "MMM yyyy", { locale: ptBR })
-                          }
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-[100]" align="center" side="bottom" sideOffset={4} collisionPadding={8}>
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => {
-                          setSelectedDate(date);
-                          if (date) {
-                            setSelectedMonth(date);
-                          }
-                        }}
-                        initialFocus={false}
-                        locale={ptBR}
-                        className="rounded-md border shadow-lg bg-background"
-                        showOutsideDays={false}
-                        fixedWeeks
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  
-                  <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {selectedDate && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setSelectedDate(undefined)}
-                    className="h-6 px-2 text-xs"
-                  >
-                    Limpar
-                  </Button>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{filteredBookings.length} agendamentos</span>
-                {selectedDate && (
-                  <Badge variant="secondary" className="text-xs">
-                    {format(selectedDate, "dd/MM/yyyy")}
-                  </Badge>
-                )}
-              </div>
+            
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Eye className="h-4 w-4" />
+              <span>{filteredBookings.length} agendamentos</span>
             </div>
           </div>
         </CardHeader>
@@ -608,8 +480,8 @@ export default function ModernConsolidatedBookingsList({
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-40" />
               <p className="text-lg font-medium mb-2">Nenhum agendamento encontrado</p>
               <p className="text-sm">
-                {searchTerm || statusFilter !== "all" || typeFilter !== "all" || selectedDate
-                  ? "Tente ajustar os filtros, busca ou data selecionada"
+                {searchTerm || statusFilter !== "all" || typeFilter !== "all"
+                  ? "Tente ajustar os filtros ou busca"
                   : `Nenhum agendamento em ${format(selectedMonth, "MMMM", { locale: ptBR })}`
                 }
               </p>
@@ -726,16 +598,12 @@ export default function ModernConsolidatedBookingsList({
                               {booking.status.includes('returned') && (
                                 <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
                                   <PackageCheck className="h-3 w-3" />
-                                  {booking.status === 'returned_auto' ? (
-                                    <span>Devolvido automaticamente</span>
-                                  ) : (
-                                    <span>
-                                      Devolvido por {booking.returned_by || 'admin'}
-                                      {booking.returned_at && (
-                                        <span> em {format(parseISO(booking.returned_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-                                      )}
-                                    </span>
-                                  )}
+                                  <span>
+                                    Devolvido por {booking.returned_by || 'sistema'}
+                                    {booking.returned_at && (
+                                      <span> em {format(parseISO(booking.returned_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+                                    )}
+                                  </span>
                                 </div>
                               )}
                               
