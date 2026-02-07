@@ -463,63 +463,138 @@ export default function ModernConsolidatedBookingsList({
       {/* Navegação de Mês e Calendário */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
-              {/* Seletor de Data com Calendário */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" className="h-8 px-4 text-sm font-medium">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate 
-                      ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                      : format(selectedMonth, "MMMM yyyy", { locale: ptBR })
-                    }
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => {
-                      setSelectedDate(date);
-                      if (date) {
-                        setSelectedMonth(date);
-                      }
-                    }}
-                    initialFocus
-                    locale={ptBR}
-                  />
-                </PopoverContent>
-              </Popover>
-              
-              <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              
-              {selectedDate && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setSelectedDate(undefined)}
-                  className="h-6 px-2 text-xs"
-                >
-                  Limpar Data
+          <div className="flex flex-col gap-4">
+            {/* Navegação Desktop */}
+            <div className="hidden sm:flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              )}
+                
+                {/* Seletor de Data com Calendário */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" className="h-8 px-4 text-sm font-medium min-w-0">
+                      <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">
+                        {selectedDate 
+                          ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                          : format(selectedMonth, "MMMM yyyy", { locale: ptBR })
+                        }
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date);
+                        if (date) {
+                          setSelectedMonth(date);
+                        }
+                      }}
+                      initialFocus
+                      locale={ptBR}
+                      className="rounded-md border"
+                      showOutsideDays={false}
+                      fixedWeeks
+                    />
+                  </PopoverContent>
+                </Popover>
+                
+                <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                {selectedDate && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setSelectedDate(undefined)}
+                    className="h-6 px-2 text-xs ml-2"
+                  >
+                    Limpar Data
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Eye className="h-4 w-4" />
+                <span>{filteredBookings.length} agendamentos</span>
+                {selectedDate && (
+                  <Badge variant="secondary" className="text-xs">
+                    {format(selectedDate, "dd/MM/yyyy")}
+                  </Badge>
+                )}
+              </div>
             </div>
-            
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Eye className="h-4 w-4" />
-              <span>{filteredBookings.length} agendamentos</span>
-              {selectedDate && (
-                <Badge variant="secondary" className="text-xs">
-                  {format(selectedDate, "dd/MM/yyyy")}
-                </Badge>
-              )}
+
+            {/* Navegação Mobile */}
+            <div className="sm:hidden space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  {/* Seletor de Data Mobile */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" className="h-8 px-3 text-sm font-medium min-w-0 flex-1">
+                        <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span className="truncate text-xs">
+                          {selectedDate 
+                            ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
+                            : format(selectedMonth, "MMM yyyy", { locale: ptBR })
+                          }
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="center">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                          setSelectedDate(date);
+                          if (date) {
+                            setSelectedMonth(date);
+                          }
+                        }}
+                        initialFocus
+                        locale={ptBR}
+                        className="rounded-md border"
+                        showOutsideDays={false}
+                        fixedWeeks
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {selectedDate && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setSelectedDate(undefined)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{filteredBookings.length} agendamentos</span>
+                {selectedDate && (
+                  <Badge variant="secondary" className="text-xs">
+                    {format(selectedDate, "dd/MM/yyyy")}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
