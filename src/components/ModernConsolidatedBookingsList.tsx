@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { toast } from '@/hooks/use-toast';
 import { 
   Clock, 
@@ -27,9 +29,11 @@ import {
   BarChart3,
   Eye,
   Archive,
-  RefreshCw
+  RefreshCw,
+  RotateCcw,
+  PackageCheck
 } from 'lucide-react';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths, isToday, isFuture, isPast } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths, isToday, isFuture, isPast, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface Booking {
@@ -45,6 +49,8 @@ interface Booking {
   created_at: string;
   type?: 'chromebook' | 'room';
   room_type?: string;
+  returned_at?: string;
+  returned_by?: string;
 }
 
 interface GroupedByDate {
@@ -67,6 +73,8 @@ interface DayBooking {
   bookingIds: string[];
   type: 'chromebook' | 'room';
   room_type?: string;
+  returned_at?: string;
+  returned_by?: string;
 }
 
 interface ModernConsolidatedBookingsListProps {
@@ -88,18 +96,49 @@ export default function ModernConsolidatedBookingsList({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  // Filtrar agendamentos pelo mês selecionado
-  const filteredBookings = useMemo(() => {
-    const monthStart = startOfMonth(selectedMonth);
-    const monthEnd = endOfMonth(selectedMonth);
+  // Lógica para determinar status real (incluindo devolvido automaticamente)
+  const getRealStatus = (booking: Booking): string => {
+    // Se já está marcado como devolvido, mantém
+    if (booking.status === 'returned') return 'returned';
     
+    // Se está cancelado, mantém
+    if (booking.status === 'cancelled') return 'cancelled';
+    
+    // Se está ativo, verifica se já passou da data
+    if (booking.status === 'active') {
+      const bookingEndDateTime = new Date(`${booking.booking_date}T${booking.end_time}`);
+      const now = new Date();
+      
+      // Se a data/hora do agendamento já passou, considera devolvido automaticamente
+      if (isPast(bookingEndDateTime)) {
+        return 'returned_auto';
+      }
+    }
+    
+    return booking.status;
+  };
+
+  // Filtrar agendamentos pelo mês selecionado e data específica
+  const filteredBookings = useMemo(() => {
     return bookings.filter(booking => {
       const bookingDate = parseISO(booking.booking_date);
       
-      // Filtro de mês
-      if (!isWithinInterval(bookingDate, { start: monthStart, end: monthEnd })) {
-        return false;
+      // Filtro de data específica (se selecionada)
+      if (selectedDate) {
+        const selectedStart = startOfDay(selectedDate);
+        const selectedEnd = endOfDay(selectedDate);
+        if (!isWithinInterval(bookingDate, { start: selectedStart, end: selectedEnd })) {
+          return false;
+        }
+      } else {
+        // Filtro de mês (se nenhuma data específica selecionada)
+        const monthStart = startOfMonth(selectedMonth);
+        const monthEnd = endOfMonth(selectedMonth);
+        if (!isWithinInterval(bookingDate, { start: monthStart, end: monthEnd })) {
+          return false;
+        }
       }
       
       // Filtro de busca
@@ -112,10 +151,12 @@ export default function ModernConsolidatedBookingsList({
         if (!matchesSearch) return false;
       }
       
-      // Filtro de status
+      // Filtro de status (usando status real)
+      const realStatus = getRealStatus(booking);
       if (statusFilter !== "all") {
-        if (statusFilter === "active" && booking.status !== "active") return false;
-        if (statusFilter === "cancelled" && booking.status !== "cancelled") return false;
+        if (statusFilter === "active" && realStatus !== 'active') return false;
+        if (statusFilter === "cancelled" && realStatus !== 'cancelled') return false;
+        if (statusFilter === "returned" && !realStatus.includes('returned')) return false;
         if (statusFilter === "today" && !isToday(parseISO(booking.booking_date))) return false;
         if (statusFilter === "future" && !isFuture(parseISO(booking.booking_date))) return false;
         if (statusFilter === "past" && !isPast(parseISO(booking.booking_date))) return false;
@@ -123,16 +164,16 @@ export default function ModernConsolidatedBookingsList({
       
       // Filtro de tipo
       if (typeFilter !== "all") {
-        if (typeFilter === "chromebook" && booking.type !== "chromebook") return false;
-        if (typeFilter === "room" && booking.type !== "room") return false;
-        if (typeFilter === "auditorio" && booking.room_type !== "auditorio") return false;
-        if (typeFilter === "laboratorio" && booking.room_type !== "laboratorio") return false;
-        if (typeFilter === "sala_criativa" && booking.room_type !== "sala_criativa") return false;
+        if (typeFilter === "chromebook" && booking.type !== 'chromebook') return false;
+        if (typeFilter === "room" && booking.type !== 'room') return false;
+        if (typeFilter === "auditorio" && booking.room_type !== 'auditorio') return false;
+        if (typeFilter === "laboratorio" && booking.room_type !== 'laboratorio') return false;
+        if (typeFilter === "sala_criativa" && booking.room_type !== 'sala_criativa') return false;
       }
       
       return true;
     });
-  }, [bookings, selectedMonth, searchTerm, statusFilter, typeFilter]);
+  }, [bookings, selectedMonth, selectedDate, searchTerm, statusFilter, typeFilter]);
 
   // Agrupar por data
   const groupedByDate = useMemo((): GroupedByDate[] => {
@@ -140,7 +181,8 @@ export default function ModernConsolidatedBookingsList({
     
     filteredBookings.forEach(booking => {
       const date = booking.booking_date;
-      const key = `${booking.user_id}-${booking.quantity}-${booking.status}-${booking.type || 'chromebook'}`;
+      const realStatus = getRealStatus(booking);
+      const key = `${booking.user_id}-${booking.quantity}-${realStatus}-${booking.type || 'chromebook'}`;
       
       if (!dateMap.has(date)) {
         dateMap.set(date, new Map());
@@ -171,12 +213,14 @@ export default function ModernConsolidatedBookingsList({
           user_id: booking.user_id,
           full_name: booking.full_name,
           quantity: booking.quantity,
-          status: booking.status,
+          status: realStatus,
           classes: [booking.class_name],
           timeRange: `${booking.start_time.substring(0, 5)} - ${booking.end_time.substring(0, 5)}`,
           bookingIds: [booking.id],
           type: booking.type || 'chromebook',
-          room_type: booking.room_type
+          room_type: booking.room_type,
+          returned_at: booking.returned_at,
+          returned_by: booking.returned_by
         });
       }
     });
@@ -252,17 +296,21 @@ export default function ModernConsolidatedBookingsList({
 
   const handlePreviousMonth = () => setSelectedMonth(prev => subMonths(prev, 1));
   const handleNextMonth = () => setSelectedMonth(prev => addMonths(prev, 1));
-  const handleCurrentMonth = () => setSelectedMonth(new Date());
+  const handleCurrentMonth = () => {
+    setSelectedMonth(new Date());
+    setSelectedDate(undefined); // Limpa data específica ao voltar ao mês atual
+  };
 
   // Estatísticas
   const stats = useMemo(() => {
     const total = filteredBookings.length;
-    const active = filteredBookings.filter(b => b.status === 'active').length;
-    const cancelled = filteredBookings.filter(b => b.status === 'cancelled').length;
+    const active = filteredBookings.filter(b => getRealStatus(b) === 'active').length;
+    const cancelled = filteredBookings.filter(b => getRealStatus(b) === 'cancelled').length;
+    const returned = filteredBookings.filter(b => getRealStatus(b).includes('returned')).length;
     const chromebooks = filteredBookings.filter(b => b.type !== 'room').length;
     const rooms = filteredBookings.filter(b => b.type === 'room').length;
     
-    return { total, active, cancelled, chromebooks, rooms };
+    return { total, active, cancelled, returned, chromebooks, rooms };
   }, [filteredBookings]);
 
   const getRoomIcon = (roomType?: string) => {
@@ -287,6 +335,8 @@ export default function ModernConsolidatedBookingsList({
     switch (status) {
       case 'active': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-300';
+      case 'returned': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'returned_auto': return 'bg-amber-100 text-amber-800 border-amber-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
@@ -295,7 +345,19 @@ export default function ModernConsolidatedBookingsList({
     switch (status) {
       case 'active': return <CheckCircle2 className="h-3 w-3" />;
       case 'cancelled': return <XCircle className="h-3 w-3" />;
+      case 'returned': return <PackageCheck className="h-3 w-3" />;
+      case 'returned_auto': return <RotateCcw className="h-3 w-3" />;
       default: return <AlertCircle className="h-3 w-3" />;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'Ativo';
+      case 'cancelled': return 'Cancelado';
+      case 'returned': return 'Devolvido';
+      case 'returned_auto': return 'Devolvido (Auto)';
+      default: return status;
     }
   };
 
@@ -318,7 +380,7 @@ export default function ModernConsolidatedBookingsList({
             </div>
             
             {/* Estatísticas */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{stats.total}</div>
                 <div className="text-xs text-muted-foreground">Total</div>
@@ -326,6 +388,10 @@ export default function ModernConsolidatedBookingsList({
               <div className="text-center">
                 <div className="text-2xl font-bold text-emerald-600">{stats.active}</div>
                 <div className="text-xs text-muted-foreground">Ativos</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.returned}</div>
+                <div className="text-xs text-muted-foreground">Devolvidos</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">{stats.cancelled}</div>
@@ -368,6 +434,7 @@ export default function ModernConsolidatedBookingsList({
                 <SelectContent>
                   <SelectItem value="all">Todos Status</SelectItem>
                   <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="returned">Devolvidos</SelectItem>
                   <SelectItem value="cancelled">Cancelados</SelectItem>
                   <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="future">Futuros</SelectItem>
@@ -393,25 +460,66 @@ export default function ModernConsolidatedBookingsList({
         </CardHeader>
       </Card>
 
-      {/* Navegação de Mês */}
+      {/* Navegação de Mês e Calendário */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" onClick={handleCurrentMonth} className="h-8 px-4 text-sm font-medium">
-                {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
-              </Button>
+              
+              {/* Seletor de Data com Calendário */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className="h-8 px-4 text-sm font-medium">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate 
+                      ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                      : format(selectedMonth, "MMMM yyyy", { locale: ptBR })
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      if (date) {
+                        setSelectedMonth(date);
+                      }
+                    }}
+                    initialFocus
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+              
               <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
                 <ChevronRight className="h-4 w-4" />
               </Button>
+              
+              {selectedDate && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSelectedDate(undefined)}
+                  className="h-6 px-2 text-xs"
+                >
+                  Limpar Data
+                </Button>
+              )}
             </div>
             
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />
               <span>{filteredBookings.length} agendamentos</span>
+              {selectedDate && (
+                <Badge variant="secondary" className="text-xs">
+                  {format(selectedDate, "dd/MM/yyyy")}
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -425,8 +533,8 @@ export default function ModernConsolidatedBookingsList({
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-40" />
               <p className="text-lg font-medium mb-2">Nenhum agendamento encontrado</p>
               <p className="text-sm">
-                {searchTerm || statusFilter !== "all" || typeFilter !== "all" 
-                  ? "Tente ajustar os filtros ou busca"
+                {searchTerm || statusFilter !== "all" || typeFilter !== "all" || selectedDate
+                  ? "Tente ajustar os filtros, busca ou data selecionada"
                   : `Nenhum agendamento em ${format(selectedMonth, "MMMM", { locale: ptBR })}`
                 }
               </p>
@@ -491,6 +599,8 @@ export default function ModernConsolidatedBookingsList({
                       className={`p-4 transition-colors ${
                         booking.status === 'cancelled' 
                           ? 'opacity-50 bg-gray-50/50' 
+                          : booking.status.includes('returned')
+                          ? 'opacity-75 bg-blue-50/30'
                           : 'hover:bg-muted/30'
                       }`}
                     >
@@ -536,6 +646,23 @@ export default function ModernConsolidatedBookingsList({
                                   <span className="truncate">{booking.full_name}</span>
                                 </span>
                               </div>
+                              
+                              {/* Informações de devolução */}
+                              {booking.status.includes('returned') && (
+                                <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
+                                  <PackageCheck className="h-3 w-3" />
+                                  {booking.status === 'returned_auto' ? (
+                                    <span>Devolvido automaticamente</span>
+                                  ) : (
+                                    <span>
+                                      Devolvido por {booking.returned_by || 'admin'}
+                                      {booking.returned_at && (
+                                        <span> em {format(parseISO(booking.returned_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                               
                               <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="text-xs">
