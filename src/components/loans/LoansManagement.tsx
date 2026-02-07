@@ -11,7 +11,8 @@ import {
   ChevronRight,
   RotateCcw,
   Eye,
-  Pencil
+  Pencil,
+  Calendar
 } from "lucide-react";
 import { Icon } from "@iconify/react";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 // Função para formatar nome: primeiro nome + último sobrenome
 const formatUserName = (fullName: string) => {
@@ -256,38 +261,6 @@ export function LoansManagement() {
     return filtered;
   };
 
-  const exportToCSV = () => {
-    const loansToExport = getFilteredLoans(statusFilter);
-    const headers = [
-      "Data Empréstimo",
-      "Solicitante",
-      "Tipo",
-      "Professor Resp.",
-      "Chromebook Nº",
-      "Tipo Equip.",
-      "Status",
-      "Data Devolução",
-    ];
-
-    const csvData = loansToExport.map((loan) => [
-      format(parse(loan.loan_date, "yyyy-MM-dd", new Date()), "dd/MM/yyyy"),
-      loan.borrower_name,
-      loan.borrower_type,
-      loan.responsible_teacher || "-",
-      `"${loan.equipment_id && loan.it_equipment?.id_number ? loan.it_equipment.id_number : loan.chromebook_number.replace(/, /g, ',')}"`,
-      loan.equipment_type === "professor" ? "Professor" : "Aluno",
-      loan.status,
-      loan.return_time ? format(new Date(loan.returned_at), "dd/MM/yyyy HH:mm") : "-",
-    ]);
-
-    const csv = [headers, ...csvData].map((row) => row.join(";")).join("\n");
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `emprestimos_${format(new Date(), "yyyy-MM-dd")}.csv`;
-    link.click();
-  };
-
   const getStatusBadge = (status: string) => {
     const baseClasses = "flex items-center gap-1.5 font-medium text-xs px-2.5 py-1 rounded-full";
     
@@ -442,6 +415,55 @@ export function LoansManagement() {
     }
   };
 
+  const exportToCSV = () => {
+    const filtered = getFilteredLoans("all");
+    
+    const csvContent = [
+      // Header
+      [
+        "Data do Empréstimo",
+        "Horário de Retirada", 
+        "Solicitante",
+        "Tipo de Solicitante",
+        "Professor Responsável",
+        "Turma",
+        "Chromebook Nº",
+        "Tipo",
+        "Quantidade",
+        "Previsão de Devolução",
+        "Status",
+        "Data de Devolução",
+        "Horário de Devolução"
+      ].join(","),
+      // Data rows
+      ...filtered.map(loan => [
+        loan.loan_date,
+        loan.pickup_time,
+        loan.borrower_name,
+        loan.borrower_type,
+        loan.responsible_teacher || "",
+        loan.class_name || "",
+        getChromebookDisplay(loan),
+        loan.equipment_type || "",
+        loan.quantity,
+        loan.expected_return_date || "",
+        loan.status,
+        loan.returned_at ? format(parse(loan.returned_at, "yyyy-MM-dd HH:mm:ss", new Date()), "dd/MM/yyyy") : "",
+        loan.return_time || ""
+      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `emprestimos_${format(new Date(), "dd-MM-yyyy_HH-mm")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const loanCounts = useMemo(() => {
     const allFilteredBySearchAndType = getFilteredLoans("all");
     return {
@@ -529,63 +551,62 @@ export function LoansManagement() {
         </div>
       </div>
 
-      {/* Search and Filters Card */}
-      <div className="bg-card border rounded-xl p-4 space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
+      {/* Super Mega Filters */}
+      <div className="bg-card border rounded-xl overflow-hidden">
+        <div className="p-4 flex flex-col gap-3 md:flex-row md:flex-wrap items-start md:items-center">
+          <div className="relative flex-1 md:flex-initial md:w-1/4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou número do Chromebook..."
+              placeholder="Buscar por nome ou Chromebook..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 bg-background"
             />
           </div>
-          <Select value={equipmentTypeFilter} onValueChange={setEquipmentTypeFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Todos os tipos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os tipos</SelectItem>
-              <SelectItem value="professor">Professor</SelectItem>
-              <SelectItem value="aluno">Aluno</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b">
-          <button
-            onClick={() => setStatusFilter("em_uso")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              statusFilter === "em_uso"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Em Uso ({loanCounts.em_uso})
-          </button>
-          <button
-            onClick={() => setStatusFilter("atrasado")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              statusFilter === "atrasado"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Atrasados ({loanCounts.atrasado})
-          </button>
-          <button
-            onClick={() => setStatusFilter("devolvido")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              statusFilter === "devolvido"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Histórico ({loanCounts.devolvido})
-          </button>
+          {/* Status Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                {statusFilter === "em_uso" && `Em Uso (${loanCounts.em_uso})`}
+                {statusFilter === "atrasado" && `Atrasados (${loanCounts.atrasado})`}
+                {statusFilter === "devolvido" && `Histórico (${loanCounts.devolvido})`}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setStatusFilter("em_uso")}>
+                Em Uso ({loanCounts.em_uso})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("atrasado")}>
+                Atrasados ({loanCounts.atrasado})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("devolvido")}>
+                Histórico ({loanCounts.devolvido})
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Equipment Type Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                {equipmentTypeFilter === "all" && "Todos os tipos"}
+                {equipmentTypeFilter === "professor" && "Professor"}
+                {equipmentTypeFilter === "aluno" && "Aluno"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setEquipmentTypeFilter("all")}>
+                Todos os tipos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setEquipmentTypeFilter("professor")}>
+                Professor
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setEquipmentTypeFilter("aluno")}>
+                Aluno
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
