@@ -129,10 +129,32 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
     { value: "funcionario", label: "Funcionário", icon: Briefcase },
   ];
 
-  // Obter lista de equipamentos
+  // Obter lista de equipamentos com ID e Patrimônio
   const equipmentsList = loan.chromebook_number 
     ? loan.chromebook_number.split(',').map((num: string) => num.trim()).filter((num: string) => num.length > 0)
     : [];
+
+  // Função para normalizar patrimônio (remover zeros à esquerda)
+  const normalizePatrimony = (patrimony: string): string => {
+    return patrimony.replace(/^0+/, '');
+  };
+
+  // Função para formatar equipamento para exibição (prioriza ID sobre Patrimônio)
+  const formatEquipmentForDisplay = (equipment: string, loan: any): string => {
+    const trimmedEquipment = equipment.trim();
+    
+    // Prioridade 1: Se tiver equipment_id e it_equipment com id_number, mostra o ID
+    if (loan.equipment_id && loan.it_equipment?.id_number) {
+      return loan.it_equipment.id_number;
+    }
+    
+    // Prioridade 2: Tentar buscar ID do equipamento pelo patrimônio (se houver mapa)
+    // Nota: Aqui poderíamos implementar um mapa de equipamentos como no LoansManagement
+    // Por enquanto, vamos usar a lógica disponível
+    
+    // Prioridade 3: Se não tiver ID, mostra o patrimônio normalizado
+    return normalizePatrimony(equipment);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,7 +188,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
                   key={index} 
                   className="inline-flex items-center px-2.5 py-1 rounded-md bg-background border text-sm font-mono"
                 >
-                  {eq}
+                  {formatEquipmentForDisplay(eq, loan)}
                 </span>
               ))}
             </div>
