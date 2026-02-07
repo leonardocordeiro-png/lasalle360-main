@@ -484,7 +484,7 @@ export default function ModernConsolidatedBookingsList({
                       </span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50" align="center" side="bottom" sideOffset={8}>
+                  <PopoverContent className="w-auto p-0 z-[100]" align="center" side="bottom" sideOffset={4} collisionPadding={8}>
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -494,7 +494,7 @@ export default function ModernConsolidatedBookingsList({
                           setSelectedMonth(date);
                         }
                       }}
-                      initialFocus
+                      initialFocus={false}
                       locale={ptBR}
                       className="rounded-md border shadow-lg bg-background"
                       showOutsideDays={false}
@@ -551,7 +551,7 @@ export default function ModernConsolidatedBookingsList({
                         </span>
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-50" align="center" side="bottom" sideOffset={8}>
+                    <PopoverContent className="w-auto p-0 z-[100]" align="center" side="bottom" sideOffset={4} collisionPadding={8}>
                       <Calendar
                         mode="single"
                         selected={selectedDate}
@@ -561,7 +561,7 @@ export default function ModernConsolidatedBookingsList({
                             setSelectedMonth(date);
                           }
                         }}
-                        initialFocus
+                        initialFocus={false}
                         locale={ptBR}
                         className="rounded-md border shadow-lg bg-background"
                         showOutsideDays={false}
