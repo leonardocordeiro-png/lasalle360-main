@@ -459,13 +459,7 @@ const DashboardComponent = () => {
         navigate('/admin');
         break;
       case 'users':
-        navigate('/admin');
-        break;
-      case 'reports':
-        navigate('/admin');
-        break;
-      case 'settings':
-        toast({ title: "Configurações", description: "Em breve disponível!" });
+        navigate('/admin?tab=users');
         break;
       case 'profile':
         setShowProfileDialog(true);

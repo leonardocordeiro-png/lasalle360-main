@@ -47,7 +47,6 @@ export const UserDropdown = ({
   
   const profileItems: MenuItem[] = [
     { icon: "solar:user-circle-line-duotone", label: "Meu Perfil", action: "profile" },
-    { icon: "solar:settings-line-duotone", label: "Configurações", action: "settings" },
     { icon: "solar:bell-line-duotone", label: "Notificações", action: "notifications" },
   ];
 
@@ -59,7 +58,6 @@ export const UserDropdown = ({
       iconClass: "text-amber-500",
       badge: { text: "Admin", className: "bg-amber-500 text-white text-[10px]" }
     },
-    { icon: "solar:chart-2-line-duotone", label: "Relatórios", action: "reports" },
     { icon: "solar:users-group-rounded-line-duotone", label: "Gerenciar Usuários", action: "users" },
   ] : [];
 

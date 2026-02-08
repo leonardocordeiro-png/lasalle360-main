@@ -23,7 +23,7 @@ import {
   GraduationCap,
   BookOpen
 } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import UserManagement from '@/components/admin/UserManagement';
 import SystemSettings from '@/components/admin/SystemSettings';
 import AuditLogs from '@/components/admin/AuditLogs';
@@ -44,6 +44,7 @@ interface Profile {
 export default function AdminPanel() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('stats');
@@ -53,6 +54,14 @@ export default function AdminPanel() {
     audit_logs: { canAccess: false, level: 'none' as PermissionLevel },
     council_class: { canAccess: false, level: 'none' as PermissionLevel }
   });
+
+  useEffect(() => {
+    // Check for tab parameter in URL
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['stats', 'users', 'inventory', 'it-equipment', 'school-planning', 'council-class', 'audit-logs', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (user) {
