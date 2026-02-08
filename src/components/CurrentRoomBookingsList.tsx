@@ -4,6 +4,7 @@ import {
   Calendar, 
   Clock, 
   Users, 
+  User,
   MessageSquare, 
   CheckCircle2, 
   XCircle, 
@@ -100,6 +101,18 @@ function groupConsecutiveBookings(bookings: RoomBooking[]): GroupedBooking[] {
   return grouped;
 }
 
+// Função para formatar nome do usuário (primeiro nome + último sobrenome)
+const formatUserName = (fullName: string) => {
+  if (!fullName) return '';
+  
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} ${parts[1]}`;
+  
+  // Pega primeiro nome e último sobrenome
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
 export function CurrentRoomBookingsList({ 
   bookings, 
   onBookingDeleted, 
@@ -189,7 +202,12 @@ export function CurrentRoomBookingsList({
                       <Users className="h-3 w-3 flex-shrink-0" />
                       <span className="truncate">Turma: {booking.class_name}</span>
                     </span>
-                    <span className="text-xs truncate">{booking.full_name?.split(' ')[0]}</span>
+                    <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 px-2 py-1 rounded-md border border-blue-200 dark:border-blue-800">
+                      <User className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-300 truncate">
+                        {formatUserName(booking.full_name)}
+                      </span>
+                    </div>
                   </div>
                   
                   {/* Observações */}
