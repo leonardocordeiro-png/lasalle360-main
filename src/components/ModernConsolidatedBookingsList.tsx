@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { toast } from '@/hooks/use-toast';
@@ -416,55 +417,92 @@ export default function ModernConsolidatedBookingsList({
         </CardHeader>
       </Card>
 
-      {/* Filtros e Busca */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Busca */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por usuário, turma ou status..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            {/* Filtros */}
-            <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Status</SelectItem>
-                  <SelectItem value="active">Ativos</SelectItem>
-                  <SelectItem value="returned">Devolvidos</SelectItem>
-                  <SelectItem value="cancelled">Cancelados</SelectItem>
-                  <SelectItem value="today">Hoje</SelectItem>
-                  <SelectItem value="future">Futuros</SelectItem>
-                  <SelectItem value="past">Passados</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Tipos</SelectItem>
-                  <SelectItem value="chromebook">Chromebooks</SelectItem>
-                  <SelectItem value="room">Salas</SelectItem>
-                  <SelectItem value="auditorio">Auditório</SelectItem>
-                  <SelectItem value="laboratorio">Laboratório</SelectItem>
-                  <SelectItem value="sala_criativa">Sala Criativa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Super Mega Filters */}
+      <div className="bg-card border rounded-xl overflow-hidden">
+        <div className="p-4 flex flex-col gap-3 md:flex-row md:flex-wrap items-start md:items-center">
+          <div className="relative flex-1 md:flex-initial md:w-1/4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por usuário, turma ou status..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-background"
+            />
           </div>
-        </CardHeader>
-      </Card>
+
+          {/* Status Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                {statusFilter === "all" && "Todos Status"}
+                {statusFilter === "active" && "Ativos"}
+                {statusFilter === "returned" && "Devolvidos"}
+                {statusFilter === "cancelled" && "Cancelados"}
+                {statusFilter === "today" && "Hoje"}
+                {statusFilter === "future" && "Futuros"}
+                {statusFilter === "past" && "Passados"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                Todos Status
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("active")}>
+                Ativos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("returned")}>
+                Devolvidos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("cancelled")}>
+                Cancelados
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("today")}>
+                Hoje
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("future")}>
+                Futuros
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("past")}>
+                Passados
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Type Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                {typeFilter === "all" && "Todos Tipos"}
+                {typeFilter === "chromebook" && "Chromebooks"}
+                {typeFilter === "room" && "Salas"}
+                {typeFilter === "auditorio" && "Auditório"}
+                {typeFilter === "laboratorio" && "Laboratório"}
+                {typeFilter === "sala_criativa" && "Sala Criativa"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setTypeFilter("all")}>
+                Todos Tipos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter("chromebook")}>
+                Chromebooks
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter("room")}>
+                Salas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter("auditorio")}>
+                Auditório
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter("laboratorio")}>
+                Laboratório
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter("sala_criativa")}>
+                Sala Criativa
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
       {/* Navegação de Mês */}
       <Card className="border-0 shadow-lg">
