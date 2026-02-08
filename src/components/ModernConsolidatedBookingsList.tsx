@@ -85,6 +85,18 @@ interface ModernConsolidatedBookingsListProps {
   currentUserId: string;
 }
 
+// Função para formatar nome do usuário (primeiro nome + último sobrenome)
+const formatUserName = (fullName: string) => {
+  if (!fullName) return '';
+  
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} ${parts[1]}`;
+  
+  // Pega primeiro nome e último sobrenome
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
 export default function ModernConsolidatedBookingsList({ 
   bookings, 
   onBookingCancelled, 
@@ -647,7 +659,7 @@ export default function ModernConsolidatedBookingsList({
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3 w-3" />
-                                  <span className="truncate">{booking.full_name}</span>
+                                  <span className="truncate">{formatUserName(booking.full_name)}</span>
                                 </span>
                               </div>
                               
@@ -656,7 +668,7 @@ export default function ModernConsolidatedBookingsList({
                                 <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
                                   <PackageCheck className="h-3 w-3" />
                                   <span>
-                                    Devolvido por {booking.returned_by || 'sistema'}
+                                    Devolvido por {booking.returned_by ? formatUserName(booking.returned_by) : 'sistema'}
                                     {booking.returned_at && (
                                       <span> em {format(parseISO(booking.returned_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
                                     )}
