@@ -141,12 +141,12 @@ export function CurrentRoomBookingsList({
               'bg-white dark:bg-slate-800'
             }`}
           >
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                <div className="flex-1 min-w-0">
                   {/* Header com data e horário */}
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-2 rounded-lg ${
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${
                       isBookingToday ? 'bg-blue-100 dark:bg-blue-900' :
                       isBookingFuture ? 'bg-green-100 dark:bg-green-900' :
                       'bg-gray-100 dark:bg-gray-800'
@@ -157,37 +157,39 @@ export function CurrentRoomBookingsList({
                         'text-gray-600 dark:text-gray-400'
                       }`} />
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">
                         {format(bookingDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {format(bookingDate, "dd/MM/yyyy")}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getStatusVariant()} className="text-xs">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {booking.start_time} - {booking.end_time}
+                  </div>
+                  
+                  {/* Badges de horário e status */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    <Badge variant={getStatusVariant()} className="text-xs flex-shrink-0">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {booking.start_time} - {booking.end_time}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                      {getStatusText()}
+                    </Badge>
+                    {booking.slots_count > 1 && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
+                        {booking.slots_count} horários
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {getStatusText()}
-                      </Badge>
-                      {booking.slots_count > 1 && (
-                        <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/20">
-                          {booking.slots_count} horários
-                        </Badge>
-                      )}
-                    </div>
+                    )}
                   </div>
                   
                   {/* Detalhes */}
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      Turma: {booking.class_name}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1 truncate">
+                      <Users className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">Turma: {booking.class_name}</span>
                     </span>
-                    <span className="text-xs">• {booking.full_name?.split(' ')[0]}</span>
+                    <span className="text-xs truncate">{booking.full_name?.split(' ')[0]}</span>
                   </div>
                   
                   {/* Observações */}
@@ -195,7 +197,7 @@ export function CurrentRoomBookingsList({
                     <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-xs text-amber-800 dark:text-amber-300">
                       <div className="flex items-start gap-1">
                         <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
-                        <span>{booking.observations.join(' | ')}</span>
+                        <span className="break-words">{booking.observations.join(' | ')}</span>
                       </div>
                     </div>
                   )}
@@ -212,9 +214,11 @@ export function CurrentRoomBookingsList({
                     {booking.approval_status === 'pending' && <Loader2 className="h-3 w-3 animate-spin" />}
                     {booking.approval_status === 'rejected' && <XCircle className="h-3 w-3" />}
                     {booking.approval_status === 'expired' && <XCircle className="h-3 w-3" />}
-                    {booking.approval_status === 'pending' ? 'Aguardando' : 
-                     booking.approval_status === 'rejected' ? 'Rejeitado' : 
-                     booking.approval_status === 'expired' ? 'Expirado' : booking.approval_status}
+                    <span className="text-xs">
+                      {booking.approval_status === 'pending' ? 'Aguardando' : 
+                       booking.approval_status === 'rejected' ? 'Rejeitado' : 
+                       booking.approval_status === 'expired' ? 'Expirado' : booking.approval_status}
+                    </span>
                   </Badge>
                 ) : (
                   <Badge 
@@ -228,12 +232,14 @@ export function CurrentRoomBookingsList({
                     {booking.approval_status === 'approved' && booking.room_type === 'auditorio' && (
                       <CheckCircle2 className="h-3 w-3" />
                     )}
-                    {booking.approval_status === 'approved' && booking.room_type === 'auditorio' 
-                      ? 'Aprovado' 
-                      : booking.status === 'active' 
-                        ? 'Ativo' 
-                        : 'Inativo'
-                    }
+                    <span className="text-xs">
+                      {booking.approval_status === 'approved' && booking.room_type === 'auditorio' 
+                        ? 'Aprovado' 
+                        : booking.status === 'active' 
+                          ? 'Ativo' 
+                          : 'Inativo'
+                      }
+                    </span>
                   </Badge>
                 )}
               </div>
