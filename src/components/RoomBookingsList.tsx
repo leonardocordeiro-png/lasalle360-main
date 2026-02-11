@@ -37,7 +37,7 @@ interface RoomBookingsListProps {
   roomName: string;
 }
 
-// Função para agrupar todos os horários do mesmo usuário/sala/data
+// Função para agrupar todos os horários do mesmo usuário/sala/data com mesmas observações
 function groupBookingsByDay(bookings: RoomBooking[]): GroupedBooking[] {
   if (bookings.length === 0) return [];
   
@@ -47,11 +47,13 @@ function groupBookingsByDay(bookings: RoomBooking[]): GroupedBooking[] {
     return a.start_time.localeCompare(b.start_time);
   });
 
-  // Agrupar por data, sala, usuário e turma
+  // Agrupar por data, sala, usuário, turma E observações
   const groups: Record<string, RoomBooking[]> = {};
   
   for (const booking of sorted) {
-    const key = `${booking.booking_date}-${booking.room_type}-${booking.full_name}-${booking.class_name}`;
+    // Normalizar observações para comparação (remover espaços extras e null)
+    const normalizedObservations = booking.observations?.trim().toLowerCase() || '';
+    const key = `${booking.booking_date}-${booking.room_type}-${booking.full_name}-${booking.class_name}-${normalizedObservations}`;
     if (!groups[key]) {
       groups[key] = [];
     }
@@ -120,7 +122,7 @@ export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomB
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {groupedBookings.map((booking) => {
         const uniqueObservations = [...new Set(booking.observations)];
         const hasObservations = uniqueObservations.length > 0;
@@ -128,83 +130,120 @@ export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomB
         return (
           <div 
             key={booking.ids.join('-')} 
-            className={`flex items-start gap-3 p-3 rounded-lg border bg-white dark:bg-gray-900 ${
+            className={`relative overflow-hidden rounded-xl border bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-md ${
               booking.status !== 'active' ? 'opacity-60' : ''
             }`}
           >
-            {/* Badge da sala */}
-            <Badge className={`${getRoomTypeBadgeClass(booking.room_type)} shrink-0 mt-0.5`}>
-              {getRoomTypeLabel(booking.room_type)}
-            </Badge>
-            
-            {/* Informações principais */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  {format(parseISO(booking.booking_date), "dd/MM/yyyy", { locale: ptBR })}
-                </span>
-                {booking.slots_count === 1 ? (
-                  <span className="flex items-center gap-1 text-sm font-medium">
-                    <Clock className="h-3 w-3" />
-                    {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
-                  </span>
-                ) : (
-                  <div className="flex items-center gap-1 text-sm font-medium">
-                    <Clock className="h-3 w-3" />
-                    <span className="text-blue-600">
-                      {booking.slots_count} horários
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      ({booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)})
+            {/* Header com informações principais */}
+            <div className="p-4 pb-3">
+              <div className="flex items-start justify-between gap-3">
+                {/* Informações do agendamento */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap mb-2">
+                    {/* Badge da sala */}
+                    <Badge className={`${getRoomTypeBadgeClass(booking.room_type)} shrink-0`}>
+                      {getRoomTypeLabel(booking.room_type)}
+                    </Badge>
+                    
+                    {/* Data */}
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground font-medium">
+                      <Calendar className="h-4 w-4" />
+                      {format(parseISO(booking.booking_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                     </span>
                   </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <Users className="h-3 w-3 text-muted-foreground" />
-                <span className="text-sm font-medium">{booking.full_name}</span>
-                <span className="text-sm text-muted-foreground">•</span>
-                <span className="text-sm text-muted-foreground">{booking.class_name}</span>
-              </div>
-              {hasObservations && (
-                <div className="flex items-start gap-1 mt-2">
-                  <MessageSquare className="h-3 w-3 text-muted-foreground mt-0.5" />
-                  <span className="text-xs text-muted-foreground">{uniqueObservations.join(', ')}</span>
+                  
+                  {/* Horários - Display inteligente */}
+                  <div className="flex items-center gap-2 mb-2">
+                    {booking.slots_count === 1 ? (
+                      <span className="flex items-center gap-1 text-base font-semibold text-gray-900 dark:text-gray-100">
+                        <Clock className="h-4 w-4 text-blue-500" />
+                        {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                      </span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 text-base font-semibold text-blue-600">
+                            <Clock className="h-4 w-4" />
+                            {booking.slots_count} {booking.slots_count === 1 ? 'horário' : 'horários'}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            ({booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)})
+                          </span>
+                        </div>
+                        <div className="text-xs text-blue-600 font-medium bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md inline-block">
+                          ✓ Agendamentos consolidados
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Usuário e turma */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{booking.full_name}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-muted-foreground">{booking.class_name}</span>
+                  </div>
                 </div>
-              )}
+                
+                {/* Status */}
+                <div className="shrink-0">
+                  {booking.room_type === 'auditorio' && booking.approval_status && booking.approval_status !== 'approved' ? (
+                    <Badge 
+                      variant={booking.approval_status === 'pending' ? 'secondary' : 'destructive'} 
+                      className={`flex items-center gap-1 ${
+                        booking.approval_status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-300' : ''
+                      }`}
+                    >
+                      {booking.approval_status === 'pending' ? (
+                        <>
+                          <Clock className="h-3 w-3" />
+                          Aguardando
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3 w-3" />
+                          Rejeitado
+                        </>
+                      )}
+                    </Badge>
+                  ) : booking.status === 'active' ? (
+                    <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600 bg-green-50">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {booking.room_type === 'auditorio' && booking.approval_status === 'approved' ? 'Aprovado' : 'Ativo'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Cancelado
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
             
-            {/* Status */}
-            {booking.room_type === 'auditorio' && booking.approval_status && booking.approval_status !== 'approved' ? (
-              <Badge 
-                variant={booking.approval_status === 'pending' ? 'secondary' : 'destructive'} 
-                className={`shrink-0 flex items-center gap-1 ${
-                  booking.approval_status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-300' : ''
-                }`}
-              >
-                {booking.approval_status === 'pending' ? (
-                  <>
-                    <Clock className="h-3 w-3" />
-                    Aguardando
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-3 w-3" />
-                    Rejeitado
-                  </>
-                )}
-              </Badge>
-            ) : booking.status === 'active' ? (
-              <Badge variant="outline" className="shrink-0 flex items-center gap-1 text-green-600 border-green-600">
-                <CheckCircle2 className="h-3 w-3" />
-                {booking.room_type === 'auditorio' && booking.approval_status === 'approved' ? 'Aprovado' : 'Ativo'}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="shrink-0 flex items-center gap-1">
-                <XCircle className="h-3 w-3" />
-                Cancelado
-              </Badge>
+            {/* Observações - Seção destacada */}
+            {hasObservations && (
+              <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">
+                      Observações:
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      {uniqueObservations.join(', ')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Indicador visual para múltiplos agendamentos */}
+            {booking.slots_count > 1 && (
+              <div className="absolute top-2 right-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              </div>
             )}
           </div>
         );
