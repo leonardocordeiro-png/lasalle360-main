@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Callback - La Salle 360</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .copy-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Processando Autorização Gmail</h1>
+        
+        <div id="status">
+            <p>🔄 Processando código de autorização...</p>
+        </div>
+        
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Extrair código da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        
+        const statusDiv = document.getElementById('status');
+        const resultDiv = document.getElementById('result');
+        
+        if (error) {
+            statusDiv.style.display = 'none';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="error">
+                    <h2>❌ Erro na Autenticação</h2>
+                    <p>Erro: ${error}</p>
+                    <p>Feche esta janela e tente novamente.</p>
+                </div>
+            `;
+        } else if (code) {
+            statusDiv.innerHTML = '<p>🔄 Trocando código por refresh token...</p>';
+            
+            // Fazer requisição para trocar código por refresh token
+            fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    client_id: 'GOOGLE_CLIENT_ID_REMOVED',
+                    client_secret: 'GOOGLE_CLIENT_SECRET_REMOVED',
+                    code: code,
+                    grant_type: 'authorization_code',
+                    redirect_uri: 'http://localhost:3000/oauth/callback'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                statusDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h2>❌ Erro ao obter token</h2>
+                            <p>Erro: ${data.error_description || data.error}</p>
+                            <p>Feche esta janela e tente novamente.</p>
+                        </div>
+                    `;
+                } else {
+                    const refreshToken = data.refresh_token;
+                    
+                    if (!refreshToken) {
+                        resultDiv.innerHTML = `
+                            <div class="error">
+                                <h2>❌ Refresh Token não obtido</h2>
+                                <p>Por favor, certifique-se de que você incluiu "access_type=offline" e "prompt=consent" na URL de autorização.</p>
+                                <p>Resposta completa: ${JSON.stringify(data, null, 2)}</p>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                <h2>✅ Autenticação Concluída!</h2>
+                                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                                    <h3>Próximos Passos:</h3>
+                                    <ol>
+                                        <li>Copie o Refresh Token abaixo:</li>
+                                        <li>Vá para o painel do Supabase</li>
+                                        <li>Settings → Edge Functions</li>
+                                        <li>Adicione a variável de ambiente: <strong>GMAIL_REFRESH_TOKEN</strong></li>
+                                        <li>Cole o valor copiado</li>
+                                    </ol>
+                                </div>
+                                
+                                <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px;">
+                                    <h3>🔑 Refresh Token (copie este valor):</h3>
+                                    <textarea readonly onclick="this.select()">${refreshToken}</textarea>
+                                    <button class="copy-btn" onclick="copyToken('${refreshToken}')">📋 Copiar Token</button>
+                                </div>
+                                
+                                <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                                    <h3>✅ Importante:</h3>
+                                    <ul>
+                                        <li>Guarde este token em local seguro</li>
+                                        <li>Não compartilhe com ninguém</li>
+                                        <li>O token não expira, mas pode ser revogado</li>
+                                        <li>Após configurar, a função de e-mail estará pronta</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            })
+            .catch(error => {
+                statusDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h2>❌ Erro na requisição</h2>
+                        <p>Erro: ${error.message}</p>
+                        <p>Feche esta janela e tente novamente.</p>
+                    </div>
+                `;
+            });
+        } else {
+            statusDiv.style.display = 'none';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="error">
+                    <h2>❌ Código não encontrado</h2>
+                    <p>Nenhum código de autorização foi encontrado na URL.</p>
+                    <p>Feche esta janela e tente novamente.</p>
+                </div>
+            `;
+        }
+        
+        function copyToken(token) {
+            navigator.clipboard.writeText(token).then(() => {
+                alert('Token copiado para a área de transferência!');
+            }).catch(err => {
+                console.error('Erro ao copiar token:', err);
+            });
+        }
+    </script>
+</body>
+</html>

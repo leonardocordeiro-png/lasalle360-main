@@ -84,11 +84,11 @@ const loanSchema = z.object({
   observations: z.string().optional(),
 }).refine((data) => {
   if (data.borrower_type === "aluno") {
-    return !!data.responsible_teacher && !!data.class_name;
+    return !!data.responsible_teacher; // Apenas professor responsável obrigatório
   }
   return true;
 }, {
-  message: "Professor responsável e turma são obrigatórios para alunos",
+  message: "Professor responsável é obrigatório para alunos",
   path: ["responsible_teacher"],
 }).refine((data) => {
   if (data.quantity === 1) {
@@ -737,13 +737,13 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
-                      Turma <span className="text-muted-foreground font-normal">(Turma)</span>
+                      Turma <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Icon icon="solar:notebook-line-duotone" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
-                          placeholder="Ex: 9A" 
+                          placeholder="Ex: 9A (opcional)" 
                           className="pl-10" 
                           disabled={borrowerType !== "aluno"}
                           {...field} 

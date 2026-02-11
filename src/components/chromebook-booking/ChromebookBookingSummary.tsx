@@ -51,7 +51,7 @@ export function ChromebookBookingSummary({
     fetchUserProfile();
   }, []);
 
-  const canSubmit = selectedSlots.length > 0 && classGroupName.trim().length > 0 && quantity > 0;
+  const canSubmit = selectedSlots.length > 0 && quantity > 0;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -76,7 +76,7 @@ export function ChromebookBookingSummary({
       const bookingsToCreate = selectedSlots.map(slot => ({
         user_id: user.id,
         full_name: profile.full_name,
-        class_name: classGroupName.trim(),
+        class_name: classGroupName.trim() || 'Sem turma',
         quantity: quantity,
         booking_date: dateStr,
         start_time: slot.start,
@@ -202,15 +202,7 @@ export function ChromebookBookingSummary({
 
             <Separator />
 
-            {/* Validação */}
-            {!classGroupName.trim() && selectedSlots.length > 0 && (
-              <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg animate-pulse">
-                <p className="text-xs font-medium text-red-700 dark:text-red-300 flex items-center gap-2">
-                  <GraduationCap className="h-4 w-4" />
-                  ⚠️ Informe a turma no painel de filtros (ao lado) para continuar
-                </p>
-              </div>
-            )}
+            {/* Validação - Removida validação de turma obrigatória */}
 
             {/* Botões */}
             <div className="space-y-2 pt-2">

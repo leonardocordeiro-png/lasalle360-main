@@ -118,14 +118,15 @@ export function RoomBookingSummary({
       return;
     }
 
-    if (!className.trim()) {
-      toast({
-        title: "Erro",
-        description: "Por favor, informe a turma",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Turma não é mais obrigatória
+    // if (!className.trim()) {
+    //   toast({
+    //     title: "Erro",
+    //     description: "Por favor, informe a turma",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     setIsCreating(true);
 
@@ -153,7 +154,7 @@ export function RoomBookingSummary({
         booking_date: format(selectedDate, 'yyyy-MM-dd'),
         start_time: slot.start,
         end_time: slot.end,
-        class_name: className.trim(),
+        class_name: className.trim() || 'Sem turma',
         observations: observations.trim() || null,
         status: 'active',
         resources: isAuditorio ? selectedResources : [],

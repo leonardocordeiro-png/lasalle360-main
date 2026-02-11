@@ -239,7 +239,7 @@ export function PendingApprovalsTab() {
 
       // Send notification email to user
       try {
-        await supabase.functions.invoke('send-approval-result-email', {
+        await supabase.functions.invoke('send-approval-result-email-gmail', {
           body: {
             bookings: group.bookings,
             userName: group.fullName,

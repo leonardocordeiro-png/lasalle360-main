@@ -1,0 +1,36 @@
+INSTRUÇÕES - CONFIGURAR GOOGLE CLOUD CONSOLE
+
+PROBLEMA: redirect_uri_mismatch
+
+SOLUÇÃO:
+
+1. Acesse: https://console.cloud.google.com/
+2. Faça login com sua conta Google
+3. No menu superior, vá para: APIs & Services → Credentials
+4. Encontre "OAuth 2.0 Client IDs" (deve ter o ID que começa com 623211940146-...)
+5. Clique no ícone de lápis (Edit) ao lado do seu Client ID
+6. Role para baixo até "Authorized redirect URIs"
+7. Clique em "+ ADD URI"
+8. Adicione EXATAMENTE uma destas opções:
+
+   OPÇÃO 1 (Recomendada):
+   https://oauth-helper-page.vercel.app/oauth/callback
+
+   OPÇÃO 2 (Alternativa):
+   http://localhost:3000/oauth/callback
+
+9. Clique em "Save" no final da página
+
+10. Espere 1-2 minutos para a configuração ser aplicada
+
+11. Depois volte para a página oauth-helper.html e tente novamente
+
+IMPORTANTE:
+- Use EXATAMENTE a URL sem espaços extras
+- Espere um pouco após salvar para o Google processar
+- Se ainda não funcionar, tente a outra opção de URL
+
+Se continuar com erro, verifique se:
+- O Client ID está correto (623211940146-9bhnq43j0nsefmdbge2gh6jb5g6r4di0.apps.googleusercontent.com)
+- Você está usando a conta correta no Google Cloud
+- A URI foi adicionada corretamente sem erros de digitação

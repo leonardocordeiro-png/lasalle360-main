@@ -65,21 +65,21 @@ export function ChromebookFilterPanel({
           </div>
         </div>
 
-        {/* Turma - Moved up for visibility */}
-        <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/10 shadow-sm">
+        {/* Turma - Opcional */}
+        <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-muted/20 shadow-sm">
           <Label className="text-sm font-medium text-foreground flex items-center gap-2">
             <GraduationCap className="h-4 w-4 text-primary" />
-            Turma *
+            Turma <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
           </Label>
           <Input
             placeholder="Ex: 9º Ano A"
             value={classGroupName}
             onChange={(e) => onClassNameChange(e.target.value)}
             maxLength={50}
-            className="bg-background border-primary/20 focus-visible:ring-primary"
+            className="bg-background border-muted/20 focus-visible:ring-primary"
           />
           <p className="text-[10px] text-muted-foreground italic">
-            Campo obrigatório para continuar a reserva
+            Informe a turma se aplicável (campo opcional)
           </p>
         </div>
 
