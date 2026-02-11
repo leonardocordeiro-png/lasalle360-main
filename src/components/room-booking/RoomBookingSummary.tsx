@@ -10,6 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { bookingEmailQueue } from "@/lib/bookingEmailQueue";
+import { useAuth } from "@/hooks/useAuth";
 
 const AUDITORIO_RESOURCES = [
   { id: 'som', label: 'Som', icon: Volume2 },
@@ -44,11 +45,13 @@ export function RoomBookingSummary({
   onBookingCreated,
   onClearSelection,
 }: RoomBookingSummaryProps) {
+  const { user } = useAuth();
   const [className, setClassName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
+  const [userEmail, setUserEmail] = useState("");
+  const [fullName, setFullName] = useState("");
 
   const toggleResource = (resourceId: string) => {
     setSelectedResources(prev => 
@@ -57,7 +60,6 @@ export function RoomBookingSummary({
         : [...prev, resourceId]
     );
   };
-  const { toast } = useToast();
 
   const roomInfo: Record<string, { name: string; icon: typeof School }> = {
     auditorio: {
@@ -125,11 +127,9 @@ export function RoomBookingSummary({
       return;
     }
 
-    setLoading(true);
+    setIsCreating(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
         toast({
           title: "Erro",
@@ -208,11 +208,12 @@ export function RoomBookingSummary({
         ? `às ${selectedSlots[0].start}` 
         : `em ${selectedSlots.length} horários`;
 
-      // Se for Auditório, enviar e-mail para aprovadores
+      // Se for Auditório, enviar e-mail para aprovadores de forma assíncrona
       if (roomName.toLowerCase().includes('auditório') || roomName.toLowerCase().includes('auditorio')) {
         console.log('Enviando e-mail de aprovação para reserva do auditório...');
         
-        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-approval-request-email', {
+        // Enviar e-mail de forma assíncrona para não bloquear o fluxo
+        supabase.functions.invoke('send-approval-request-email-gmail', {
           body: {
             bookings: newBookings,
             userName: user.user_metadata?.full_name || user.email || 'Usuário',
@@ -221,14 +222,15 @@ export function RoomBookingSummary({
             resources: selectedResources,
             observations: observations
           }
+        }).then(({ data: emailResult, error: emailError }) => {
+          if (emailError) {
+            console.error('Erro ao enviar e-mail de aprovação:', emailError);
+          } else {
+            console.log('E-mail de aprovação enviado com sucesso:', emailResult);
+          }
+        }).catch(error => {
+          console.error('Erro na chamada da função de e-mail:', error);
         });
-        
-        if (emailError) {
-          console.error('Erro ao enviar e-mail de aprovação:', emailError);
-          // Não falhar o fluxo se o e-mail falhar
-        } else {
-          console.log('E-mail de aprovação enviado com sucesso:', emailResult);
-        }
       }
 
       toast({
@@ -250,7 +252,7 @@ export function RoomBookingSummary({
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
@@ -395,10 +397,10 @@ export function RoomBookingSummary({
             <div className="space-y-2">
               <Button
                 type="submit"
-                disabled={loading || !className.trim()}
+                disabled={isCreating || !className.trim()}
                 className="w-full h-12 text-base font-medium"
               >
-                {loading ? (
+                {isCreating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Confirmando...

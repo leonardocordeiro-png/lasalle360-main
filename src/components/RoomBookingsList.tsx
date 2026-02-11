@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, MessageSquare, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Calendar, Clock, Users, MessageSquare, CheckCircle2, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -37,8 +37,8 @@ interface RoomBookingsListProps {
   roomName: string;
 }
 
-// Função para agrupar horários consecutivos do mesmo usuário/sala/data
-function groupConsecutiveBookings(bookings: RoomBooking[]): GroupedBooking[] {
+// Função para agrupar todos os horários do mesmo usuário/sala/data
+function groupBookingsByDay(bookings: RoomBooking[]): GroupedBooking[] {
   if (bookings.length === 0) return [];
   
   const sorted = [...bookings].sort((a, b) => {
@@ -47,44 +47,47 @@ function groupConsecutiveBookings(bookings: RoomBooking[]): GroupedBooking[] {
     return a.start_time.localeCompare(b.start_time);
   });
 
-  const grouped: GroupedBooking[] = [];
-  let current: GroupedBooking | null = null;
-
+  // Agrupar por data, sala, usuário e turma
+  const groups: Record<string, RoomBooking[]> = {};
+  
   for (const booking of sorted) {
-    const canGroup = current && 
-      current.booking_date === booking.booking_date &&
-      current.room_type === booking.room_type &&
-      current.class_name === booking.class_name &&
-      current.status === booking.status &&
-      current.end_time === booking.start_time;
-
-    if (canGroup && current) {
-      current.ids.push(booking.id);
-      current.end_time = booking.end_time;
-      current.slots_count++;
-      if (booking.observations?.trim()) {
-        current.observations.push(booking.observations.trim());
-      }
-    } else {
-      if (current) grouped.push(current);
-      current = {
-        ids: [booking.id],
-        room_type: booking.room_type,
-        booking_date: booking.booking_date,
-        start_time: booking.start_time,
-        end_time: booking.end_time,
-        class_name: booking.class_name,
-        observations: booking.observations?.trim() ? [booking.observations.trim()] : [],
-        status: booking.status,
-        full_name: booking.full_name,
-        slots_count: 1,
-        approval_status: booking.approval_status
-      };
+    const key = `${booking.booking_date}-${booking.room_type}-${booking.full_name}-${booking.class_name}`;
+    if (!groups[key]) {
+      groups[key] = [];
     }
+    groups[key].push(booking);
+  }
+
+  // Converter para o formato GroupedBooking
+  const grouped: GroupedBooking[] = [];
+  
+  for (const group of Object.values(groups)) {
+    if (group.length === 0) continue;
+    
+    const first = group[0];
+    const allObservations = group
+      .map(b => b.observations?.trim())
+      .filter(Boolean) as string[];
+    
+    grouped.push({
+      ids: group.map(b => b.id),
+      room_type: first.room_type,
+      booking_date: first.booking_date,
+      start_time: group[0].start_time,
+      end_time: group[group.length - 1].end_time,
+      class_name: first.class_name,
+      observations: [...new Set(allObservations)],
+      status: first.status,
+      full_name: first.full_name,
+      slots_count: group.length,
+      approval_status: first.approval_status
+    });
   }
   
-  if (current) grouped.push(current);
-  return grouped;
+  return grouped.sort((a, b) => {
+    if (a.booking_date !== b.booking_date) return a.booking_date.localeCompare(b.booking_date);
+    return a.start_time.localeCompare(b.start_time);
+  });
 }
 
 export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomBookingsListProps) {
@@ -96,13 +99,13 @@ export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomB
   };
 
   const getRoomTypeBadgeClass = (type: string) => {
-    if (type === 'auditorio') return 'bg-blue-600 hover:bg-blue-700 text-white';
-    if (type === 'laboratorio') return 'bg-purple-600 hover:bg-purple-700 text-white';
+    if (type === 'auditorio') return 'bg-purple-600 hover:bg-purple-700 text-white';
+    if (type === 'laboratorio') return 'bg-blue-600 hover:bg-blue-700 text-white';
     if (type === 'sala_criativa') return 'bg-amber-600 hover:bg-amber-700 text-white';
     return 'bg-gray-600 hover:bg-gray-700 text-white';
   };
 
-  const groupedBookings = groupConsecutiveBookings(bookings);
+  const groupedBookings = groupBookingsByDay(bookings);
 
   if (groupedBookings.length === 0) {
     return (
@@ -141,31 +144,33 @@ export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomB
                   <Calendar className="h-3 w-3" />
                   {format(parseISO(booking.booking_date), "dd/MM/yyyy", { locale: ptBR })}
                 </span>
-                <span className="flex items-center gap-1 text-sm font-medium">
-                  <Clock className="h-3 w-3" />
-                  {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
-                </span>
-                {booking.slots_count > 1 && (
-                  <Badge variant="outline" className="text-xs">
-                    {booking.slots_count} horários
-                  </Badge>
+                {booking.slots_count === 1 ? (
+                  <span className="flex items-center gap-1 text-sm font-medium">
+                    <Clock className="h-3 w-3" />
+                    {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1 text-sm font-medium">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-blue-600">
+                      {booking.slots_count} horários
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)})
+                    </span>
+                  </div>
                 )}
               </div>
-              
-              <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
-                <span className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  Turma: {booking.class_name}
-                </span>
-                <span className="text-xs">• {booking.full_name?.split(' ')[0]}</span>
+              <div className="flex items-center gap-2 mt-1">
+                <Users className="h-3 w-3 text-muted-foreground" />
+                <span className="text-sm font-medium">{booking.full_name}</span>
+                <span className="text-sm text-muted-foreground">•</span>
+                <span className="text-sm text-muted-foreground">{booking.class_name}</span>
               </div>
-              
               {hasObservations && (
-                <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-xs text-amber-800 dark:text-amber-300">
-                  <div className="flex items-start gap-1">
-                    <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
-                    <span>{uniqueObservations.join(' | ')}</span>
-                  </div>
+                <div className="flex items-start gap-1 mt-2">
+                  <MessageSquare className="h-3 w-3 text-muted-foreground mt-0.5" />
+                  <span className="text-xs text-muted-foreground">{uniqueObservations.join(', ')}</span>
                 </div>
               )}
             </div>
@@ -178,28 +183,27 @@ export function RoomBookingsList({ bookings, onBookingDeleted, roomName }: RoomB
                   booking.approval_status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-300' : ''
                 }`}
               >
-                {booking.approval_status === 'pending' && <Loader2 className="h-3 w-3 animate-spin" />}
-                {booking.approval_status === 'rejected' && <XCircle className="h-3 w-3" />}
-                {booking.approval_status === 'expired' && <XCircle className="h-3 w-3" />}
-                {booking.approval_status === 'pending' ? 'Aguardando' : 
-                 booking.approval_status === 'rejected' ? 'Rejeitado' : 
-                 booking.approval_status === 'expired' ? 'Expirado' : booking.approval_status}
+                {booking.approval_status === 'pending' ? (
+                  <>
+                    <Clock className="h-3 w-3" />
+                    Aguardando
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-3 w-3" />
+                    Rejeitado
+                  </>
+                )}
+              </Badge>
+            ) : booking.status === 'active' ? (
+              <Badge variant="outline" className="shrink-0 flex items-center gap-1 text-green-600 border-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                {booking.room_type === 'auditorio' && booking.approval_status === 'approved' ? 'Aprovado' : 'Ativo'}
               </Badge>
             ) : (
-              <Badge 
-                variant={booking.status === 'active' ? 'default' : 'secondary'} 
-                className={`shrink-0 flex items-center gap-1 ${
-                  booking.approval_status === 'approved' && booking.room_type === 'auditorio' 
-                    ? 'bg-green-100 text-green-800 border-green-300' 
-                    : ''
-                }`}
-              >
-                {booking.approval_status === 'approved' && booking.room_type === 'auditorio' && (
-                  <CheckCircle2 className="h-3 w-3" />
-                )}
-                {booking.status === 'active' 
-                  ? (booking.approval_status === 'approved' && booking.room_type === 'auditorio' ? 'Aprovado' : 'Ativo')
-                  : 'Cancelado'}
+              <Badge variant="outline" className="shrink-0 flex items-center gap-1">
+                <XCircle className="h-3 w-3" />
+                Cancelado
               </Badge>
             )}
           </div>
