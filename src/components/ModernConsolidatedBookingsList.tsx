@@ -381,175 +381,139 @@ export default function ModernConsolidatedBookingsList({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header com Estatísticas */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-background">
-        <CardHeader>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-xl">
-                <BarChart3 className="h-6 w-6 text-primary" />
+    <div className="space-y-5">
+      {/* Header with Gradient + Stats */}
+      <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-500 dark:from-indigo-700 dark:via-indigo-600 dark:to-purple-600 p-5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+                <BarChart3 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl">Todos os Agendamentos</CardTitle>
-                <CardDescription>
-                  Visualização completa de Chromebooks e Salas
-                </CardDescription>
+                <h3 className="text-lg font-bold text-white tracking-tight">Todos os Agendamentos</h3>
+                <p className="text-[11px] text-white/70 font-medium">Visualização completa de Chromebooks e Salas</p>
               </div>
             </div>
             
-            {/* Estatísticas */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{stats.total}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
+            {/* Stats Pills */}
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-xl">
+                <span className="text-lg font-black text-white">{stats.total}</span>
+                <span className="text-[10px] text-white/70 font-medium">Total</span>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-600">{stats.active}</div>
-                <div className="text-xs text-muted-foreground">Ativos</div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-xl">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="text-lg font-black text-white">{stats.active}</span>
+                <span className="text-[10px] text-white/70 font-medium">Ativos</span>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.returned}</div>
-                <div className="text-xs text-muted-foreground">Devolvidos</div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-xl">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <span className="text-lg font-black text-white">{stats.returned}</span>
+                <span className="text-[10px] text-white/70 font-medium">Devolvidos</span>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{stats.cancelled}</div>
-                <div className="text-xs text-muted-foreground">Cancelados</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.chromebooks}</div>
-                <div className="text-xs text-muted-foreground">Chromebooks</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{stats.rooms}</div>
-                <div className="text-xs text-muted-foreground">Salas</div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-xl">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                <span className="text-lg font-black text-white">{stats.cancelled}</span>
+                <span className="text-[10px] text-white/70 font-medium">Cancelados</span>
               </div>
             </div>
           </div>
-        </CardHeader>
+        </div>
+
+        {/* Filters Bar */}
+        <div className="p-4 border-t border-border/30">
+          <div className="flex flex-col gap-3 md:flex-row md:flex-wrap items-start md:items-center">
+            <div className="relative flex-1 md:flex-initial md:w-1/4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por usuário, turma..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-muted/20 rounded-xl border-border/40 h-9 text-sm"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="rounded-xl border-border/40 h-9 text-sm">
+                  <Filter className="h-3.5 w-3.5 mr-1.5" />
+                  {statusFilter === "all" && "Todos Status"}
+                  {statusFilter === "active" && "Ativos"}
+                  {statusFilter === "returned" && "Devolvidos"}
+                  {statusFilter === "cancelled" && "Cancelados"}
+                  {statusFilter === "today" && "Hoje"}
+                  {statusFilter === "future" && "Futuros"}
+                  {statusFilter === "past" && "Passados"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setStatusFilter("all")}>Todos Status</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("active")}>Ativos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("returned")}>Devolvidos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("cancelled")}>Cancelados</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("today")}>Hoje</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("future")}>Futuros</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("past")}>Passados</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Type Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="rounded-xl border-border/40 h-9 text-sm">
+                  <Filter className="h-3.5 w-3.5 mr-1.5" />
+                  {typeFilter === "all" && "Todos Tipos"}
+                  {typeFilter === "chromebook" && "Chromebooks"}
+                  {typeFilter === "room" && "Salas"}
+                  {typeFilter === "auditorio" && "Auditório"}
+                  {typeFilter === "laboratorio" && "Laboratório"}
+                  {typeFilter === "sala_criativa" && "Sala Criativa"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setTypeFilter("all")}>Todos Tipos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("chromebook")}>Chromebooks</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("room")}>Salas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("auditorio")}>Auditório</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("laboratorio")}>Laboratório</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("sala_criativa")}>Sala Criativa</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </Card>
 
-      {/* Super Mega Filters */}
-      <div className="bg-card border rounded-xl overflow-hidden">
-        <div className="p-4 flex flex-col gap-3 md:flex-row md:flex-wrap items-start md:items-center">
-          <div className="relative flex-1 md:flex-initial md:w-1/4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por usuário, turma ou status..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-background"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                {statusFilter === "all" && "Todos Status"}
-                {statusFilter === "active" && "Ativos"}
-                {statusFilter === "returned" && "Devolvidos"}
-                {statusFilter === "cancelled" && "Cancelados"}
-                {statusFilter === "today" && "Hoje"}
-                {statusFilter === "future" && "Futuros"}
-                {statusFilter === "past" && "Passados"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setStatusFilter("all")}>
-                Todos Status
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("active")}>
-                Ativos
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("returned")}>
-                Devolvidos
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("cancelled")}>
-                Cancelados
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("today")}>
-                Hoje
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("future")}>
-                Futuros
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("past")}>
-                Passados
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Type Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                {typeFilter === "all" && "Todos Tipos"}
-                {typeFilter === "chromebook" && "Chromebooks"}
-                {typeFilter === "room" && "Salas"}
-                {typeFilter === "auditorio" && "Auditório"}
-                {typeFilter === "laboratorio" && "Laboratório"}
-                {typeFilter === "sala_criativa" && "Sala Criativa"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setTypeFilter("all")}>
-                Todos Tipos
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter("chromebook")}>
-                Chromebooks
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter("room")}>
-                Salas
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter("auditorio")}>
-                Auditório
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter("laboratorio")}>
-                Laboratório
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter("sala_criativa")}>
-                Sala Criativa
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/* Month Navigation */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8 rounded-lg border-border/40">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" onClick={handleCurrentMonth} className="h-8 px-4 text-sm font-semibold rounded-lg capitalize">
+            {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
+          </Button>
+          <Button variant="outline" size="icon" onClick={handleNextMonth} className="h-8 w-8 rounded-lg border-border/40">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground bg-muted/30 px-2.5 py-1 rounded-lg">
+          <Eye className="h-3 w-3" />
+          <span className="font-medium">{filteredBookings.length} agendamentos</span>
         </div>
       </div>
 
-      {/* Navegação de Mês */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
-              <Button variant="ghost" onClick={handleCurrentMonth} className="h-8 px-4 text-sm font-medium">
-                {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
-              </Button>
-              
-              <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Eye className="h-4 w-4" />
-              <span>{filteredBookings.length} agendamentos</span>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Lista de Agendamentos */}
+      {/* Bookings List */}
       {groupedByDate.length === 0 ? (
-        <Card className="border-0 shadow-lg">
-          <CardContent className="py-12">
+        <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+          <CardContent className="py-16">
             <div className="text-center text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-40" />
-              <p className="text-lg font-medium mb-2">Nenhum agendamento encontrado</p>
-              <p className="text-sm">
+              <div className="h-16 w-16 rounded-2xl bg-muted/40 flex items-center justify-center mx-auto mb-4">
+                <Calendar className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <p className="font-semibold text-sm">Nenhum agendamento encontrado</p>
+              <p className="text-[12px] mt-1.5 text-muted-foreground/70 max-w-[260px] mx-auto leading-relaxed">
                 {searchTerm || statusFilter !== "all" || typeFilter !== "all"
                   ? "Tente ajustar os filtros ou busca"
                   : `Nenhum agendamento em ${format(selectedMonth, "MMMM", { locale: ptBR })}`
@@ -561,167 +525,189 @@ export default function ModernConsolidatedBookingsList({
       ) : (
         <div className="space-y-4">
           {groupedByDate.map((dateGroup) => (
-            <Card key={dateGroup.date} className="border-0 shadow-lg overflow-hidden">
-              {/* Cabeçalho da Data */}
-              <div className={`px-6 py-4 ${
-                dateGroup.isToday 
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-800'
-                  : dateGroup.isFuture
-                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-green-200 dark:border-green-800'
-                  : 'bg-muted/30 border-b border-border'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      dateGroup.isToday 
-                        ? 'bg-blue-100 dark:bg-blue-900'
-                        : dateGroup.isFuture
-                        ? 'bg-green-100 dark:bg-green-900'
-                        : 'bg-gray-100 dark:bg-gray-800'
-                    }`}>
-                      <Calendar className={`h-5 w-5 ${
+            <Card key={dateGroup.date} className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+              {/* Date Header */}
+              <div className="relative overflow-hidden">
+                {/* Left accent bar for date header */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                  dateGroup.isToday 
+                    ? 'bg-blue-500'
+                    : dateGroup.isFuture
+                    ? 'bg-emerald-500'
+                    : 'bg-gray-300 dark:bg-gray-600'
+                }`} />
+                <div className={`pl-5 pr-5 py-3.5 ${
+                  dateGroup.isToday 
+                    ? 'bg-gradient-to-r from-blue-50/80 to-indigo-50/40 dark:from-blue-950/30 dark:to-indigo-950/15'
+                    : dateGroup.isFuture
+                    ? 'bg-gradient-to-r from-emerald-50/80 to-green-50/40 dark:from-emerald-950/30 dark:to-green-950/15'
+                    : 'bg-muted/20'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         dateGroup.isToday 
-                          ? 'text-blue-600 dark:text-blue-400'
+                          ? 'bg-blue-100 dark:bg-blue-900/50'
                           : dateGroup.isFuture
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-gray-600 dark:text-gray-400'
-                      }`} />
-                    </div>
-                    <div>
-                      <div className="text-lg font-semibold">
-                        {dateGroup.dateFormatted}
+                          ? 'bg-emerald-100 dark:bg-emerald-900/50'
+                          : 'bg-muted/50'
+                      }`}>
+                        <Calendar className={`h-4 w-4 ${
+                          dateGroup.isToday 
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : dateGroup.isFuture
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-muted-foreground'
+                        }`} />
                       </div>
-                      <div className="text-sm text-muted-foreground capitalize">
-                        {dateGroup.dayOfWeek}
-                        {dateGroup.isToday && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            Hoje
-                          </Badge>
-                        )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{dateGroup.dateFormatted}</span>
+                          <span className="text-[11px] text-muted-foreground capitalize">{dateGroup.dayOfWeek}</span>
+                          {dateGroup.isToday && (
+                            <Badge className="text-[9px] px-1.5 py-0 h-4 rounded bg-blue-500 text-white border-0 font-semibold">
+                              Hoje
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {dateGroup.bookings.length} agendamento(s)
+                    <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 rounded-md font-medium border-border/50">
+                      {dateGroup.bookings.length} agendamento{dateGroup.bookings.length > 1 ? 's' : ''}
+                    </Badge>
                   </div>
                 </div>
               </div>
               
-              {/* Bookings do dia */}
+              {/* Day Bookings */}
               <CardContent className="p-0">
-                <div className="divide-y divide-border/50">
-                  {dateGroup.bookings.map((booking, idx) => (
-                    <div
-                      key={`${booking.user_id}-${idx}`}
-                      className={`p-4 transition-colors ${
-                        getRealStatus(booking) === 'cancelled' 
-                          ? 'opacity-50 bg-gray-50/50' 
-                          : getRealStatus(booking).includes('returned')
-                          ? 'opacity-75 bg-blue-50/30'
-                          : 'hover:bg-muted/30'
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
-                        {/* Tipo e Ícone */}
-                        <div className="flex-shrink-0">
-                          <div className={`p-2 rounded-lg ${
-                            booking.type === 'room' 
-                              ? 'bg-purple-100 dark:bg-purple-900'
-                              : 'bg-blue-100 dark:bg-blue-900'
-                          }`}>
-                            {getRoomIcon(booking.room_type)}
-                          </div>
-                        </div>
-                        
-                        {/* Informações Principais */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-4 mb-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium truncate">
-                                  {getRoomName(booking.room_type)}
-                                </h4>
-                                <Badge 
-                                  variant="outline" 
-                                  className={`text-xs ${getStatusColor(getRealStatus(booking))}`}
-                                >
-                                  <span className="flex items-center gap-1">
-                                    {getStatusIcon(getRealStatus(booking))}
-                                    {getStatusText(getRealStatus(booking))}
-                                  </span>
-                                </Badge>
-                              </div>
-                              
-                              <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  <span className="font-mono">{booking.timeRange}</span>
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Users className="h-3 w-3" />
-                                  <span className="truncate">{formatUserName(booking.full_name)}</span>
-                                </span>
-                              </div>
-                              
-                              {/* Informações de devolução */}
-                              {getRealStatus(booking).includes('returned') && (
-                                <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
-                                  <PackageCheck className="h-3 w-3" />
-                                  <span>
-                                    Devolvido por {booking.returned_by ? formatUserName(booking.returned_by) : 'sistema'}
-                                    {booking.returned_at && (
-                                      <span> em {format(parseISO(booking.returned_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-xs">
-                                  {booking.classes.length === 1 
-                                    ? booking.classes[0] 
-                                    : `${booking.classes.length} turmas`}
-                                </Badge>
-                                {booking.classes.length > 1 && (
-                                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                                    {booking.classes.join(', ')}
-                                  </span>
-                                )}
-                              </div>
+                <div className="divide-y divide-border/30">
+                  {dateGroup.bookings.map((booking, idx) => {
+                    const realStatus = getRealStatus(booking);
+                    const getTypeIconBg = () => {
+                      if (booking.room_type === 'auditorio') return 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
+                      if (booking.room_type === 'laboratorio') return 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400';
+                      if (booking.room_type === 'sala_criativa') return 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400';
+                      return 'bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400';
+                    };
+                    const getAccentColor = () => {
+                      if (realStatus === 'cancelled') return 'bg-red-300';
+                      if (realStatus.includes('returned')) return 'bg-blue-300';
+                      if (realStatus === 'active_today') return 'bg-emerald-400';
+                      if (realStatus === 'active_future') return 'bg-blue-400';
+                      return 'bg-emerald-400';
+                    };
+
+                    return (
+                      <div
+                        key={`${booking.user_id}-${idx}`}
+                        className={`relative overflow-hidden transition-all duration-150 ${
+                          realStatus === 'cancelled' 
+                            ? 'opacity-45' 
+                            : realStatus.includes('returned')
+                            ? 'opacity-70'
+                            : 'hover:bg-muted/20'
+                        }`}
+                      >
+                        {/* Left accent */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${getAccentColor()}`} />
+
+                        <div className="pl-4 pr-4 py-3.5">
+                          <div className="flex items-start gap-3">
+                            {/* Type Icon */}
+                            <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${getTypeIconBg()}`}>
+                              {getRoomIcon(booking.room_type)}
                             </div>
                             
-                            {/* Quantidade e Ações */}
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <div className="text-right">
-                                <div className="text-lg font-semibold text-primary">
-                                  {booking.quantity}
+                            {/* Main Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-bold text-[13px] truncate">
+                                      {getRoomName(booking.room_type)}
+                                    </h4>
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-[9px] px-1.5 py-0 h-4 rounded-md font-semibold border flex items-center gap-0.5 ${getStatusColor(realStatus)}`}
+                                    >
+                                      {getStatusIcon(realStatus)}
+                                      {getStatusText(realStatus)}
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground mb-1.5">
+                                    <span className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded">
+                                      <Clock className="h-2.5 w-2.5" />
+                                      <span className="font-mono font-medium">{booking.timeRange}</span>
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Users className="h-2.5 w-2.5" />
+                                      <span className="font-medium truncate">{formatUserName(booking.full_name)}</span>
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Return info */}
+                                  {realStatus.includes('returned') && (
+                                    <div className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 mb-1.5">
+                                      <PackageCheck className="h-2.5 w-2.5" />
+                                      <span>
+                                        Devolvido por {booking.returned_by ? formatUserName(booking.returned_by) : 'sistema'}
+                                        {booking.returned_at && (
+                                          <span> em {format(parseISO(booking.returned_at), "dd/MM HH:mm", { locale: ptBR })}</span>
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="flex items-center gap-1.5">
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 rounded font-medium">
+                                      {booking.classes.length === 1 
+                                        ? booking.classes[0] 
+                                        : `${booking.classes.length} turmas`}
+                                    </Badge>
+                                    {booking.classes.length > 1 && (
+                                      <span className="text-[10px] text-muted-foreground hidden sm:inline truncate">
+                                        {booking.classes.join(', ')}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {booking.type === 'room' ? 'reserva(s)' : 'un.'}
+                                
+                                {/* Quantity + Actions */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <div className="text-right">
+                                    <div className="text-lg font-black text-primary leading-tight">
+                                      {booking.quantity}
+                                    </div>
+                                    <div className="text-[9px] text-muted-foreground font-medium">
+                                      {booking.type === 'room' ? 'reserva(s)' : 'un.'}
+                                    </div>
+                                  </div>
+                                  
+                                  {canCancel(booking) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleCancelBooking(booking)}
+                                      disabled={isCancelling(booking)}
+                                      className="h-7 w-7 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                      {isCancelling(booking) ? (
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <X className="h-3.5 w-3.5" />
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
-                              
-                              {canCancel(booking) && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCancelBooking(booking)}
-                                  disabled={isCancelling(booking)}
-                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                >
-                                  {isCancelling(booking) ? (
-                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <X className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              )}
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

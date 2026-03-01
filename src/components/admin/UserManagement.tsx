@@ -275,6 +275,15 @@ export default function UserManagement() {
         title: "Sucesso",
         description: `Usuário ${!currentStatus ? 'bloqueado' : 'desbloqueado'} com sucesso`,
       });
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: currentStatus ? 'unblock' : 'block',
+        module: 'users',
+        description: `Usuário ${!currentStatus ? 'bloqueado' : 'desbloqueado'}`,
+        resourceId: userId,
+        metadata: { target_user_id: userId }
+      });
     } catch (error: any) {
       toast({
         variant: "destructive",

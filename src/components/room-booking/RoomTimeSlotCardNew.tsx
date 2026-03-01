@@ -310,34 +310,43 @@ const RoomTimeSlotCardNew = memo(({
       <Card
         onClick={handleClick}
         className={cn(
-          "relative p-4 transition-all duration-200 group",
-          !isBooked && !isPast && "cursor-pointer hover:shadow-md",
+          "relative overflow-hidden transition-all duration-200 group",
+          !isBooked && !isPast && "cursor-pointer hover:shadow-md hover:border-border/60",
           isBooked && "cursor-default",
-          isSelected && "ring-2 ring-blue-500 bg-blue-50 border-blue-200",
-          isBooked && !isSelected && "bg-red-50/50 border-red-200/50",
-          isAvailable && !isSelected && "bg-emerald-50/30 border-emerald-200/50 hover:bg-emerald-50",
-          isPast && "opacity-50 cursor-not-allowed bg-gray-50"
+          isSelected && "ring-2 ring-blue-400 bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
+          isBooked && !isSelected && "bg-red-50/30 dark:bg-red-950/10 border-red-200/50 dark:border-red-800/30",
+          isAvailable && !isSelected && "bg-card/50 border-border/40 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/10",
+          isPast && "opacity-40 cursor-not-allowed bg-muted/30"
         )}
       >
+        {/* Left Accent Bar */}
+        <div className={cn(
+          "absolute left-0 top-0 bottom-0 w-1 rounded-l",
+          isSelected && "bg-blue-500",
+          isBooked && !isSelected && "bg-red-400",
+          isAvailable && !isSelected && "bg-emerald-400",
+          isPast && !isBooked && "bg-gray-300"
+        )} />
+
         {/* Checkmark para selecionado */}
         {isSelected && (
-          <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-            <Check className="h-4 w-4 text-white" />
+          <div className="absolute top-2.5 right-2.5 w-5 h-5 bg-blue-500 rounded-md flex items-center justify-center shadow-sm">
+            <Check className="h-3 w-3 text-white" />
           </div>
         )}
 
         {/* Menu de ações para reservas */}
         {isBooked && !isPast && (isOwner || isAdmin) && (
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-2.5 right-2.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 bg-white/80 hover:bg-white shadow-sm"
+                  className="h-6 w-6 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 shadow-sm rounded-md"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -375,12 +384,12 @@ const RoomTimeSlotCardNew = memo(({
           </div>
         )}
 
-        <div className="space-y-3">
-          {/* Horário */}
+        <div className="pl-4 pr-3.5 py-3.5 space-y-2.5">
+          {/* Time + Status */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-sm">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-bold text-sm tracking-tight">
                 {timeSlot.start} - {timeSlot.end}
               </span>
             </div>
@@ -388,12 +397,12 @@ const RoomTimeSlotCardNew = memo(({
             {isBooked && !isOwner && !isAdmin && getStatusBadge()}
           </div>
 
-          {/* Informações do booking ou disponibilidade */}
+          {/* Booking info or availability */}
           {isBooked ? (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium truncate">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-sm">
+                <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium truncate text-[13px]">
                   {(() => {
                     const parts = booking.full_name?.split(' ') || [];
                     if (parts.length <= 2) return booking.full_name;
@@ -401,25 +410,25 @@ const RoomTimeSlotCardNew = memo(({
                   })()}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground truncate pl-6">
+              <p className="text-[11px] text-muted-foreground truncate pl-5">
                 {booking.class_name}
               </p>
               {isOwner && (
-                <Badge variant="outline" className="text-xs mt-1 border-blue-300 text-blue-600">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5 border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded-md font-medium">
                   Sua reserva
                 </Badge>
               )}
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               {isPast ? "Horário passado" : "Clique para reservar"}
-            </div>
+            </p>
           )}
 
-          {/* Duração */}
-          <div className="text-xs text-muted-foreground">
+          {/* Duration */}
+          <p className="text-[10px] text-muted-foreground/70 font-medium">
             Duração: {duration} min
-          </div>
+          </p>
         </div>
       </Card>
 

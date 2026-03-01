@@ -194,91 +194,101 @@ export function ChromebookAvailabilityGrid({
 
   return (
     <>
-      <Card className="flex-1">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4">
-            <div>
-              <CardTitle className="text-xl">
-                Disponibilidade - {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {format(selectedDate, "EEEE", { locale: ptBR })}
-              </p>
+      <Card className="flex-1 border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+        {/* Gradient Date Header */}
+        <div className="bg-gradient-to-r from-primary/8 via-primary/5 to-transparent border-b border-border/40">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">
+                  Disponibilidade - {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                </CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 capitalize">
+                  {format(selectedDate, "EEEE", { locale: ptBR })}
+                </p>
+              </div>
+
+              {/* Legend Pills */}
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[10px] sm:text-xs font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Disponível
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[10px] sm:text-xs font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Parcial
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-[10px] sm:text-xs font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  Lotado
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-[10px] sm:text-xs font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  Selecionado
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800/40 text-gray-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                  Bloqueado
+                </span>
+              </div>
             </div>
 
-            {/* Legenda */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                <span className="whitespace-nowrap">Disponível</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                <span className="whitespace-nowrap">Parcial</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-                <span className="whitespace-nowrap">Lotado</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
-                <span className="whitespace-nowrap">Selecionado</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0" />
-                <span className="whitespace-nowrap">Bloqueado</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Contador de selecionados */}
-          {selectedSlots.length > 0 && (
-            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                <strong>{selectedSlots.length}</strong> horário(s) selecionado(s) para reserva
-              </p>
-            </div>
-          )}
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          {/* Informações do Recurso */}
-          <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <Chrome className="h-8 w-8 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg">Chromebooks</h3>
-              <div className="flex flex-wrap items-center gap-3 mt-1">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Laptop className="h-4 w-4" />
-                  <span>{totalInventory} unidades</span>
+            {/* Contador de selecionados */}
+            {selectedSlots.length > 0 && (
+              <div className="mt-3 p-2.5 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60 rounded-xl flex items-center gap-2">
+                <div className="h-6 w-6 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">{selectedSlots.length}</span>
                 </div>
-                <Badge variant="secondary" className="text-xs">
-                  Equipamento de Aluno
-                </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  Entrega pela TI/TE
-                </Badge>
+                <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium">
+                  horário(s) selecionado(s) para reserva
+                </p>
+              </div>
+            )}
+          </CardHeader>
+        </div>
+
+        <CardContent className="p-4 sm:p-6 space-y-5">
+          {/* Resource Info Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-muted/40 to-muted/20 rounded-xl border border-border/30">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="p-2.5 bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl ring-1 ring-primary/10 flex-shrink-0">
+                <Chrome className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-base sm:text-lg tracking-tight">Chromebooks</h3>
+                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Laptop className="h-3 w-3" />
+                    {totalInventory} unidades
+                  </span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 rounded-md font-medium bg-primary/8 text-primary border-primary/15">
+                    Equipamento de Aluno
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 rounded-md font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/15">
+                    Entrega pela TI/TE
+                  </Badge>
+                </div>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-emerald-600">{totalAvailableSlots}</p>
-              <p className="text-xs text-muted-foreground">horários com vagas</p>
+            <div className="flex items-center gap-3 sm:gap-4 sm:flex-col sm:items-end self-end sm:self-center">
+              <div className="text-right">
+                <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 leading-none">{totalAvailableSlots}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">horários com vagas</p>
+              </div>
             </div>
           </div>
 
           {/* Dica para administradores */}
           {isAdmin && (
-            <div className="p-3 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg">
-              <p className="text-sm text-purple-700 dark:text-purple-300">
+            <div className="p-3 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-950/50 dark:to-violet-950/50 border border-purple-200/60 dark:border-purple-800/60 rounded-xl">
+              <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">
                 👑 <strong>Administrador:</strong> Clique no menu (⋮) de qualquer reserva para editar, cancelar, excluir ou <strong>transferir para outro usuário</strong>.
               </p>
             </div>
           )}
 
           {/* Grid de Horários */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3">
             {timeSlots.map((slot) => {
               const slotBookings = getBookingsForSlot(slot);
               const availableCount = getAvailableCount(slot);

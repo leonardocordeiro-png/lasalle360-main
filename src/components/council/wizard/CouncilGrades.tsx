@@ -302,18 +302,32 @@ export function CouncilGrades({ data, onComplete }: CouncilGradesProps) {
   };
 
   return (
-    <div className="space-y-6 px-2 sm:px-0">
+    <div className="space-y-5 px-2 sm:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">Avaliação por Disciplina</h3>
-          <p className="text-sm text-muted-foreground">
-            Preencha o status de cada aluno em cada disciplina
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+            <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold">Avaliação por Disciplina</h3>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              Preencha o status de cada aluno em cada disciplina
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Badge className="bg-green-100 text-green-800">AP - Aprovado</Badge>
-          <Badge className="bg-yellow-100 text-yellow-800">REC - Recuperação</Badge>
-          <Badge className="bg-gray-100 text-gray-800">- Não se aplica</Badge>
+        <div className="flex gap-1.5 flex-wrap">
+          <Badge variant="outline" className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1" />
+            AP - Aprovado
+          </Badge>
+          <Badge variant="outline" className="text-[10px] font-bold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1" />
+            REC - Recuperação
+          </Badge>
+          <Badge variant="outline" className="text-[10px] font-bold bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800">
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1" />
+            N/A
+          </Badge>
         </div>
       </div>
 
@@ -321,10 +335,10 @@ export function CouncilGrades({ data, onComplete }: CouncilGradesProps) {
         placeholder="Buscar aluno..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full sm:max-w-sm"
+        className="w-full sm:max-w-sm rounded-xl h-9 border-border/50 bg-muted/30 text-sm"
       />
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden rounded-xl border-border/50 shadow-sm">
         <ScrollArea className="w-full h-[600px]">
           <div className="min-w-max">
             <table className="w-full border-separate border-spacing-0">
@@ -475,8 +489,8 @@ export function CouncilGrades({ data, onComplete }: CouncilGradesProps) {
         </ScrollArea>
       </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={handleContinue} className="w-full sm:w-auto">
+      <div className="flex justify-end pt-2">
+        <Button onClick={handleContinue} className="w-full sm:w-auto rounded-xl h-9 px-6 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-md">
           Continuar
         </Button>
       </div>

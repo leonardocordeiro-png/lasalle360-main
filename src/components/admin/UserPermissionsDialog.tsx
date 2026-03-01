@@ -291,6 +291,18 @@ export function UserPermissionsDialog({ open, onOpenChange, userId, userName }: 
         description: 'Permissões atualizadas com sucesso',
       });
 
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'grant_permission',
+        module: 'permissions',
+        description: `Permissões atualizadas para usuário`,
+        resourceId: userId,
+        newData: {
+          permissions: permissions.map(p => ({ module: p.module_name, access: p.can_access, level: p.permission_level })),
+          is_approver: isApprover
+        }
+      });
+
       onOpenChange(false);
     } catch (error: any) { // Explicitly type error as any to access .message
       console.error('Error saving permissions:', error);

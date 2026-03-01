@@ -168,6 +168,14 @@ export default function SystemSettings() {
         title: "Configurações salvas",
         description: "As configurações do sistema foram atualizadas com sucesso.",
       });
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'config_change',
+        module: 'system_settings',
+        description: 'Configurações do sistema atualizadas',
+        newData: config
+      });
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
@@ -245,6 +253,14 @@ export default function SystemSettings() {
         title: "Agendamentos excluídos",
         description: "Todos os agendamentos foram excluídos com sucesso.",
       });
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'reset_data',
+        module: 'system_settings',
+        description: 'Todos os agendamentos do sistema foram excluídos',
+        metadata: { scope: 'all_bookings' }
+      });
       
       fetchSystemStats();
     } catch (error) {
@@ -295,6 +311,14 @@ export default function SystemSettings() {
       toast({
         title: "Agendamentos excluídos",
         description: `Todos os agendamentos da data ${format(new Date(deleteDate), 'dd/MM/yyyy', { locale: ptBR })} foram excluídos.`,
+      });
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'delete',
+        module: 'system_settings',
+        description: `Agendamentos da data ${format(new Date(deleteDate), 'dd/MM/yyyy', { locale: ptBR })} excluídos`,
+        metadata: { date: deleteDate, scope: 'bookings_by_date' }
       });
       
       setDeleteDate('');

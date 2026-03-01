@@ -260,6 +260,15 @@ export function ITEquipmentManagement() {
         description: "O equipamento foi excluído com sucesso.",
       });
 
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'delete',
+        module: 'it_equipment',
+        description: `Equipamento "${equipmentToDelete.equipment_name}" excluído`,
+        resourceId: equipmentToDelete.id,
+        oldData: { name: equipmentToDelete.equipment_name, type: equipmentToDelete.equipment_type }
+      });
+
       fetchEquipments();
     } catch (error: any) {
       toast({
@@ -301,6 +310,14 @@ export function ITEquipmentManagement() {
       toast({
         title: "Equipamentos excluídos",
         description: `${selectedIds.length} equipamento(s) foram excluídos com sucesso.`,
+      });
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'bulk_delete',
+        module: 'it_equipment',
+        description: `${selectedIds.length} equipamento(s) excluído(s) em lote`,
+        metadata: { count: selectedIds.length, ids: selectedIds }
       });
 
       setSelectedIds([]);
@@ -397,23 +414,32 @@ export function ITEquipmentManagement() {
         </Alert>
       )}
       
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5" />
-                Equipamentos de TI
-                {isReadOnly && (
-                  <Badge variant="outline" className="text-xs">
-                    <Eye className="h-3 w-3 mr-1" />
-                    Somente Leitura
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Gerencie o inventário de equipamentos de tecnologia
-              </CardDescription>
+      <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+        {/* Gradient Header */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-5 sm:p-6">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/[0.04] rounded-full blur-2xl" />
+            <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-white/[0.03] rounded-full blur-xl" />
+          </div>
+          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="h-11 w-11 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center ring-1 ring-white/20 shadow-lg">
+                <Monitor className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                  Equipamentos de TI
+                  {isReadOnly && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-white/15 backdrop-blur-sm px-2 py-0.5 rounded-full text-white/80">
+                      <Eye className="h-3 w-3" />
+                      Leitura
+                    </span>
+                  )}
+                </h2>
+                <p className="text-blue-100/60 text-[11px] sm:text-xs font-medium tracking-wide">
+                  Gerencie o inventário de equipamentos de tecnologia
+                </p>
+              </div>
             </div>
             {canEdit && (
               <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
@@ -421,38 +447,38 @@ export function ITEquipmentManagement() {
                   <Button 
                     variant="destructive" 
                     onClick={() => setBulkDeleteDialogOpen(true)}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto rounded-xl shadow-lg h-9 text-xs font-semibold"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                     Excluir ({selectedIds.length})
                   </Button>
                 )}
-                <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto rounded-xl bg-white text-blue-700 hover:bg-blue-50 shadow-lg h-9 text-xs font-semibold">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
                   Cadastrar
                 </Button>
-                <Button variant="outline" onClick={() => setBulkImportOpen(true)} className="w-full sm:w-auto">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Importar Lote
+                <Button variant="ghost" onClick={() => setBulkImportOpen(true)} className="w-full sm:w-auto rounded-xl text-white/80 hover:text-white hover:bg-white/10 h-9 text-xs font-semibold">
+                  <Upload className="mr-1.5 h-3.5 w-3.5" />
+                  Importar
                 </Button>
-                <Button variant="outline" onClick={exportToCSV} className="w-full sm:w-auto">
-                  <Download className="mr-2 h-4 w-4" />
+                <Button variant="ghost" onClick={exportToCSV} className="w-full sm:w-auto rounded-xl text-white/80 hover:text-white hover:bg-white/10 h-9 text-xs font-semibold">
+                  <Download className="mr-1.5 h-3.5 w-3.5" />
                   Exportar
                 </Button>
               </div>
             )}
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
+            <TabsList className="inline-flex w-auto sm:w-full max-w-md items-center gap-1 bg-muted/50 backdrop-blur-sm border border-border/40 p-1 rounded-xl sm:justify-center">
+              <TabsTrigger value="dashboard" className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+                <BarChart3 className="h-3.5 w-3.5" />
                 Dashboard
               </TabsTrigger>
-              <TabsTrigger value="list" className="flex items-center gap-2">
-                <Monitor className="h-4 w-4" />
+              <TabsTrigger value="list" className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+                <Monitor className="h-3.5 w-3.5" />
                 Listagem
               </TabsTrigger>
             </TabsList>
@@ -463,94 +489,108 @@ export function ITEquipmentManagement() {
 
             <TabsContent value="list" className="mt-6">
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por ID, patrimônio, equipamento, marca, modelo, série, MAC ou descrição..."
-                  value={filters.search}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  className="pl-10"
-                />
+            {/* Search & Filters Bar */}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Input
+                    placeholder="Buscar por ID, patrimônio, equipamento, marca, modelo, série, MAC..."
+                    value={filters.search}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    className="pl-10 rounded-xl h-10 border-border/50 bg-muted/30 focus:bg-background transition-colors"
+                  />
+                </div>
+                
+                <Select
+                  value={filters.sector}
+                  onValueChange={(value) => setFilters({ ...filters, sector: value })}
+                >
+                  <SelectTrigger className="w-full sm:w-44 rounded-xl h-10 border-border/50 bg-muted/30">
+                    <SelectValue placeholder="Setor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os setores</SelectItem>
+                    {sectors.map((sector) => (
+                      <SelectItem key={sector} value={sector}>
+                        {sector}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filters.status}
+                  onValueChange={(value) => setFilters({ ...filters, status: value })}
+                >
+                  <SelectTrigger className="w-full sm:w-40 rounded-xl h-10 border-border/50 bg-muted/30">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="ATIVO">ATIVO</SelectItem>
+                    <SelectItem value="EMPRESTIMO">EMPRÉSTIMO</SelectItem>
+                    <SelectItem value="DEFEITO">DEFEITO</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <Select
-                value={filters.sector}
-                onValueChange={(value) => setFilters({ ...filters, sector: value })}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filtrar por setor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os setores</SelectItem>
-                  {sectors.map((sector) => (
-                    <SelectItem key={sector} value={sector}>
-                      {sector}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
 
-              <Select
-                value={filters.status}
-                onValueChange={(value) => setFilters({ ...filters, status: value })}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="ATIVO">ATIVO</SelectItem>
-                  <SelectItem value="EMPRESTIMO">EMPRÉSTIMO</SelectItem>
-                  <SelectItem value="DEFEITO">DEFEITO</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <span className="text-sm text-muted-foreground">Ordenar por:</span>
-              <Select
-                value={sorting.field}
-                onValueChange={(value) => setSorting({ ...sorting, field: value })}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="equipment_number">Numeração</SelectItem>
-                  <SelectItem value="patrimony">Patrimônio</SelectItem>
-                  <SelectItem value="equipment_type">Equipamento</SelectItem>
-                  <SelectItem value="brand">Marca</SelectItem>
-                  <SelectItem value="serial_number">N° Série</SelectItem>
-                  <SelectItem value="sector">Setor</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
-                  <SelectItem value="responsible">Responsável</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setSorting({ ...sorting, direction: sorting.direction === 'asc' ? 'desc' : 'asc' })}
-                title={sorting.direction === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'}
-                className="w-full sm:w-10"
-              >
-                {sorting.direction === 'asc' ? (
-                  <ArrowUp className="h-4 w-4" />
-                ) : (
-                  <ArrowDown className="h-4 w-4" />
-                )}
-              </Button>
+              {/* Sort & Info Bar */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ordenar:</span>
+                  <Select
+                    value={sorting.field}
+                    onValueChange={(value) => setSorting({ ...sorting, field: value })}
+                  >
+                    <SelectTrigger className="w-auto min-w-[140px] h-8 rounded-lg text-xs border-border/50 bg-muted/30">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="equipment_number">Numeração</SelectItem>
+                      <SelectItem value="patrimony">Patrimônio</SelectItem>
+                      <SelectItem value="equipment_type">Equipamento</SelectItem>
+                      <SelectItem value="brand">Marca</SelectItem>
+                      <SelectItem value="serial_number">N° Série</SelectItem>
+                      <SelectItem value="sector">Setor</SelectItem>
+                      <SelectItem value="status">Status</SelectItem>
+                      <SelectItem value="responsible">Responsável</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSorting({ ...sorting, direction: sorting.direction === 'asc' ? 'desc' : 'asc' })}
+                    title={sorting.direction === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'}
+                    className="h-8 w-8 rounded-lg border-border/50"
+                  >
+                    {sorting.direction === 'asc' ? (
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    ) : (
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {filteredEquipments.length} equipamento{filteredEquipments.length !== 1 ? 's' : ''} encontrado{filteredEquipments.length !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
 
             {loading ? (
-              <div className="text-center py-8">Carregando equipamentos...</div>
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center animate-pulse">
+                  <Monitor className="h-5 w-5 text-blue-500" />
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">Carregando equipamentos...</p>
+              </div>
             ) : (
               <>
-                <div className="rounded-md border">
+                <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
                         {canEdit && (
                           <TableHead className="w-12">
                             <Checkbox
@@ -559,29 +599,37 @@ export function ITEquipmentManagement() {
                             />
                           </TableHead>
                         )}
-                        <TableHead className="w-20">Nº</TableHead>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Patrimônio</TableHead>
-                        <TableHead>Equipamento</TableHead>
-                        <TableHead>Marca/Modelo</TableHead>
-                        <TableHead>N° Série</TableHead>
-                        <TableHead>Setor</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Emprestado Para</TableHead>
-                        <TableHead>Responsável</TableHead>
-                        {canEdit && <TableHead className="w-24">Ações</TableHead>}
+                        <TableHead className="w-16 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nº</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">ID</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Patrimônio</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Equipamento</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Marca/Modelo</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">N° Série</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Setor</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Emprestado Para</TableHead>
+                        <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Responsável</TableHead>
+                        {canEdit && <TableHead className="w-24 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedEquipments.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={canEdit ? 12 : 10} className="text-center py-8 text-muted-foreground">
-                            Nenhum equipamento encontrado
+                          <TableCell colSpan={canEdit ? 12 : 10} className="text-center py-16">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center">
+                                <Search className="h-5 w-5 text-muted-foreground/50" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground">Nenhum equipamento encontrado</p>
+                                <p className="text-xs text-muted-foreground/60 mt-0.5">Tente ajustar os filtros de busca</p>
+                              </div>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : (
                         paginatedEquipments.map((equipment) => (
-                          <TableRow key={equipment.id}>
+                          <TableRow key={equipment.id} className="group hover:bg-muted/20 transition-colors">
                             {canEdit && (
                               <TableCell>
                                 <Checkbox
@@ -590,63 +638,70 @@ export function ITEquipmentManagement() {
                                 />
                               </TableCell>
                             )}
-                            <TableCell className="font-mono">{equipment.equipment_number}</TableCell>
-                            <TableCell className="font-medium">{equipment.id_number || '-'}</TableCell>
-                            <TableCell className="font-medium">{normalizePatrimony(equipment.patrimony)}</TableCell>
-                            <TableCell>{equipment.equipment_type}</TableCell>
-                            <TableCell>
-                              {equipment.brand} {equipment.model}
+                            <TableCell className="font-mono text-xs text-muted-foreground">{equipment.equipment_number}</TableCell>
+                            <TableCell className="font-semibold text-sm">{equipment.id_number || '-'}</TableCell>
+                            <TableCell className="font-semibold text-sm">{normalizePatrimony(equipment.patrimony)}</TableCell>
+                            <TableCell className="text-sm">{equipment.equipment_type}</TableCell>
+                            <TableCell className="text-sm">
+                              <span className="font-medium">{equipment.brand}</span>{' '}
+                              <span className="text-muted-foreground">{equipment.model}</span>
                             </TableCell>
-                            <TableCell className="font-mono text-sm">{equipment.serial_number}</TableCell>
-                            <TableCell>{equipment.sector}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{equipment.serial_number}</TableCell>
+                            <TableCell>
+                              <span className="inline-flex items-center text-xs font-medium bg-muted/40 px-2 py-0.5 rounded-md">
+                                {equipment.sector}
+                              </span>
+                            </TableCell>
                             <TableCell>
                               <EquipmentLoanBadge status={equipment.status} />
                             </TableCell>
                             <TableCell>
                               {equipment.status === 'EMPRESTIMO' && equipment.active_loan ? (
-                                <div className="text-sm space-y-1">
-                                  <p className="font-medium">{equipment.active_loan.borrower_name}</p>
-                                   <p className="text-xs text-muted-foreground">
-                                     {format(parse(equipment.active_loan.loan_date, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy')}
-                                   </p>
+                                <div className="space-y-0.5">
+                                  <p className="text-sm font-semibold">{equipment.active_loan.borrower_name}</p>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    {format(parse(equipment.active_loan.loan_date, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy')}
+                                  </p>
                                   {equipment.active_loan.responsible_teacher && (
-                                    <p className="text-xs text-blue-600">
+                                    <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
                                       Prof.: {equipment.active_loan.responsible_teacher}
                                     </p>
                                   )}
                                   {equipment.active_loan.quantity > 1 && (
-                                    <p className="text-xs text-muted-foreground">
-                                      ({equipment.active_loan.quantity} Chromebooks)
-                                    </p>
+                                    <span className="inline-flex text-[10px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                                      {equipment.active_loan.quantity} Chromebooks
+                                    </span>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-muted-foreground">-</span>
+                                <span className="text-muted-foreground/40">—</span>
                               )}
                             </TableCell>
-                            <TableCell>{equipment.responsible}</TableCell>
+                            <TableCell className="text-sm">{equipment.responsible}</TableCell>
                             {canEdit && (
                               <TableCell>
-                                <div className="flex gap-2">
+                                <div className="flex gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                                   <Button
                                     variant="ghost"
                                     size="icon"
+                                    className="h-8 w-8 rounded-lg hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-400"
                                     onClick={() => {
                                       setSelectedEquipment(equipment);
                                       setDialogOpen(true);
                                     }}
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Edit className="h-3.5 w-3.5" />
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
+                                    className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                                     onClick={() => {
                                       setEquipmentToDelete(equipment);
                                       setDeleteDialogOpen(true);
                                     }}
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -658,36 +713,51 @@ export function ITEquipmentManagement() {
                   </Table>
                 </div>
 
+                {/* Pagination */}
                 {totalPages > 1 && (
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                      
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(page)}
-                            isActive={currentPage === page}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-[11px] text-muted-foreground font-medium">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            className={`rounded-lg h-8 ${currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                          />
                         </PaginationItem>
-                      ))}
+                        
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                          .map((page, idx, arr) => (
+                            <span key={page} className="contents">
+                              {idx > 0 && arr[idx - 1] !== page - 1 && (
+                                <PaginationItem>
+                                  <span className="px-2 text-xs text-muted-foreground">…</span>
+                                </PaginationItem>
+                              )}
+                              <PaginationItem>
+                                <PaginationLink
+                                  onClick={() => setCurrentPage(page)}
+                                  isActive={currentPage === page}
+                                  className="cursor-pointer rounded-lg h-8 w-8 text-xs"
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            </span>
+                          ))}
 
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            className={`rounded-lg h-8 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
                 )}
               </>
             )}

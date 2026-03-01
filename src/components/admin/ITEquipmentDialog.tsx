@@ -194,26 +194,41 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
       }
 
       // Check for duplicates (patrimony and serial_number)
-      const { data: existingEquipment, error: checkError } = await supabase
-        .from('it_equipment')
-        .select('id, patrimony, serial_number')
-        .or(`patrimony.eq.${formData.patrimony.trim()},serial_number.eq.${formData.serial_number.trim()}`)
-        .neq('id', equipment?.id || '00000000-0000-0000-0000-000000000000');
+      // Allow multiple equipment with "SEM PATRIMÔNIO" - completely skip duplicate check
+      const patrimonyValue = formData.patrimony.trim().toUpperCase();
+      const serialNumberValue = formData.serial_number.trim();
+      
+      // Skip duplicate check completely if patrimony is "SEM PATRIMÔNIO"
+      if (patrimonyValue !== 'SEM PATRIMÔNIO') {
+        let duplicateConditions = [];
+        
+        // Add serial number check
+        duplicateConditions.push(`serial_number.eq.${serialNumberValue}`);
+        
+        // Add patrimony check
+        duplicateConditions.push(`patrimony.eq.${patrimonyValue}`);
 
-      if (checkError) throw checkError;
+        const { data: existingEquipment, error: checkError } = await supabase
+          .from('it_equipment')
+          .select('id, patrimony, serial_number')
+          .or(duplicateConditions.join(','))
+          .neq('id', equipment?.id || '00000000-0000-0000-0000-000000000000');
 
-      if (existingEquipment && existingEquipment.length > 0) {
-        const duplicateFields = [];
-        existingEquipment.forEach(eq => {
-          if (eq.patrimony === formData.patrimony.trim()) {
-            duplicateFields.push(`Patrimônio "${formData.patrimony}"`);
-          }
-          if (eq.serial_number === formData.serial_number.trim()) {
-            duplicateFields.push(`N° Série "${formData.serial_number}"`);
-          }
-        });
+        if (checkError) throw checkError;
 
-        throw new Error(`Equipamento duplicado encontrado: ${duplicateFields.join(', ')} já está cadastrado no sistema.`);
+        if (existingEquipment && existingEquipment.length > 0) {
+          const duplicateFields = [];
+          existingEquipment.forEach(eq => {
+            if (eq.patrimony === patrimonyValue) {
+              duplicateFields.push(`Patrimônio "${patrimonyValue}"`);
+            }
+            if (eq.serial_number === serialNumberValue) {
+              duplicateFields.push(`N° Série "${serialNumberValue}"`);
+            }
+          });
+
+          throw new Error(`Equipamento duplicado encontrado: ${duplicateFields.join(', ')} já está cadastrado no sistema.`);
+        }
       }
 
       const dataToSave = {
@@ -236,6 +251,15 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
           title: "Equipamento atualizado",
           description: "O equipamento foi atualizado com sucesso.",
         });
+
+        const { auditLog } = await import('@/lib/auditLogger');
+        await auditLog({
+          action: 'update',
+          module: 'it_equipment',
+          description: `Equipamento "${formData.equipment_name}" atualizado`,
+          resourceId: equipment.id,
+          newData: { name: formData.equipment_name, type: formData.equipment_type, status: formData.status }
+        });
       } else {
         const { error } = await supabase
           .from('it_equipment')
@@ -246,6 +270,14 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
         toast({
           title: "Equipamento cadastrado",
           description: "O equipamento foi cadastrado com sucesso.",
+        });
+
+        const { auditLog } = await import('@/lib/auditLogger');
+        await auditLog({
+          action: 'create',
+          module: 'it_equipment',
+          description: `Equipamento "${formData.equipment_name}" cadastrado`,
+          newData: { name: formData.equipment_name, type: formData.equipment_type, status: formData.status }
         });
       }
 
@@ -288,8 +320,12 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
                 id="patrimony"
                 value={formData.patrimony}
                 onChange={(e) => setFormData({ ...formData, patrimony: e.target.value })}
+                placeholder="Digite o número do patrimônio ou 'SEM PATRIMÔNIO'"
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Use "SEM PATRIMÔNIO" caso o equipamento não tenha número de patrimônio
+              </p>
             </div>
 
             <div className="space-y-2">

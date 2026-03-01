@@ -262,6 +262,14 @@ export function ITEquipmentBulkImport({ open, onOpenChange, onSuccess }: ITEquip
         description: `${equipmentsToInsert.length} equipamento(s) importado(s) com sucesso.`,
       });
 
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'import',
+        module: 'it_equipment',
+        description: `${equipmentsToInsert.length} equipamento(s) importado(s) via planilha`,
+        metadata: { count: equipmentsToInsert.length }
+      });
+
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {

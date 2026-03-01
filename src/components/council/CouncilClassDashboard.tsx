@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, BookOpen, Calendar, GraduationCap, Users } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { auditLog } from "@/lib/auditLogger";
 import {
   Select,
   SelectContent,
@@ -79,16 +80,17 @@ export function CouncilClassDashboard({ filter, trimester }: CouncilClassDashboa
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; className: string }> = {
-      draft: { label: "Em Avaliação", className: "bg-destructive hover:bg-destructive/90 text-destructive-foreground" },
-      in_progress: { label: "Em Avaliação", className: "bg-destructive hover:bg-destructive/90 text-destructive-foreground" },
-      completed: { label: "Concluído", className: "bg-yellow-600 hover:bg-yellow-700 text-white dark:bg-yellow-500 dark:hover:bg-yellow-600" },
-      approved: { label: "Aprovado", className: "bg-green-600 hover:bg-green-700 text-white dark:bg-green-500 dark:hover:bg-green-600" },
+    const statusMap: Record<string, { label: string; dotColor: string; className: string }> = {
+      draft: { label: "Em Avaliação", dotColor: "bg-red-500", className: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800" },
+      in_progress: { label: "Em Avaliação", dotColor: "bg-red-500", className: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800" },
+      completed: { label: "Concluído", dotColor: "bg-amber-500", className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800" },
+      approved: { label: "Aprovado", dotColor: "bg-emerald-500", className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800" },
     };
 
     const config = statusMap[status] || statusMap.draft;
     return (
-      <Badge className={`text-xs ${config.className}`}>
+      <Badge variant="outline" className={`text-[10px] font-bold gap-1.5 ${config.className}`}>
+        <div className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
         {config.label}
       </Badge>
     );
@@ -104,6 +106,15 @@ export function CouncilClassDashboard({ filter, trimester }: CouncilClassDashboa
       if (error) throw error;
 
       toast.success("Status atualizado com sucesso!");
+
+      await auditLog({
+        action: 'status_change',
+        module: 'council',
+        description: `Status do conselho alterado para "${newStatus}"`,
+        resourceId: councilId,
+        newData: { status: newStatus }
+      });
+
       fetchCouncils();
     } catch (error: any) {
       console.error("Error updating status:", error);
@@ -146,6 +157,14 @@ export function CouncilClassDashboard({ filter, trimester }: CouncilClassDashboa
       if (error) throw error;
 
       toast.success("Conselho excluído com sucesso!");
+
+      await auditLog({
+        action: 'delete',
+        module: 'council',
+        description: `Conselho de Classe excluído`,
+        resourceId: councilToDelete
+      });
+
       setDeleteDialogOpen(false);
       setCouncilToDelete(null);
       fetchCouncils();
@@ -157,16 +176,24 @@ export function CouncilClassDashboard({ filter, trimester }: CouncilClassDashboa
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-2 sm:px-0">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-6 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-20 w-full" />
-            </CardContent>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="border-0 shadow-lg bg-card/95 overflow-hidden">
+            <div className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-3/4 rounded-md" />
+                  <Skeleton className="h-3 w-1/2 rounded-md" />
+                </div>
+              </div>
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <div className="flex gap-2 pt-2">
+                <Skeleton className="h-8 flex-1 rounded-lg" />
+                <Skeleton className="h-8 flex-1 rounded-lg" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
+              </div>
+            </div>
           </Card>
         ))}
       </div>
@@ -175,117 +202,153 @@ export function CouncilClassDashboard({ filter, trimester }: CouncilClassDashboa
 
   if (councils.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-lg font-medium text-muted-foreground">
-            Nenhum conselho encontrado
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <div className="h-16 w-16 rounded-3xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+          <BookOpen className="h-7 w-7 text-purple-500 dark:text-purple-400" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-semibold text-foreground">Nenhum conselho encontrado</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
+            Crie um novo conselho de classe para começar a registrar as avaliações
           </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Crie um novo conselho para começar
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-2 sm:px-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {councils.map((council) => {
           if (!council || !council.id) return null;
           
+          const statusColors: Record<string, string> = {
+            draft: "from-red-400 to-rose-500",
+            in_progress: "from-red-400 to-rose-500",
+            completed: "from-amber-400 to-orange-500",
+            approved: "from-emerald-400 to-green-500",
+          };
+          const accentGradient = statusColors[council.status || "draft"] || statusColors.draft;
+
           return (
-          <Card key={council.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <CardTitle className="text-lg mb-2">
-                    {getTrimesterLabel(council.trimester || "1")} - {council.grade_class || "N/A"}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {getLevelLabel(council.academic_level || filter)}
-                  </p>
+          <Card key={council.id} className="relative overflow-hidden border-0 shadow-lg bg-card/95 backdrop-blur-sm group hover:shadow-xl transition-all duration-300">
+            <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${accentGradient}`} />
+            <div className="p-4 sm:p-5 pl-5 sm:pl-6">
+              {/* Top: Title + Badge */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center ring-1 ring-purple-200/50 dark:ring-purple-800/30 flex-shrink-0">
+                    <GraduationCap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold leading-tight">
+                      {council.grade_class || "N/A"}
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground font-medium">
+                      {getTrimesterLabel(council.trimester || "1")}
+                    </p>
+                  </div>
                 </div>
+                {getStatusBadge(council.status || "draft")}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                <Select
-                  value={council.status || "draft"}
-                  onValueChange={(value) => handleStatusChange(council.id, value as "draft" | "in_progress" | "completed" | "approved")}
-                >
-                  <SelectTrigger className="w-[180px] h-8">
-                    <SelectValue>
-                      {getStatusBadge(council.status || "draft")}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">
-                      <Badge className="bg-destructive text-destructive-foreground text-xs">
-                        Em Avaliação
-                      </Badge>
-                    </SelectItem>
-                    <SelectItem value="completed">
-                      <Badge className="bg-yellow-600 text-white dark:bg-yellow-500 text-xs">
-                        Concluído
-                      </Badge>
-                    </SelectItem>
-                    <SelectItem value="approved">
-                      <Badge className="bg-green-600 text-white dark:bg-green-500 text-xs">
-                        Aprovado
-                      </Badge>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Data:</span>
-                  <span className="font-medium">
+
+              {/* Info rows */}
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <span className="font-medium">Data</span>
+                  </div>
+                  <span className="text-xs font-semibold">
                     {council.council_date ? format(new Date(council.council_date), "dd/MM/yyyy", {
                       locale: ptBR,
                     }) : "N/A"}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Ano letivo:</span>
-                  <span className="font-medium">{council.school_years?.year || "N/A"}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <BookOpen className="h-3 w-3" />
+                    <span className="font-medium">Ano letivo</span>
+                  </div>
+                  <span className="text-xs font-semibold">{council.school_years?.year || "N/A"}</span>
                 </div>
 
-                {/* Ações */}
-                <div className="flex gap-2 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 w-full sm:w-auto"
-                    onClick={() => handleView(council.id)}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    Ver
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 w-full sm:w-auto"
-                    onClick={() => handleEdit(council.id)}
-                  >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => handleDeleteClick(council.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Users className="h-3 w-3" />
+                    <span className="font-medium">Nível</span>
+                  </div>
+                  <span className="text-[11px] font-medium bg-muted/40 px-2 py-0.5 rounded-md">
+                    {getLevelLabel(council.academic_level || filter)}
+                  </span>
                 </div>
               </div>
-            </CardContent>
+
+              {/* Status Selector */}
+              <div className="mb-3">
+                <Select
+                  value={council.status || "draft"}
+                  onValueChange={(value) => handleStatusChange(council.id, value as "draft" | "in_progress" | "completed" | "approved")}
+                >
+                  <SelectTrigger className="w-full h-8 rounded-lg text-xs border-border/50 bg-muted/30">
+                    <SelectValue>
+                      {getStatusBadge(council.status || "draft")}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">
+                      <Badge variant="outline" className="text-[10px] font-bold gap-1.5 bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        Em Avaliação
+                      </Badge>
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      <Badge variant="outline" className="text-[10px] font-bold gap-1.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Concluído
+                      </Badge>
+                    </SelectItem>
+                    <SelectItem value="approved">
+                      <Badge variant="outline" className="text-[10px] font-bold gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Aprovado
+                      </Badge>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-1.5 pt-3 border-t border-border/40">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-8 rounded-lg text-xs font-medium border-border/50 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 dark:hover:bg-purple-950 dark:hover:text-purple-400 transition-colors"
+                  onClick={() => handleView(council.id)}
+                >
+                  <Eye className="mr-1.5 h-3 w-3" />
+                  Ver
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-8 rounded-lg text-xs font-medium border-border/50 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:hover:bg-blue-950 dark:hover:text-blue-400 transition-colors"
+                  onClick={() => handleEdit(council.id)}
+                >
+                  <Edit className="mr-1.5 h-3 w-3" />
+                  Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 rounded-lg border-border/50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-950 dark:hover:text-red-400 transition-colors p-0"
+                  onClick={() => handleDeleteClick(council.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
           </Card>
           );
         })}

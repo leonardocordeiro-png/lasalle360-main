@@ -1189,7 +1189,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user" | "coordinator"
       council_status_enum: "draft" | "in_progress" | "completed" | "approved"
       equipment_status: "ATIVO" | "DEFEITO" | "EMPRESTIMO"
-      equipment_type_loan: "professor" | "aluno"
+      equipment_type_loan: "professor" | "aluno" | "colaborador"
       grade_status_enum: "AP" | "REC" | "-"
       loan_status: "em_uso" | "devolvido" | "atrasado"
       signature_role_enum: "prof_reg" | "sse" | "soe" | "sct" | "scp"
@@ -1331,7 +1331,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user", "coordinator"],
       council_status_enum: ["draft", "in_progress", "completed", "approved"],
       equipment_status: ["ATIVO", "DEFEITO", "EMPRESTIMO"],
-      equipment_type_loan: ["professor", "aluno"],
+      equipment_type_loan: ["professor", "aluno", "colaborador"],
       grade_status_enum: ["AP", "REC", "-"],
       loan_status: ["em_uso", "devolvido", "atrasado"],
       signature_role_enum: ["prof_reg", "sse", "soe", "sct", "scp"],

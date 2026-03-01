@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Calendar as CalendarIcon, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Clock, User, Calendar as CalendarIcon, MessageSquare, AlertTriangle, School, FlaskConical, Lightbulb, Key, MapPin, Layers } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -172,18 +172,48 @@ export function TodayRoomBookings() {
     return currentTime >= startTime && currentTime <= endTime;
   };
 
+  const getRoomIcon = (type: string) => {
+    if (type === 'auditorio') return <School className="h-4 w-4" />;
+    if (type === 'laboratorio') return <FlaskConical className="h-4 w-4" />;
+    if (type === 'sala_criativa') return <Lightbulb className="h-4 w-4" />;
+    return <MapPin className="h-4 w-4" />;
+  };
+
+  const getRoomAccentColor = (type: string) => {
+    if (type === 'auditorio') return 'bg-blue-500';
+    if (type === 'laboratorio') return 'bg-purple-500';
+    if (type === 'sala_criativa') return 'bg-amber-500';
+    return 'bg-gray-500';
+  };
+
+  const getRoomIconContainerClass = (type: string) => {
+    if (type === 'auditorio') return 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
+    if (type === 'laboratorio') return 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400';
+    if (type === 'sala_criativa') return 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400';
+    return 'bg-gray-100 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400';
+  };
+
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-5">
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border border-border/40 p-4">
+              <Skeleton className="h-4 w-16 mb-2" />
+              <Skeleton className="h-8 w-10" />
+            </div>
+          ))}
+        </div>
         {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-5 w-1/2" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-12 w-full" />
-            </CardContent>
-          </Card>
+          <div key={i} className="rounded-xl border border-border/40 p-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-lg" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -221,88 +251,145 @@ export function TodayRoomBookings() {
 
   return (
     <div className="space-y-6">
-      {/* Filtro de período */}
+      {/* Period Filter + Counter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <Tabs value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)} className="w-full sm:w-auto">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3">
-            <TabsTrigger value="today" className="text-xs sm:text-sm">Hoje</TabsTrigger>
-            <TabsTrigger value="week" className="text-xs sm:text-sm">Próx. 7 dias</TabsTrigger>
-            <TabsTrigger value="month" className="text-xs sm:text-sm">Próx. 30 dias</TabsTrigger>
+          <TabsList className="grid w-full sm:w-auto grid-cols-3 bg-muted/50 backdrop-blur-sm rounded-xl p-1 h-auto">
+            <TabsTrigger value="today" className="text-xs sm:text-sm rounded-lg py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm gap-1.5">
+              <CalendarIcon className="h-3.5 w-3.5 hidden sm:block" />
+              Hoje
+            </TabsTrigger>
+            <TabsTrigger value="week" className="text-xs sm:text-sm rounded-lg py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm gap-1.5">
+              <Layers className="h-3.5 w-3.5 hidden sm:block" />
+              Próx. 7 dias
+            </TabsTrigger>
+            <TabsTrigger value="month" className="text-xs sm:text-sm rounded-lg py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm gap-1.5">
+              <Layers className="h-3.5 w-3.5 hidden sm:block" />
+              Próx. 30 dias
+            </TabsTrigger>
           </TabsList>
         </Tabs>
-        <p className="text-sm text-muted-foreground">
-          {bookings.length} agendamento(s) {getFilterLabel()}
-        </p>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary">
+            <Key className="h-3 w-3" />
+          </div>
+          <p className="text-xs font-medium text-muted-foreground">
+            <span className="text-foreground font-bold">{groupedBookings.length}</span> reserva(s) {getFilterLabel()}
+          </p>
+        </div>
       </div>
 
-      {/* Estado vazio */}
+      {/* Empty State */}
       {bookings.length === 0 && !loading && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">
+        <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-muted/30 via-background to-muted/20 p-10 text-center">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          <div className="relative">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-muted/60 flex items-center justify-center">
+              <CalendarIcon className="h-8 w-8 text-muted-foreground/60" />
+            </div>
+            <p className="text-base font-semibold text-muted-foreground">
               Nenhum agendamento {getFilterLabel()}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground/70 mt-1">
               Não há salas reservadas para o período selecionado
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {/* Resumo compacto */}
+      {/* Room Stats Cards */}
       {groupedBookings.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground">Auditório</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{auditorioCount}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Auditório */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-200/60 dark:border-blue-800/40 bg-gradient-to-br from-blue-50 via-blue-50/50 to-white dark:from-blue-950/40 dark:via-blue-950/20 dark:to-background p-4 transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center ring-2 ring-blue-200/50 dark:ring-blue-800/30 flex-shrink-0">
+                <School className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wider text-blue-600/70 dark:text-blue-400/70 font-semibold">Auditório</p>
+                <p className="text-2xl font-black text-blue-600 dark:text-blue-400 leading-tight">{auditorioCount}</p>
+              </div>
+            </div>
           </div>
-          <div className="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground">Laboratório</p>
-            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{laboratorioCount}</p>
+
+          {/* Laboratório */}
+          <div className="relative overflow-hidden rounded-xl border border-purple-200/60 dark:border-purple-800/40 bg-gradient-to-br from-purple-50 via-purple-50/50 to-white dark:from-purple-950/40 dark:via-purple-950/20 dark:to-background p-4 transition-all duration-200 hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center ring-2 ring-purple-200/50 dark:ring-purple-800/30 flex-shrink-0">
+                <FlaskConical className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wider text-purple-600/70 dark:text-purple-400/70 font-semibold">Laboratório</p>
+                <p className="text-2xl font-black text-purple-600 dark:text-purple-400 leading-tight">{laboratorioCount}</p>
+              </div>
+            </div>
           </div>
-          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground">Sala Criativa</p>
-            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{salaCriativaCount}</p>
+
+          {/* Sala Criativa */}
+          <div className="relative overflow-hidden rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-gradient-to-br from-amber-50 via-amber-50/50 to-white dark:from-amber-950/40 dark:via-amber-950/20 dark:to-background p-4 transition-all duration-200 hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center ring-2 ring-amber-200/50 dark:ring-amber-800/30 flex-shrink-0">
+                <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wider text-amber-600/70 dark:text-amber-400/70 font-semibold">Sala Criativa</p>
+                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 leading-tight">{salaCriativaCount}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Alerta compacto de solicitações especiais */}
+      {/* Special Requests Alert */}
       {bookingsWithObservations.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 rounded-lg p-3">
-          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {bookingsWithObservations.length} reserva(s) com solicitações especiais
-            </span>
+        <div className="relative overflow-hidden rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-gradient-to-r from-amber-50 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20 p-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                {bookingsWithObservations.length} reserva(s) com solicitações especiais
+              </span>
+              <p className="text-[11px] text-amber-600/70 dark:text-amber-400/60">Verifique as observações nos agendamentos abaixo</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Lista de agendamentos agrupados por data */}
+      {/* Bookings List grouped by date */}
       {sortedDates.map((date) => {
         const dateBookings = bookingsByDate[date];
         const isToday = date === todayStr;
         const formattedDate = format(new Date(date + 'T12:00:00'), "EEEE, dd/MM", { locale: ptBR });
         
         return (
-          <div key={date} className="space-y-2">
-            {/* Cabeçalho da data - apenas se não for hoje ou se houver múltiplas datas */}
+          <div key={date} className="space-y-3">
+            {/* Date Section Header */}
             {(sortedDates.length > 1 || !isToday) && (
-              <div className={`flex items-center gap-2 px-2 py-1 rounded ${isToday ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                <CalendarIcon className={`h-4 w-4 ${isToday ? 'text-green-600' : 'text-gray-500'}`} />
-                <span className={`text-sm font-medium capitalize ${isToday ? 'text-green-700 dark:text-green-300' : ''}`}>
-                  {isToday ? '📍 Hoje' : formattedDate}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({dateBookings.length} reserva{dateBookings.length > 1 ? 's' : ''})
-                </span>
+              <div className="flex items-center gap-3">
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                  isToday 
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' 
+                    : 'bg-muted/60 text-muted-foreground'
+                }`}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  <span className="capitalize">{isToday ? 'Hoje' : formattedDate}</span>
+                </div>
+                <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 rounded-md font-medium border-border/50">
+                  {dateBookings.length} reserva{dateBookings.length > 1 ? 's' : ''}
+                </Badge>
+                <div className="flex-1 h-px bg-border/40" />
               </div>
             )}
 
-            {/* Cards dos agendamentos - agrupados */}
-            <div className="space-y-2">
+            {/* Booking Cards */}
+            <div className="space-y-2.5">
               {dateBookings.map((booking) => {
                 const isActive = isCurrentlyActive(booking.booking_date, booking.start_time, booking.end_time);
                 const hasObservations = booking.observations.length > 0;
@@ -311,49 +398,75 @@ export function TodayRoomBookings() {
                 return (
                   <div 
                     key={booking.ids.join('-')} 
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    className={`group relative overflow-hidden rounded-xl border transition-all duration-200 ${
                       isActive 
-                        ? 'border-green-500 bg-green-50 dark:bg-green-950 shadow-md' 
-                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
+                        ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-md shadow-emerald-500/10' 
+                        : 'border-border/40 bg-card/50 hover:bg-card/80 hover:shadow-sm hover:border-border/60'
                     }`}
                   >
-                    {/* Badge da sala */}
-                    <Badge className={`${getRoomTypeBadgeClass(booking.room_type)} shrink-0`}>
-                      {getRoomTypeLabel(booking.room_type)}
-                    </Badge>
-                    
-                    {/* Informações principais */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm truncate">{booking.full_name}</span>
-                        {booking.slots_count > 1 && (
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            {booking.slots_count} horários
-                          </Badge>
-                        )}
-                        {isActive && (
-                          <Badge className="bg-green-600 text-white text-xs animate-pulse shrink-0">
-                            EM USO
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
-                        </span>
-                        <span>{booking.class_name}</span>
-                      </div>
-                      
-                      {/* Observações inline */}
-                      {hasObservations && (
-                        <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-xs text-amber-800 dark:text-amber-300">
-                          <div className="flex items-start gap-1">
-                            <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
-                            <span>{uniqueObservations.join(' | ')}</span>
-                          </div>
+                    {/* Left Accent Bar */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l ${
+                      isActive ? 'bg-emerald-500' : getRoomAccentColor(booking.room_type)
+                    }`} />
+
+                    <div className="pl-4 pr-4 py-3.5">
+                      <div className="flex items-start gap-3">
+                        {/* Room Icon */}
+                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+                          isActive 
+                            ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400' 
+                            : getRoomIconContainerClass(booking.room_type)
+                        }`}>
+                          {getRoomIcon(booking.room_type)}
                         </div>
-                      )}
+                        
+                        {/* Main Content */}
+                        <div className="flex-1 min-w-0">
+                          {/* Top Row: Name + Badges */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm truncate">{booking.full_name}</span>
+                            {isActive && (
+                              <span className="relative flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded-md">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600" />
+                                </span>
+                                EM USO
+                              </span>
+                            )}
+                            {booking.slots_count > 1 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 rounded-md border-border/50 font-medium">
+                                <Layers className="h-2.5 w-2.5 mr-0.5" />
+                                {booking.slots_count}h
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Info Row */}
+                          <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                            <Badge className={`${getRoomTypeBadgeClass(booking.room_type)} text-[10px] px-2 py-0 h-5 rounded-md font-semibold`}>
+                              {getRoomTypeLabel(booking.room_type)}
+                            </Badge>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                              <Clock className="h-3 w-3" />
+                              {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
+                            </span>
+                            {booking.class_name && (
+                              <span className="text-xs text-muted-foreground/80">{booking.class_name}</span>
+                            )}
+                          </div>
+                          
+                          {/* Observations */}
+                          {hasObservations && (
+                            <div className="mt-2.5 p-2.5 bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-800/30 rounded-lg">
+                              <div className="flex items-start gap-1.5">
+                                <MessageSquare className="h-3 w-3 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <span className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">{uniqueObservations.join(' | ')}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );

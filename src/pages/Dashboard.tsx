@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Chrome, Calendar, Clock, Users, LogOut, School, FlaskConical, ListChecks, Eye, Package, DoorOpen, Lightbulb, Shield, ClipboardCheck } from 'lucide-react';
+import { Chrome, Calendar, Clock, Users, LogOut, School, FlaskConical, ListChecks, Eye, Package, DoorOpen, Lightbulb, Shield, ClipboardCheck, Key } from 'lucide-react';
 import estrelaLogo from '@/assets/Estrela_La_Salle.png';
 import { toast } from '@/hooks/use-toast';
 import BookingDialog from '@/components/BookingDialog';
@@ -510,26 +510,34 @@ const DashboardComponent = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Moderno */}
-      <header className="bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground shadow-xl">
-        <div className="container mx-auto px-4 py-4">
+      <header className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/85 text-primary-foreground shadow-2xl">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/[0.04] rounded-full blur-2xl" />
+          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-white/[0.03] rounded-full blur-xl" />
+          <div className="absolute top-0 right-1/3 w-32 h-32 bg-white/[0.02] rounded-full blur-lg" />
+        </div>
+
+        <div className="container mx-auto px-4 py-4 relative z-10">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             {/* Logo e Título */}
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="bg-white/15 backdrop-blur-sm p-2.5 rounded-xl shadow-lg">
-                <img src={estrelaLogo} alt="La Salle Logo" className="h-9 w-9 object-contain" />
+            <div className="flex items-center gap-3.5">
+              <div className="relative">
+                <div className="bg-white/10 backdrop-blur-md p-2.5 rounded-2xl shadow-xl ring-1 ring-white/20">
+                  <img src={estrelaLogo} alt="La Salle Logo" className="h-10 w-10 object-contain drop-shadow-lg" />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full ring-2 ring-primary shadow-lg" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">La Salle Sobradinho 360</h1>
-                <p className="text-primary-foreground/70 text-xs sm:text-sm font-medium">Gestão completa. Olhar Lasallista.</p>
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-tight">La Salle Sobradinho 360</h1>
+                <p className="text-primary-foreground/60 text-[11px] sm:text-xs font-medium tracking-wide">Gestão completa. Olhar Lasallista.</p>
               </div>
             </div>
 
             {/* Área de Ações e Usuário */}
-            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
-              {/* Notificações */}
+            <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
               <NotificationBell />
-
-              {/* User Dropdown com Avatar */}
+              <div className="w-px h-6 bg-white/15 hidden sm:block" />
               <UserDropdown
                 user={userDropdownData}
                 onAction={handleUserAction}
@@ -542,66 +550,78 @@ const DashboardComponent = () => {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950 dark:to-background">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Disponíveis Hoje</CardTitle>
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
-                <Chrome className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+          {/* Disponíveis Hoje */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-card/95 backdrop-blur-sm group hover:shadow-2xl transition-shadow duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-l" />
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/[0.04] rounded-full -translate-y-6 translate-x-6" />
+            <CardContent className="p-4 sm:p-5 pl-5 sm:pl-6">
+              <div className="flex items-start justify-between mb-3">
+                <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Disponíveis Hoje</p>
+                <div className="h-9 w-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center ring-2 ring-emerald-200/50 dark:ring-emerald-800/30 flex-shrink-0">
+                  <Chrome className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{availableChromebooks}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 leading-none tracking-tight">{availableChromebooks}</div>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground/70 mt-1.5 font-medium">
                 de {totalInventory} chromebooks
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-white dark:from-amber-950 dark:to-background">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Em Uso Hoje</CardTitle>
-              <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-                <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          {/* Em Uso Hoje */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-card/95 backdrop-blur-sm group hover:shadow-2xl transition-shadow duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 to-orange-500 rounded-l" />
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/[0.04] rounded-full -translate-y-6 translate-x-6" />
+            <CardContent className="p-4 sm:p-5 pl-5 sm:pl-6">
+              <div className="flex items-start justify-between mb-3">
+                <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Em Uso Hoje</p>
+                <div className="h-9 w-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center ring-2 ring-amber-200/50 dark:ring-amber-800/30 flex-shrink-0">
+                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{totalInventory - availableChromebooks}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {todayBookings.length} agendamentos
+              <div className="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400 leading-none tracking-tight">{totalInventory - availableChromebooks}</div>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground/70 mt-1.5 font-medium">
+                {todayBookings.length} agendamento{todayBookings.length !== 1 ? 's' : ''}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-background">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Meus Agendamentos</CardTitle>
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          {/* Meus Agendamentos */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-card/95 backdrop-blur-sm group hover:shadow-2xl transition-shadow duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-l" />
+            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/[0.04] rounded-full -translate-y-6 translate-x-6" />
+            <CardContent className="p-4 sm:p-5 pl-5 sm:pl-6">
+              <div className="flex items-start justify-between mb-3">
+                <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Meus Agendamentos</p>
+                <div className="h-9 w-9 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center ring-2 ring-blue-200/50 dark:ring-blue-800/30 flex-shrink-0">
+                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+              <div className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400 leading-none tracking-tight">
                 {bookings.filter(b => b.user_id === user?.id && b.status === 'active').length}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground/70 mt-1.5 font-medium">
                 ativos
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-background">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Agendamentos</CardTitle>
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          {/* Total Agendamentos */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-card/95 backdrop-blur-sm group hover:shadow-2xl transition-shadow duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-purple-400 to-violet-600 rounded-l" />
+            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/[0.04] rounded-full -translate-y-6 translate-x-6" />
+            <CardContent className="p-4 sm:p-5 pl-5 sm:pl-6">
+              <div className="flex items-start justify-between mb-3">
+                <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Agendamentos</p>
+                <div className="h-9 w-9 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center ring-2 ring-purple-200/50 dark:ring-purple-800/30 flex-shrink-0">
+                  <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+              <div className="text-3xl sm:text-4xl font-black text-purple-600 dark:text-purple-400 leading-none tracking-tight">
                 {bookings.filter(b => b.status === 'active').length}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground/70 mt-1.5 font-medium">
                 ativos no sistema
               </p>
             </CardContent>
@@ -610,26 +630,35 @@ const DashboardComponent = () => {
 
         {/* Notification Permission Banner - Only for Auditório Approvers */}
         {showNotificationBanner && (isUserAdmin || isUserApprover) && (
-          <div className="mb-8">
+          <div className="mb-6">
             <NotificationPermissionBanner onDismiss={() => setShowNotificationBanner(false)} />
           </div>
         )}
 
         {/* Alert Message */}
-        <Card className="mb-8 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950 dark:to-orange-950 border-red-200 dark:border-red-800 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row items-start gap-4">
-              <div className="text-3xl flex-shrink-0 bg-red-100 dark:bg-red-900 p-3 rounded-xl">🚨</div>
-              <div className="flex-1">
-                <h3 className="text-red-700 dark:text-red-400 font-bold text-lg mb-3">AGENDAMENTO OBRIGATÓRIO!</h3>
-                <div className="text-red-900 dark:text-red-300 space-y-2 text-sm">
-                  <p><strong>Chromebooks</strong> → entrega exclusiva pela equipe de TI/TE.</p>
-                  <p><strong>Chave do Auditório</strong> → retirada com a equipe do SCT.</p>
-                  <p className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
+        <Card className="relative overflow-hidden mb-8 border-0 shadow-xl bg-card/95 backdrop-blur-sm">
+          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-red-400 via-red-500 to-orange-500 rounded-l" />
+          <CardContent className="p-5 pl-6">
+            <div className="flex items-start gap-4">
+              <div className="h-11 w-11 rounded-2xl bg-red-100 dark:bg-red-900/50 flex items-center justify-center ring-2 ring-red-200/50 dark:ring-red-800/30 flex-shrink-0">
+                <Shield className="h-5 w-5 text-red-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-extrabold text-red-700 dark:text-red-400 uppercase tracking-wide mb-2.5">Agendamento Obrigatório!</h3>
+                <div className="space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/80 bg-muted/40 px-2.5 py-1 rounded-lg">
+                      <Chrome className="h-3 w-3 text-emerald-500" />
+                      <strong>Chromebooks</strong> → equipe de TI/TE
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/80 bg-muted/40 px-2.5 py-1 rounded-lg">
+                      <Key className="h-3 w-3 text-amber-500" />
+                      <strong>Chave do Auditório</strong> → equipe do SCT
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-1 border-t border-border/30">
                     A entrega dos Chromebooks é realizada exclusivamente mediante agendamento.
-                  </p>
-                  <p className="mt-2">
-                    <strong>Obs:</strong> Alunos não estão autorizados a retirar os equipamentos.
+                    <span className="font-semibold text-red-600 dark:text-red-400 ml-1">Obs: Alunos não estão autorizados a retirar os equipamentos.</span>
                   </p>
                 </div>
               </div>
@@ -639,61 +668,105 @@ const DashboardComponent = () => {
 
         {/* Module Tabs */}
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <div className="overflow-x-auto pb-2">
-            <TabsList className="flex flex-nowrap justify-start sm:justify-center min-w-max sm:min-w-0 bg-muted/50 p-1 rounded-xl">
-              {modulePermissions.chromebooks && (
-                <TabsTrigger value="chromebooks" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  <Chrome className="h-4 w-4" />
-                  <span>Chromebooks</span>
-                </TabsTrigger>
-              )}
-              {modulePermissions.loans_management && (
-                <TabsTrigger value="emprestimos" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  <Package className="h-4 w-4" />
-                  <span>Empréstimos</span>
-                </TabsTrigger>
-              )}
-              {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
-                <TabsTrigger value="salas" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  <DoorOpen className="h-4 w-4" />
-                  <span>Salas</span>
-                </TabsTrigger>
-              )}
-              {modulePermissions.admin_salas_hoje && (
-                <TabsTrigger value="today-rooms" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  <Eye className="h-4 w-4" />
-                  <span>Salas Hoje</span>
-                </TabsTrigger>
-              )}
-              {(isUserAdmin || isUserApprover) && (
-                <>
-                  {console.log('DEBUG - Renderizando Aba Aprovações:', { isUserAdmin, isUserApprover })}
-                  <TabsTrigger value="approvals" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm relative">
-                    <ClipboardCheck className="h-4 w-4" />
+          {/* Navigation - Floating Card Style */}
+          <div className="relative">
+            {/* Gradient fade hints for scroll on mobile */}
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none sm:hidden" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
+            
+            <div className="overflow-x-auto scrollbar-hide -mx-1 px-1">
+              <TabsList className="inline-flex w-auto sm:flex sm:w-full items-center gap-1 sm:gap-1.5 bg-card/80 backdrop-blur-sm border border-border/60 shadow-lg shadow-black/[0.04] dark:shadow-black/[0.15] p-1.5 sm:p-2 rounded-2xl sm:justify-center min-w-max sm:min-w-0">
+                {modulePermissions.chromebooks && (
+                  <TabsTrigger 
+                    value="chromebooks" 
+                    className="group relative flex-shrink-0 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 text-muted-foreground hover:text-foreground data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:bg-emerald-50 dark:data-[state=active]:bg-emerald-950/40 data-[state=active]:shadow-sm hover:bg-muted/50"
+                  >
+                    <div className="flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-lg transition-all duration-300 bg-muted/60 group-data-[state=active]:bg-emerald-100 dark:group-data-[state=active]:bg-emerald-900/50 group-hover:bg-muted">
+                      <Chrome className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors duration-300 group-data-[state=active]:text-emerald-600 dark:group-data-[state=active]:text-emerald-400" />
+                    </div>
+                    <span className="hidden sm:inline">Chromebooks</span>
+                    <span className="sm:hidden">Chrome</span>
+                    {/* Active indicator bar */}
+                    <div className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-emerald-500 scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 origin-center" />
+                  </TabsTrigger>
+                )}
+                {modulePermissions.loans_management && (
+                  <TabsTrigger 
+                    value="emprestimos" 
+                    className="group relative flex-shrink-0 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 text-muted-foreground hover:text-foreground data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-400 data-[state=active]:bg-blue-50 dark:data-[state=active]:bg-blue-950/40 data-[state=active]:shadow-sm hover:bg-muted/50"
+                  >
+                    <div className="flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-lg transition-all duration-300 bg-muted/60 group-data-[state=active]:bg-blue-100 dark:group-data-[state=active]:bg-blue-900/50 group-hover:bg-muted">
+                      <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors duration-300 group-data-[state=active]:text-blue-600 dark:group-data-[state=active]:text-blue-400" />
+                    </div>
+                    <span>Empréstimos</span>
+                    <div className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-500 scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 origin-center" />
+                  </TabsTrigger>
+                )}
+                {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
+                  <TabsTrigger 
+                    value="salas" 
+                    className="group relative flex-shrink-0 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 text-muted-foreground hover:text-foreground data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-400 data-[state=active]:bg-purple-50 dark:data-[state=active]:bg-purple-950/40 data-[state=active]:shadow-sm hover:bg-muted/50"
+                  >
+                    <div className="flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-lg transition-all duration-300 bg-muted/60 group-data-[state=active]:bg-purple-100 dark:group-data-[state=active]:bg-purple-900/50 group-hover:bg-muted">
+                      <DoorOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors duration-300 group-data-[state=active]:text-purple-600 dark:group-data-[state=active]:text-purple-400" />
+                    </div>
+                    <span>Salas</span>
+                    <div className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-purple-500 scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 origin-center" />
+                  </TabsTrigger>
+                )}
+                {modulePermissions.admin_salas_hoje && (
+                  <TabsTrigger 
+                    value="today-rooms" 
+                    className="group relative flex-shrink-0 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 text-muted-foreground hover:text-foreground data-[state=active]:text-amber-700 dark:data-[state=active]:text-amber-400 data-[state=active]:bg-amber-50 dark:data-[state=active]:bg-amber-950/40 data-[state=active]:shadow-sm hover:bg-muted/50"
+                  >
+                    <div className="flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-lg transition-all duration-300 bg-muted/60 group-data-[state=active]:bg-amber-100 dark:group-data-[state=active]:bg-amber-900/50 group-hover:bg-muted">
+                      <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors duration-300 group-data-[state=active]:text-amber-600 dark:group-data-[state=active]:text-amber-400" />
+                    </div>
+                    <span className="hidden sm:inline">Salas Hoje</span>
+                    <span className="sm:hidden">Hoje</span>
+                    <div className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-amber-500 scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 origin-center" />
+                  </TabsTrigger>
+                )}
+                {(isUserAdmin || isUserApprover) && (
+                  <TabsTrigger 
+                    value="approvals" 
+                    className="group relative flex-shrink-0 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 text-muted-foreground hover:text-foreground data-[state=active]:text-rose-700 dark:data-[state=active]:text-rose-400 data-[state=active]:bg-rose-50 dark:data-[state=active]:bg-rose-950/40 data-[state=active]:shadow-sm hover:bg-muted/50"
+                  >
+                    <div className="relative flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-lg transition-all duration-300 bg-muted/60 group-data-[state=active]:bg-rose-100 dark:group-data-[state=active]:bg-rose-900/50 group-hover:bg-muted">
+                      <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors duration-300 group-data-[state=active]:text-rose-600 dark:group-data-[state=active]:text-rose-400" />
+                      {unreadApprovals > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center h-4 w-4 sm:h-5 sm:w-5">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping" />
+                          <span className="relative inline-flex items-center justify-center h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-red-500 text-white text-[9px] sm:text-[10px] font-bold shadow-sm">
+                            {unreadApprovals > 9 ? '9+' : unreadApprovals}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                     <span>Aprovações</span>
-                    {unreadApprovals > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                        {unreadApprovals > 9 ? '9+' : unreadApprovals}
-                      </span>
-                    )}
+                    <div className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-rose-500 scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 origin-center" />
                   </TabsTrigger>
-                </>
-              )}
-              {isUserAdmin && (
-                <>
-                  {console.log('DEBUG - Renderizando Aba Todos Agendamentos:', { isUserAdmin })}
-                  <TabsTrigger value="bookings" className="flex-shrink-0 flex items-center gap-2 text-xs sm:text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                    <ListChecks className="h-4 w-4" />
-                    <span>Todos Agendamentos</span>
+                )}
+                {isUserAdmin && (
+                  <TabsTrigger 
+                    value="bookings" 
+                    className="group relative flex-shrink-0 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 text-muted-foreground hover:text-foreground data-[state=active]:text-indigo-700 dark:data-[state=active]:text-indigo-400 data-[state=active]:bg-indigo-50 dark:data-[state=active]:bg-indigo-950/40 data-[state=active]:shadow-sm hover:bg-muted/50"
+                  >
+                    <div className="flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-lg transition-all duration-300 bg-muted/60 group-data-[state=active]:bg-indigo-100 dark:group-data-[state=active]:bg-indigo-900/50 group-hover:bg-muted">
+                      <ListChecks className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors duration-300 group-data-[state=active]:text-indigo-600 dark:group-data-[state=active]:text-indigo-400" />
+                    </div>
+                    <span className="hidden sm:inline">Todos Agendamentos</span>
+                    <span className="sm:hidden">Todos</span>
+                    <div className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-indigo-500 scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 origin-center" />
                   </TabsTrigger>
-                </>
-              )}
-            </TabsList>
+                )}
+              </TabsList>
+            </div>
           </div>
 
           <TabsContent value="chromebooks" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-3">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+              <div className="xl:col-span-3">
                 <ChromebookBookingPage
                   onBookingCreated={handleBookingCreated}
                   totalInventory={totalInventory}
@@ -701,16 +774,26 @@ const DashboardComponent = () => {
                 />
               </div>
               <div>
-                <Card className="border-0 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Chrome className="h-5 w-5 text-primary" />
-                      Agendamentos {format(selectedChromebookDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') 
-                        ? 'de Hoje' 
-                        : `de ${format(selectedChromebookDate, "dd/MM", { locale: ptBR })}`}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm sticky top-4">
+                  {/* Gradient Header */}
+                  <div className="bg-gradient-to-br from-primary via-primary to-primary/80 p-4 sm:p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+                        <Chrome className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                          Agendamentos {format(selectedChromebookDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') 
+                            ? 'de Hoje' 
+                            : `de ${format(selectedChromebookDate, "dd/MM", { locale: ptBR })}`}
+                        </h3>
+                        <p className="text-[11px] text-white/70 font-medium">
+                          {format(selectedChromebookDate, "EEEE", { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <CardContent className="p-4 sm:p-5">
                     <TodayChromebookBookings totalInventory={totalInventory} selectedDate={selectedChromebookDate} />
                   </CardContent>
                 </Card>
@@ -798,17 +881,24 @@ const DashboardComponent = () => {
 
           {modulePermissions.admin_salas_hoje && (
             <TabsContent value="today-rooms" className="space-y-6">
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Eye className="h-5 w-5 text-primary" />
-                    Controle de Chaves - Agendamentos do Dia
-                  </CardTitle>
-                  <CardDescription>
-                    Visualização simplificada dos agendamentos de hoje para controle de liberação das chaves de Auditório, Laboratório e Sala Criativa
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+              <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+                {/* Gradient Header */}
+                <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-orange-500 dark:from-amber-700 dark:via-amber-600 dark:to-orange-600 p-5 sm:p-6">
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+                      <Key className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                        Controle de Chaves
+                      </h3>
+                      <p className="text-[11px] sm:text-xs text-white/70 font-medium mt-0.5">
+                        Agendamentos para liberação das chaves de Auditório, Laboratório e Sala Criativa
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <CardContent className="p-5 sm:p-6">
                   <TodayRoomBookings />
                 </CardContent>
               </Card>

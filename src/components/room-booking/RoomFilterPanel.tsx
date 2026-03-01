@@ -60,38 +60,52 @@ export function RoomFilterPanel({
     return checkDate < today;
   };
 
+  const getRoomColor = (value: string) => {
+    if (value === 'auditorio') return { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200/60 dark:border-blue-800/40', ring: 'ring-blue-500' };
+    if (value === 'laboratorio') return { bg: 'bg-purple-100 dark:bg-purple-900/50', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-200/60 dark:border-purple-800/40', ring: 'ring-purple-500' };
+    return { bg: 'bg-amber-100 dark:bg-amber-900/50', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200/60 dark:border-amber-800/40', ring: 'ring-amber-500' };
+  };
+
   return (
-    <Card className="h-fit sticky top-4">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Filter className="h-5 w-5 text-primary" />
-          Reservar Sala
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <Card className="h-fit sticky top-4 border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+      {/* Gradient Header */}
+      <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-500 dark:from-purple-700 dark:via-purple-600 dark:to-indigo-600 p-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+            <Filter className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white tracking-tight">Reservar Sala</h3>
+            <p className="text-[11px] text-white/70 font-medium">Selecione a sala, data e horários</p>
+          </div>
+        </div>
+      </div>
+
+      <CardContent className="p-5 space-y-5">
         {/* Categoria */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-muted-foreground">
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Categoria
           </Label>
-          <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
-            <div className="p-2 bg-primary/10 rounded-lg">
+          <div className="relative overflow-hidden flex items-center gap-3 p-3.5 bg-gradient-to-br from-primary/5 via-primary/3 to-transparent rounded-xl border border-primary/15">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative p-2 bg-primary/10 rounded-lg ring-2 ring-primary/20">
               <DoorOpen className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <p className="font-medium text-sm">Salas e Laboratórios</p>
-              <p className="text-xs text-muted-foreground">Ambientes para aulas</p>
+            <div className="relative">
+              <p className="font-semibold text-sm">Salas e Laboratórios</p>
+              <p className="text-[11px] text-muted-foreground">Ambientes para aulas</p>
             </div>
           </div>
         </div>
 
         {/* Sala Específica */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-muted-foreground">
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Sala Específica
           </Label>
           <Select value={roomType} onValueChange={(value) => onRoomTypeChange(value as 'auditorio' | 'laboratorio' | 'sala_criativa')}>
-            <SelectTrigger>
+            <SelectTrigger className="rounded-xl border-border/50 h-10">
               <SelectValue placeholder="Selecione a sala" />
             </SelectTrigger>
             <SelectContent>
@@ -110,34 +124,46 @@ export function RoomFilterPanel({
           </Select>
 
           {/* Info da sala selecionada */}
-          <div className="p-3 bg-muted/50 rounded-lg mt-2">
-            <div className="flex items-center gap-2 mb-1">
-              <RoomIcon className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">{currentRoom.name}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">{currentRoom.description}</p>
-          </div>
+          {(() => {
+            const colors = getRoomColor(roomType);
+            return (
+              <div className={`relative overflow-hidden p-3 rounded-xl border ${colors.border} bg-gradient-to-br from-${roomType === 'auditorio' ? 'blue' : roomType === 'laboratorio' ? 'purple' : 'amber'}-50/50 dark:from-${roomType === 'auditorio' ? 'blue' : roomType === 'laboratorio' ? 'purple' : 'amber'}-950/20 to-transparent mt-2`}>
+                <div className="absolute top-0 right-0 w-12 h-12 bg-current opacity-[0.03] rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="relative flex items-center gap-2.5">
+                  <div className={`h-8 w-8 rounded-lg ${colors.bg} flex items-center justify-center flex-shrink-0`}>
+                    <RoomIcon className={`h-4 w-4 ${colors.text}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-semibold text-sm block">{currentRoom.name}</span>
+                    <p className="text-[11px] text-muted-foreground">{currentRoom.description}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Calendário */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-muted-foreground">
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Selecionar Data
           </Label>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(date) => date && onDateChange(date)}
-            locale={ptBR}
-            disabled={(date) => isPastDate(date)}
-            className="rounded-md border w-full"
-          />
+          <div className="rounded-xl border border-border/40 overflow-hidden">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && onDateChange(date)}
+              locale={ptBR}
+              disabled={(date) => isPastDate(date)}
+              className="w-full"
+            />
+          </div>
         </div>
 
         {/* Observações */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+            <MessageSquare className="h-3.5 w-3.5" />
             Observações / Solicitações
           </Label>
           <Textarea
@@ -146,14 +172,17 @@ export function RoomFilterPanel({
             onChange={(e) => onObservationsChange(e.target.value)}
             rows={4}
             maxLength={500}
-            className="resize-none"
+            className="resize-none rounded-xl border-border/40 text-sm"
           />
-          <p className="text-xs text-muted-foreground text-right">
+          <p className="text-[11px] text-muted-foreground text-right">
             {observations.length}/500 caracteres
           </p>
-          <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-md">
-            💡 Use este campo para informar se precisa de suporte técnico, recursos adicionais ou qualquer outra necessidade.
-          </p>
+          <div className="flex items-start gap-2 p-2.5 bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-800/30 rounded-lg">
+            <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+              Use este campo para informar se precisa de suporte técnico, recursos adicionais ou qualquer outra necessidade.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Save, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Loader2, BookOpen, Users, FileText, ClipboardList, Check } from "lucide-react";
 import { CouncilBasicInfo } from "./wizard/CouncilBasicInfo";
 import { CouncilStudents } from "./wizard/CouncilStudents";
 import { CouncilGrades } from "./wizard/CouncilGrades";
@@ -8,6 +8,7 @@ import { CouncilActions } from "./wizard/CouncilActions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { auditLog } from "@/lib/auditLogger";
 
 interface CouncilWizardProps {
   onComplete: () => void;
@@ -98,10 +99,10 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
   };
 
   const steps = [
-    { number: 1, title: "Informações Básicas", component: CouncilBasicInfo },
-    { number: 2, title: "Alunos", component: CouncilStudents },
-    { number: 3, title: "Avaliações", component: CouncilGrades },
-    { number: 4, title: "Encaminhamentos", component: CouncilActions },
+    { number: 1, title: "Informações", icon: BookOpen, component: CouncilBasicInfo },
+    { number: 2, title: "Alunos", icon: Users, component: CouncilStudents },
+    { number: 3, title: "Avaliações", icon: FileText, component: CouncilGrades },
+    { number: 4, title: "Encaminhamentos", icon: ClipboardList, component: CouncilActions },
   ];
 
   const currentStep = steps[step - 1];
@@ -279,6 +280,35 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
       }
 
       toast.success(councilId ? "Conselho atualizado com sucesso!" : "Conselho criado com sucesso!");
+
+      console.log('🔍 About to call auditLog for council:', {
+        councilId,
+        action: councilId ? 'update' : 'create',
+        grade_class: dataToSave.basicInfo.grade_class,
+        trimester: dataToSave.basicInfo.trimester
+      });
+
+      await auditLog({
+        action: councilId ? 'update' : 'create',
+        module: 'council',
+        description: `Conselho de Classe ${councilId ? 'atualizado' : 'criado'} — ${dataToSave.basicInfo.grade_class}, ${dataToSave.basicInfo.trimester}º Trimestre`,
+        resourceId: councilId || undefined,
+        newData: { 
+          grade_class: dataToSave.basicInfo.grade_class, 
+          trimester: dataToSave.basicInfo.trimester, 
+          academic_level: dataToSave.basicInfo.academic_level,
+          students_count: dataToSave.students?.length || 0,
+          grades_count: Object.keys(dataToSave.grades || {}).length,
+          actions_count: Object.keys(dataToSave.actions || {}).length,
+          school_year_id: dataToSave.basicInfo.school_year_id
+        },
+        metadata: {
+          operation_type: councilId ? 'council_edit' : 'council_create',
+          sensitive_data: true,
+          data_categories: ['basic_info', 'students', 'grades', 'actions']
+        }
+      });
+
       onComplete();
     } catch (error: any) {
       console.error("Error saving council:", error);
@@ -288,47 +318,75 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center py-16 gap-3">
+        <div className="h-12 w-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center animate-pulse">
+          <BookOpen className="h-5 w-5 text-purple-500" />
+        </div>
+        <p className="text-sm text-muted-foreground font-medium">Carregando conselho...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 px-2 sm:px-4">
-      {/* Progress Indicator */}
-      <div className="w-full overflow-x-auto">
-        <div className="flex items-center gap-3 w-max">
-          {steps.map((s, idx) => (
-            <div key={s.number} className="flex items-center">
-              <div
-                className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${
-                  step >= s.number
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-muted-foreground text-muted-foreground"
-                }`}
-              >
-                {s.number}
+      {/* Progress Stepper */}
+      <div className="w-full overflow-x-auto pb-2">
+        <div className="flex items-start justify-between w-max min-w-full px-2">
+          {steps.map((s, idx) => {
+            const Icon = s.icon;
+            const isCompleted = step > s.number;
+            const isCurrent = step === s.number;
+            const isUpcoming = step < s.number;
+
+            return (
+              <div key={s.number} className="flex items-start flex-1 last:flex-none">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-xl border-2 transition-all duration-300 ${
+                      isCompleted
+                        ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200 dark:shadow-purple-900/30"
+                        : isCurrent
+                        ? "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-400 dark:border-purple-500 ring-4 ring-purple-100 dark:ring-purple-900/20"
+                        : "bg-muted/30 text-muted-foreground/50 border-border/50"
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Icon className="h-4 w-4" />
+                    )}
+                  </div>
+                  <p
+                    className={`text-[10px] sm:text-[11px] font-semibold mt-2 text-center whitespace-nowrap ${
+                      isCompleted || isCurrent ? "text-foreground" : "text-muted-foreground/50"
+                    }`}
+                  >
+                    {s.title}
+                  </p>
+                </div>
+                {idx < steps.length - 1 && (
+                  <div className="flex-1 flex items-center px-2 sm:px-3 mt-5">
+                    <div
+                      className={`h-0.5 w-full rounded-full transition-colors duration-300 ${
+                        step > s.number ? "bg-purple-500" : "bg-border/40"
+                      }`}
+                    />
+                  </div>
+                )}
               </div>
-              <div className="ml-2">
-                <p
-                  className={`text-sm font-medium ${
-                    step >= s.number ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {s.title}
-                </p>
-              </div>
-              {idx < steps.length - 1 && (
-                <div
-                  className={`h-0.5 w-8 sm:w-16 mx-2 sm:mx-4 ${
-                    step > s.number ? "bg-primary" : "bg-muted"
-                  }`}
-                />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
+      </div>
+
+      {/* Step indicator text */}
+      <div className="flex items-center justify-between px-1">
+        <span className="text-[11px] text-muted-foreground font-medium">
+          Etapa {step} de {steps.length}
+        </span>
+        <span className="text-[11px] text-purple-600 dark:text-purple-400 font-semibold">
+          {currentStep.title}
+        </span>
       </div>
 
       {/* Current Step Content */}
@@ -340,13 +398,14 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
+      <div className="flex justify-between pt-4 border-t border-border/40">
         <Button
           variant="outline"
           onClick={handleBack}
           disabled={step === 1}
+          className="rounded-xl h-9 text-xs font-semibold border-border/50"
         >
-          <ChevronLeft className="mr-2 h-4 w-4" />
+          <ChevronLeft className="mr-1.5 h-3.5 w-3.5" />
           Voltar
         </Button>
       </div>

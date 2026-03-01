@@ -167,66 +167,75 @@ export function TodayChromebookBookings({ totalInventory, selectedDate }: TodayC
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-xs text-muted-foreground font-medium">
           {groupedBookings.length} {groupedBookings.length === 1 ? 'agendamento' : 'agendamentos'} {isToday ? 'hoje' : `em ${dateLabel}`}
         </div>
       </div>
 
-      <ScrollArea className="h-[600px] pr-4">
-        <div className="space-y-3">
+      <ScrollArea className="h-[600px] pr-3">
+        <div className="space-y-2.5">
           {groupedBookings.map((group) => {
             const isActive = isGroupActive(group);
             
             return (
-              <Card 
+              <div 
                 key={group.key} 
-                className={`${isActive ? 'border-primary shadow-md bg-primary/5' : ''}`}
+                className={`relative overflow-hidden rounded-xl border transition-all duration-200 ${
+                  isActive 
+                    ? 'border-primary/40 bg-primary/5 shadow-md' 
+                    : 'border-border/40 bg-muted/10 hover:bg-muted/20'
+                }`}
               >
-                <CardContent className="pt-4 pb-4 space-y-3">
+                {/* Left accent bar */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l ${isActive ? 'bg-primary' : 'bg-muted-foreground/20'}`} />
+                
+                <div className="pl-4 pr-3 py-3 space-y-2.5">
                   {isActive && (
-                    <Badge className="bg-primary text-primary-foreground">
+                    <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0 h-5 rounded-md font-semibold">
                       Em Uso Agora
                     </Badge>
                   )}
                   
-                  <div className="flex items-start gap-2">
-                    <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <User className="h-3.5 w-3.5 text-primary" />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{formatUserName(group.full_name)}</p>
-                      <p className="text-xs text-muted-foreground">{group.class_name}</p>
+                      <p className="text-sm font-semibold truncate">{formatUserName(group.full_name)}</p>
+                      <p className="text-[11px] text-muted-foreground">{group.class_name}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Chrome className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm font-semibold text-primary">
+                  <div className="flex items-center gap-2 pl-0.5">
+                    <Chrome className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    <span className="text-sm font-bold text-primary">
                       {group.quantity} {group.quantity === 1 ? 'Chromebook' : 'Chromebooks'}
                     </span>
                   </div>
 
-                  <div className="flex items-start gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-2 pl-0.5">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       {group.timeSlots.length > 1 ? (
                         <div className="space-y-1">
-                          <span className="text-xs text-muted-foreground">{group.timeSlots.length} horários:</span>
+                          <span className="text-[10px] text-muted-foreground font-medium">{group.timeSlots.length} horários:</span>
                           <div className="flex flex-wrap gap-1">
                             {group.timeSlots.map((slot, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
+                              <Badge key={idx} variant="outline" className="text-[10px] px-1.5 py-0 h-5 rounded-md border-border/50 font-medium">
                                 {slot.start} - {slot.end}
                               </Badge>
                             ))}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-sm">
+                        <span className="text-sm font-medium">
                           {group.timeSlots[0].start} - {group.timeSlots[0].end}
                         </span>
                       )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>

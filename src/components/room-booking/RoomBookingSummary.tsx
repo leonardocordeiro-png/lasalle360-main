@@ -259,43 +259,67 @@ export function RoomBookingSummary({
 
   const hasSelection = selectedDate && selectedSlots.length > 0;
 
+  const getRoomGradient = () => {
+    if (roomType === 'auditorio') return 'from-blue-600 via-blue-500 to-sky-500 dark:from-blue-700 dark:via-blue-600 dark:to-sky-600';
+    if (roomType === 'laboratorio') return 'from-purple-600 via-purple-500 to-violet-500 dark:from-purple-700 dark:via-purple-600 dark:to-violet-600';
+    return 'from-amber-600 via-amber-500 to-orange-500 dark:from-amber-700 dark:via-amber-600 dark:to-orange-600';
+  };
+
+  const getRoomIconBg = () => {
+    if (roomType === 'auditorio') return 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
+    if (roomType === 'laboratorio') return 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400';
+    return 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400';
+  };
+
   return (
-    <Card className="h-fit sticky top-4">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg">Resumo da Reserva</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Card className="h-fit sticky top-4 border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+      {/* Gradient Header */}
+      <div className={`bg-gradient-to-br ${getRoomGradient()} p-5`}>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+            <Calendar className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white tracking-tight">Resumo da Reserva</h3>
+            <p className="text-[11px] text-white/70 font-medium">
+              {hasSelection ? `${selectedSlots.length} horário(s) selecionado(s)` : 'Selecione horários na grade'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <CardContent className="p-5">
         {hasSelection ? (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Informações da Sala */}
-            <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <RoomIcon className="h-5 w-5 text-primary" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Room Info */}
+            <div className={`relative overflow-hidden flex items-center gap-3 p-3 rounded-xl border border-border/40`}>
+              <div className="absolute top-0 right-0 w-14 h-14 bg-current opacity-[0.02] rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className={`relative h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${getRoomIconBg()}`}>
+                <RoomIcon className="h-4 w-4" />
               </div>
-              <div>
-                <p className="font-medium text-sm">{currentRoom.name}</p>
-                <p className="text-xs text-muted-foreground">Sala selecionada</p>
+              <div className="relative min-w-0">
+                <p className="font-semibold text-sm">{currentRoom.name}</p>
+                <p className="text-[11px] text-muted-foreground">Sala selecionada</p>
               </div>
             </div>
 
-            {/* Data */}
-            <div className="flex items-center gap-3 text-sm">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>{format(selectedDate!, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+            {/* Date */}
+            <div className="flex items-center gap-2.5 text-sm p-2.5 bg-muted/30 rounded-lg">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="text-[13px] font-medium">{format(selectedDate!, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
             </div>
 
-            {/* Horários Selecionados */}
+            {/* Selected Time Slots */}
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground flex items-center gap-2">
-                <Clock className="h-4 w-4" />
+              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
                 Horários Selecionados ({selectedSlots.length})
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {selectedSlots.map((slot, index) => (
                   <Badge 
                     key={index} 
-                    variant="secondary" 
-                    className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                    className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[10px] px-2 py-0.5 rounded-md font-semibold border-0"
                   >
                     {slot.start} - {slot.end}
                   </Badge>
@@ -304,17 +328,17 @@ export function RoomBookingSummary({
             </div>
 
             {/* Professor */}
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground flex items-center gap-2">
-                <User className="h-4 w-4" />
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
                 Professor
               </Label>
-              <Input value={fullName} disabled className="bg-muted/50" />
+              <Input value={fullName} disabled className="bg-muted/30 rounded-lg border-border/40 h-9 text-sm" />
             </div>
 
             {/* Turma */}
-            <div className="space-y-2">
-              <Label htmlFor="className" className="text-sm">
+            <div className="space-y-1.5">
+              <Label htmlFor="className" className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
                 Turma *
               </Label>
               <Input
@@ -324,46 +348,48 @@ export function RoomBookingSummary({
                 onChange={(e) => setClassName(e.target.value)}
                 required
                 maxLength={100}
+                className="rounded-lg border-border/40 h-9 text-sm"
               />
             </div>
 
             {/* Recursos do Auditório */}
             {roomType === 'auditorio' && (
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">
+              <div className="space-y-2">
+                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
                   Recursos Necessários
                 </Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   {AUDITORIO_RESOURCES.map((resource) => {
                     const ResourceIcon = resource.icon;
+                    const isActive = selectedResources.includes(resource.id);
                     return (
                       <button
                         type="button"
                         key={resource.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                          selectedResources.includes(resource.id)
-                            ? 'bg-primary/10 border-primary'
-                            : 'bg-muted/30 border-transparent hover:bg-muted/50'
+                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all duration-150 ${
+                          isActive
+                            ? 'bg-primary/10 border-primary/40 shadow-sm'
+                            : 'bg-muted/20 border-border/30 hover:bg-muted/40 hover:border-border/50'
                         }`}
                         onClick={() => toggleResource(resource.id)}
                       >
-                        <div className={`h-4 w-4 rounded border flex items-center justify-center ${
-                          selectedResources.includes(resource.id)
+                        <div className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                          isActive
                             ? 'bg-primary border-primary'
                             : 'border-muted-foreground/30'
                         }`}>
-                          {selectedResources.includes(resource.id) && (
+                          {isActive && (
                             <Check className="h-3 w-3 text-primary-foreground" />
                           )}
                         </div>
-                        <ResourceIcon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs">{resource.label}</span>
+                        <ResourceIcon className={`h-3.5 w-3.5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <span className="text-[11px] font-medium">{resource.label}</span>
                       </button>
                     );
                   })}
                 </div>
                 {selectedResources.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground font-medium">
                     {selectedResources.length} recurso(s) selecionado(s)
                   </p>
                 )}
@@ -372,12 +398,12 @@ export function RoomBookingSummary({
 
             {/* Observações (se houver) */}
             {observations.trim() && (
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Observações / Solicitações
+              <div className="space-y-1.5">
+                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Observações
                 </Label>
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <div className="p-2.5 bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-800/30 rounded-lg text-[12px] text-amber-800 dark:text-amber-300 leading-relaxed">
                   {observations}
                 </div>
               </div>
@@ -385,21 +411,21 @@ export function RoomBookingSummary({
 
             {/* Aviso de aprovação para Auditório */}
             {roomType === 'auditorio' && (
-              <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-lg">
-                <Clock className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <span>
+              <div className="flex items-start gap-2 p-2.5 bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-800/30 rounded-lg">
+                <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <span className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
                   <strong>Atenção:</strong> Reservas do Auditório necessitam de aprovação. 
                   Você será notificado em até 48 horas.
                 </span>
               </div>
             )}
 
-            {/* Botões */}
-            <div className="space-y-2">
+            {/* Buttons */}
+            <div className="space-y-2 pt-1">
               <Button
                 type="submit"
                 disabled={isCreating || !className.trim()}
-                className="w-full h-12 text-base font-medium"
+                className={`w-full h-11 text-sm font-semibold rounded-xl bg-gradient-to-r ${getRoomGradient()} hover:opacity-90 transition-opacity shadow-lg`}
               >
                 {isCreating ? (
                   <>
@@ -418,26 +444,28 @@ export function RoomBookingSummary({
                 type="button"
                 variant="outline"
                 onClick={onClearSelection}
-                className="w-full"
+                className="w-full rounded-xl border-border/50 h-9 text-sm"
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="h-3.5 w-3.5 mr-1.5" />
                 Limpar Seleção
               </Button>
             </div>
 
-            {/* Aviso de Email */}
-            <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
-              <Mail className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span>Uma confirmação será enviada para seu email após a reserva.</span>
+            {/* Email Notice */}
+            <div className="flex items-start gap-2 p-2.5 bg-muted/30 rounded-lg">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <span className="text-[11px] text-muted-foreground leading-relaxed">Uma confirmação será enviada para seu email após a reserva.</span>
             </div>
           </form>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <Calendar className="h-8 w-8" />
+          <div className="text-center py-10 text-muted-foreground">
+            <div className="relative mx-auto mb-4">
+              <div className="h-16 w-16 rounded-2xl bg-muted/40 flex items-center justify-center mx-auto">
+                <Calendar className="h-8 w-8 text-muted-foreground/50" />
+              </div>
             </div>
-            <p className="font-medium">Nenhum horário selecionado</p>
-            <p className="text-sm mt-1">
+            <p className="font-semibold text-sm">Nenhum horário selecionado</p>
+            <p className="text-[12px] mt-1.5 text-muted-foreground/70 max-w-[200px] mx-auto leading-relaxed">
               Selecione um ou mais horários disponíveis na grade ao lado para fazer sua reserva.
             </p>
           </div>

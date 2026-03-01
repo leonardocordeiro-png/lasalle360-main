@@ -160,6 +160,16 @@ export default function InventoryManagement() {
         description: "Inventário atualizado com sucesso",
       });
 
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'update',
+        module: 'inventory',
+        description: `Inventário "${selectedItem.day_label}" atualizado para ${newQuantity} unidades`,
+        resourceId: selectedItem.id,
+        oldData: { total_available: selectedItem.total_available },
+        newData: { total_available: parseInt(newQuantity) }
+      });
+
       setShowEditDialog(false);
       setSelectedItem(null);
       setNewQuantity('200');
@@ -189,6 +199,15 @@ export default function InventoryManagement() {
       toast({
         title: "Sucesso",
         description: "Item removido do inventário",
+      });
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'delete',
+        module: 'inventory',
+        description: `Item "${item.day_label}" removido do inventário`,
+        resourceId: item.id,
+        oldData: { day_label: item.day_label, total_available: item.total_available }
       });
 
       await fetchInventory();

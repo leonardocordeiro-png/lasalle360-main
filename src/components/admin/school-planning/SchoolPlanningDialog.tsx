@@ -151,10 +151,20 @@ export const SchoolPlanningDialog = ({
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ["class-planning"] });
       queryClient.invalidateQueries({ queryKey: ["school-planning-dashboard"] });
       toast.success("Planejamento criado com sucesso!");
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'create',
+        module: 'school_planning',
+        description: `Planejamento de turma criado`,
+        resourceId: result?.id,
+        newData: { class_name: result?.class_name }
+      });
+
       onSuccess();
     },
     onError: (error) => {
@@ -170,10 +180,19 @@ export const SchoolPlanningDialog = ({
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["class-planning"] });
       queryClient.invalidateQueries({ queryKey: ["school-planning-dashboard"] });
       toast.success("Planejamento atualizado com sucesso!");
+
+      const { auditLog } = await import('@/lib/auditLogger');
+      await auditLog({
+        action: 'update',
+        module: 'school_planning',
+        description: `Planejamento de turma atualizado`,
+        resourceId: planningId || undefined
+      });
+
       onSuccess();
     },
     onError: (error) => {

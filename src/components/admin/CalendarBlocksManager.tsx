@@ -187,6 +187,14 @@ export default function CalendarBlocksManager() {
                 description: "Bloqueio criado com sucesso",
             });
 
+            const { auditLog } = await import('@/lib/auditLogger');
+            await auditLog({
+                action: 'create',
+                module: 'calendar_blocks',
+                description: `Bloqueio criado para ${resourceType} em ${blockDate}`,
+                newData: { resource_type: resourceType, block_date: blockDate, reason, start_time: startTime, end_time: endTime }
+            });
+
             setShowAddDialog(false);
             resetForm();
             await fetchBlocks();
@@ -229,6 +237,15 @@ export default function CalendarBlocksManager() {
                 description: "Bloqueio atualizado com sucesso",
             });
 
+            const { auditLog } = await import('@/lib/auditLogger');
+            await auditLog({
+                action: 'update',
+                module: 'calendar_blocks',
+                description: `Bloqueio atualizado para ${resourceType} em ${blockDate}`,
+                resourceId: selectedBlock.id,
+                newData: { resource_type: resourceType, block_date: blockDate, reason, start_time: startTime, end_time: endTime }
+            });
+
             setShowEditDialog(false);
             resetForm();
             await fetchBlocks();
@@ -258,6 +275,15 @@ export default function CalendarBlocksManager() {
             toast({
                 title: "Sucesso",
                 description: "Bloqueio removido com sucesso",
+            });
+
+            const { auditLog } = await import('@/lib/auditLogger');
+            await auditLog({
+                action: 'delete',
+                module: 'calendar_blocks',
+                description: `Bloqueio removido: ${block.resource_type} em ${block.block_date}`,
+                resourceId: block.id,
+                oldData: { resource_type: block.resource_type, block_date: block.block_date, reason: block.reason }
             });
 
             await fetchBlocks();

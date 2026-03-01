@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Search, 
   Calendar as CalendarIcon,
@@ -24,7 +26,9 @@ import {
   X,
   LogIn,
   Laptop,
-  DoorOpen
+  DoorOpen,
+  Activity,
+  Eye
 } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { format, subDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
@@ -84,6 +88,7 @@ export default function AuditLogs() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [bookingHistory, setBookingHistory] = useState<BookingLog[]>([]);
   const [schoolPlanningLogs, setSchoolPlanningLogs] = useState<SchoolPlanningLog[]>([]);
+  const [councilLogs, setCouncilLogs] = useState<AuditLog[]>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, { full_name: string; email: string; avatar_url?: string }>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,7 +99,7 @@ export default function AuditLogs() {
     from: subDays(new Date(), 30),
     to: new Date()
   });
-  const [activeTab, setActiveTab] = useState<'security' | 'bookings' | 'school-planning'>('bookings');
+  const [activeTab, setActiveTab] = useState<'security' | 'bookings' | 'school-planning' | 'council'>('bookings');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -139,11 +144,59 @@ export default function AuditLogs() {
         .order('created_at', { ascending: false })
         .limit(500);
 
+      console.log('🔍 Security Logs Debug:', { 
+        count: securityLogs?.length || 0, 
+        logs: securityLogs,
+        error: securityError 
+      });
+
       if (securityError) {
         console.log('Security logs not accessible:', securityError);
         setAuditLogs([]);
       } else {
-        setAuditLogs(securityLogs || []);
+        const filteredLogs = (Array.isArray(securityLogs) ? securityLogs : []).filter(log => {
+          const actionMatch = log.action?.toLowerCase().includes('council');
+          const resourceTypeMatch = log.resource_type === 'council';
+          
+          // Parse additional_data if it's a string
+          let additionalData = {};
+          if (typeof log.additional_data === 'string') {
+            try {
+              additionalData = JSON.parse(log.additional_data);
+            } catch (e) {
+              console.warn('Failed to parse additional_data:', e);
+            }
+          } else if (log.additional_data) {
+            additionalData = log.additional_data;
+          }
+          
+          const descriptionMatch = additionalData?.description?.toLowerCase().includes('conselho');
+          const moduleMatch = additionalData?.module === 'council';
+          
+          console.log('🔍 Filtering council log:', {
+            logId: log.id,
+            action: log.action,
+            resource_type: log.resource_type,
+            additionalData,
+            matches: { actionMatch, resourceTypeMatch, descriptionMatch, moduleMatch }
+          });
+          
+          // The issue: logs are created with action "council_update" which should match actionMatch
+          const isCouncilLog = actionMatch || resourceTypeMatch || descriptionMatch || moduleMatch;
+          
+          if (isCouncilLog) {
+            console.log('✅ Found council log:', log);
+          }
+          
+          return isCouncilLog;
+        });
+        console.log('🔍 Council Logs Filtered:', { 
+          total: securityLogs?.length || 0, 
+          council: filteredLogs.length,
+          councilLogs: filteredLogs
+        });
+        setAuditLogs(Array.isArray(securityLogs) ? securityLogs : []);
+        setCouncilLogs(filteredLogs);
       }
 
       // Fetch chromebook booking history
@@ -153,7 +206,10 @@ export default function AuditLogs() {
         .order('created_at', { ascending: false })
         .limit(500);
 
-      if (chromebookError) throw chromebookError;
+      if (chromebookError) {
+        console.error('Error fetching chromebook bookings:', chromebookError);
+        throw chromebookError;
+      }
 
       // Fetch room booking history
       const { data: roomBookings, error: roomError } = await supabase
@@ -162,32 +218,35 @@ export default function AuditLogs() {
         .order('created_at', { ascending: false })
         .limit(500);
 
-      if (roomError) throw roomError;
+      if (roomError) {
+        console.error('Error fetching room bookings:', roomError);
+        throw roomError;
+      }
 
       // Transform chromebook bookings into log format
-      const chromebookLogs: BookingLog[] = chromebookBookings.map(booking => ({
-        id: booking.id,
-        user_id: booking.user_id,
-        full_name: booking.full_name,
+      const chromebookLogs: BookingLog[] = (Array.isArray(chromebookBookings) ? chromebookBookings : []).map(booking => ({
+        id: booking.id || '',
+        user_id: booking.user_id || '',
+        full_name: booking.full_name || 'Unknown',
         action: booking.status === 'active' ? 'CREATE_BOOKING' : 'CANCEL_BOOKING',
-        booking_date: booking.booking_date,
-        quantity: booking.quantity,
-        class_name: booking.class_name,
-        created_at: booking.created_at,
-        status: booking.status,
+        booking_date: booking.booking_date || '',
+        quantity: booking.quantity || 0,
+        class_name: booking.class_name || '',
+        created_at: booking.created_at || '',
+        status: booking.status || 'unknown',
         booking_type: 'chromebook' as const
       }));
 
       // Transform room bookings into log format
-      const roomLogs: BookingLog[] = roomBookings.map(booking => ({
-        id: booking.id,
-        user_id: booking.user_id,
-        full_name: booking.full_name,
+      const roomLogs: BookingLog[] = (Array.isArray(roomBookings) ? roomBookings : []).map(booking => ({
+        id: booking.id || '',
+        user_id: booking.user_id || '',
+        full_name: booking.full_name || 'Unknown',
         action: booking.status === 'active' ? 'CREATE_BOOKING' : 'CANCEL_BOOKING',
-        booking_date: booking.booking_date,
-        class_name: booking.class_name,
-        created_at: booking.created_at,
-        status: booking.status,
+        booking_date: booking.booking_date || '',
+        class_name: booking.class_name || '',
+        created_at: booking.created_at || '',
+        status: booking.status || 'unknown',
         booking_type: 'room' as const,
         room_type: booking.room_type
       }));
@@ -210,7 +269,7 @@ export default function AuditLogs() {
         console.log('School planning logs not accessible:', planningError);
         setSchoolPlanningLogs([]);
       } else {
-        setSchoolPlanningLogs((planningLogs || []) as SchoolPlanningLog[]);
+        setSchoolPlanningLogs(Array.isArray(planningLogs) ? planningLogs as SchoolPlanningLog[] : []);
       }
     } catch (error) {
       console.error('Error fetching logs:', error);
@@ -219,8 +278,9 @@ export default function AuditLogs() {
     }
   };
 
-  const getActionBadge = (action: string, type?: 'booking' | 'planning' | 'security') => {
+  const getActionBadge = (action: string, type?: 'booking' | 'planning' | 'security' | 'council') => {
     const baseClasses = "flex items-center gap-1.5 font-medium text-xs px-2.5 py-1 rounded-full";
+    const actionLower = action.toLowerCase();
     
     if (type === 'booking') {
       if (action === 'CREATE_BOOKING') {
@@ -268,8 +328,59 @@ export default function AuditLogs() {
       }
     }
 
+    // Council specific actions
+    if (type === 'council') {
+      if (actionLower.includes('data_access')) {
+        return (
+          <span className={`${baseClasses} bg-purple-100 text-purple-700 border border-purple-200`}>
+            <Eye className="h-3 w-3" />
+            Acesso
+          </span>
+        );
+      }
+      if (actionLower.includes('export')) {
+        return (
+          <span className={`${baseClasses} bg-orange-100 text-orange-700 border border-orange-200`}>
+            <Download className="h-3 w-3" />
+            Exportar
+          </span>
+        );
+      }
+      if (actionLower.includes('status_change')) {
+        return (
+          <span className={`${baseClasses} bg-amber-100 text-amber-700 border border-amber-200`}>
+            <RefreshCw className="h-3 w-3" />
+            Alterar Status
+          </span>
+        );
+      }
+      if (actionLower.includes('create')) {
+        return (
+          <span className={`${baseClasses} bg-emerald-100 text-emerald-700 border border-emerald-200`}>
+            <Plus className="h-3 w-3" />
+            Criar
+          </span>
+        );
+      }
+      if (actionLower.includes('update')) {
+        return (
+          <span className={`${baseClasses} bg-blue-100 text-blue-700 border border-blue-200`}>
+            <FileEdit className="h-3 w-3" />
+            Atualizar
+          </span>
+        );
+      }
+      if (actionLower.includes('delete')) {
+        return (
+          <span className={`${baseClasses} bg-red-100 text-red-700 border border-red-200`}>
+            <Trash2 className="h-3 w-3" />
+            Excluir
+          </span>
+        );
+      }
+    }
+
     // Security actions
-    const actionLower = action.toLowerCase();
     if (actionLower.includes('login') || actionLower.includes('signup')) {
       return (
         <span className={`${baseClasses} bg-violet-100 text-violet-700 border border-violet-200`}>
@@ -307,6 +418,31 @@ export default function AuditLogs() {
         <span className={`${baseClasses} bg-red-100 text-red-700 border border-red-200`}>
           <Trash2 className="h-3 w-3" />
           Excluir
+        </span>
+      );
+    }
+    // Council specific actions
+    if (actionLower.includes('data_access')) {
+      return (
+        <span className={`${baseClasses} bg-purple-100 text-purple-700 border border-purple-200`}>
+          <Eye className="h-3 w-3" />
+          Acesso
+        </span>
+      );
+    }
+    if (actionLower.includes('export')) {
+      return (
+        <span className={`${baseClasses} bg-orange-100 text-orange-700 border border-orange-200`}>
+          <Download className="h-3 w-3" />
+          Exportar
+        </span>
+      );
+    }
+    if (actionLower.includes('status_change')) {
+      return (
+        <span className={`${baseClasses} bg-amber-100 text-amber-700 border border-amber-200`}>
+          <RefreshCw className="h-3 w-3" />
+          Alterar Status
         </span>
       );
     }
@@ -380,7 +516,7 @@ export default function AuditLogs() {
     );
   };
 
-  const getDescription = (log: BookingLog | SchoolPlanningLog | AuditLog, type: 'booking' | 'planning' | 'security') => {
+  const getDescription = (log: BookingLog | SchoolPlanningLog | AuditLog, type: 'booking' | 'planning' | 'security' | 'council') => {
     if (type === 'booking') {
       const bookingLog = log as BookingLog;
       if (bookingLog.action === 'CREATE_BOOKING') {
@@ -409,6 +545,14 @@ export default function AuditLogs() {
       if (planningLog.action === 'DELETE') return `Excluiu ${tableName}`;
     }
     
+    if (type === 'council') {
+      const councilLog = log as AuditLog;
+      if (councilLog.additional_data?.description) {
+        return councilLog.additional_data.description;
+      }
+      return `Operação no conselho: ${councilLog.action}`;
+    }
+    
     const securityLog = log as AuditLog;
     if (securityLog.additional_data?.description) {
       return securityLog.additional_data.description;
@@ -434,7 +578,7 @@ export default function AuditLogs() {
     return actionDescriptions[securityLog.action.toLowerCase()] || securityLog.action;
   };
 
-  const getUserInfo = (log: BookingLog | SchoolPlanningLog | AuditLog, type: 'booking' | 'planning' | 'security') => {
+  const getUserInfo = (log: BookingLog | SchoolPlanningLog | AuditLog, type: 'booking' | 'planning' | 'security' | 'council') => {
     if (type === 'booking') {
       const bookingLog = log as BookingLog;
       const profile = userProfiles[bookingLog.user_id];
@@ -451,6 +595,16 @@ export default function AuditLogs() {
       return {
         name: planningLog.user_name,
         role: 'Coordenador',
+        avatar: profile?.avatar_url
+      };
+    }
+    
+    if (type === 'council') {
+      const councilLog = log as AuditLog;
+      const profile = councilLog.user_id ? userProfiles[councilLog.user_id] : null;
+      return {
+        name: profile?.full_name || 'Sistema',
+        role: councilLog.user_id ? 'Administrador' : 'Automático',
         avatar: profile?.avatar_url
       };
     }
@@ -532,9 +686,26 @@ export default function AuditLogs() {
     return matchesSearch && matchesUser && matchesDate;
   });
 
+  const filteredCouncilLogs = councilLogs.filter(log => {
+    const profile = log.user_id ? userProfiles[log.user_id] : null;
+    const userName = profile?.full_name || 'Sistema';
+    
+    const matchesSearch = log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         log.resource_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (log.ip_address && String(log.ip_address).includes(searchTerm));
+    
+    const matchesUser = !userFilter || userName.toLowerCase().includes(userFilter.toLowerCase());
+    
+    const matchesDate = filterByDateRange(log.created_at);
+    
+    return matchesSearch && matchesUser && matchesDate;
+  });
+
   const getCurrentLogs = () => {
     if (activeTab === 'bookings') return filteredBookingLogs;
     if (activeTab === 'school-planning') return filteredSchoolPlanningLogs;
+    if (activeTab === 'council') return filteredCouncilLogs;
     return filteredAuditLogs;
   };
 
@@ -590,315 +761,389 @@ export default function AuditLogs() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground">Carregando logs...</p>
+      <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 p-5 sm:p-6">
+          <Skeleton className="h-6 w-64 bg-white/10" />
+          <Skeleton className="h-4 w-48 bg-white/10 mt-2" />
         </div>
-      </div>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Icon icon="solar:document-text-bold-duotone" className="h-7 w-7 text-primary" />
-            Logs de Auditoria
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Monitoramento completo de atividades, ações e modificações no sistema.
-          </p>
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 p-5 sm:p-6">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/[0.03] rounded-full blur-2xl" />
+          <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-white/[0.02] rounded-full blur-xl" />
         </div>
-        <Button onClick={exportToCSV} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Exportar CSV
-        </Button>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-card border rounded-xl p-4 space-y-4">
-        {/* Search Bar */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por descrição, ID ou endereço IP..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-background"
-            />
-          </div>
-          <div className="relative md:w-64">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Filtrar por usuário..."
-              value={userFilter}
-              onChange={(e) => setUserFilter(e.target.value)}
-              className="pl-10 bg-background"
-            />
-          </div>
-        </div>
-
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Filter className="h-4 w-4" />
-            <span className="font-medium">FILTROS:</span>
-          </div>
-
-          {/* Date Range Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-2">
-                <CalendarIcon className="h-3.5 w-3.5" />
-                {getDateRangeLabel()}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={2}
-                locale={ptBR}
-              />
-            </PopoverContent>
-          </Popover>
-
-          {/* Action Filter */}
-          <Select value={actionFilter} onValueChange={(v) => setActionFilter(v as ActionType)}>
-            <SelectTrigger className="h-8 w-auto min-w-[120px]">
-              <SelectValue placeholder="Ação" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Ação: Todas</SelectItem>
-              <SelectItem value="create">Criações</SelectItem>
-              <SelectItem value="update">Atualizações</SelectItem>
-              <SelectItem value="delete">Exclusões</SelectItem>
-              <SelectItem value="cancel">Cancelamentos</SelectItem>
-              <SelectItem value="login">Logins</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Module Filter (only for bookings) */}
-          {activeTab === 'bookings' && (
-            <Select value={moduleFilter} onValueChange={(v) => setModuleFilter(v as ModuleType)}>
-              <SelectTrigger className="h-8 w-auto min-w-[130px]">
-                <SelectValue placeholder="Módulo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Módulo: Todos</SelectItem>
-                <SelectItem value="chromebook">Chromebooks</SelectItem>
-                <SelectItem value="room">Salas</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-
-          {/* Clear Filters */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={clearFilters}
-            className="h-8 text-primary hover:text-primary/80"
-          >
-            <X className="h-3.5 w-3.5 mr-1" />
-            Limpar filtros
-          </Button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        <Button 
-          variant={activeTab === 'bookings' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('bookings')}
-          className="flex items-center gap-2"
-        >
-          <CalendarIcon className="h-4 w-4" />
-          Agendamentos
-          <Badge variant="secondary" className="ml-1">{filteredBookingLogs.length}</Badge>
-        </Button>
-        <Button 
-          variant={activeTab === 'school-planning' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('school-planning')}
-          className="flex items-center gap-2"
-        >
-          <GraduationCap className="h-4 w-4" />
-          Planejamento Escolar
-          <Badge variant="secondary" className="ml-1">{filteredSchoolPlanningLogs.length}</Badge>
-        </Button>
-        <Button 
-          variant={activeTab === 'security' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('security')}
-          className="flex items-center gap-2"
-        >
-          <Shield className="h-4 w-4" />
-          Segurança
-          <Badge variant="secondary" className="ml-1">{filteredAuditLogs.length}</Badge>
-        </Button>
-        <Button variant="outline" onClick={fetchLogs} className="ml-auto">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
-      </div>
-
-      {/* Table */}
-      <div className="bg-card border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/30">
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                  Data/Hora
-                </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                  Usuário
-                </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                  Ação
-                </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                  Módulo / Alvo
-                </th>
-                <th className="text-left py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                  Descrição
-                </th>
-                {activeTab === 'security' && (
-                  <th className="text-right py-4 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                    Endereço IP
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {paginatedLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={activeTab === 'security' ? 6 : 5} className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <Icon icon="solar:document-text-line-duotone" className="h-12 w-12 text-muted-foreground/50" />
-                      <h3 className="font-medium text-foreground">Nenhum log encontrado</h3>
-                      <p className="text-sm text-muted-foreground">Tente ajustar os filtros de busca.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedLogs.map((log) => {
-                  const type = activeTab === 'bookings' ? 'booking' : activeTab === 'school-planning' ? 'planning' : 'security';
-                  const userInfo = getUserInfo(log, type);
-                  const action = type === 'booking' ? (log as BookingLog).action : 
-                                type === 'planning' ? (log as SchoolPlanningLog).action : 
-                                (log as AuditLog).action;
-                  
-                  return (
-                    <tr key={log.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-4 px-4">
-                        <div className="text-sm">
-                          <p className="font-medium text-foreground">
-                            {format(new Date(log.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR })}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border">
-                            <AvatarImage src={userInfo.avatar} />
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                              {getInitials(userInfo.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm text-foreground">{userInfo.name}</p>
-                            <p className="text-xs text-muted-foreground">{userInfo.role}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        {getActionBadge(action, type)}
-                      </td>
-                      <td className="py-4 px-4">
-                        {getModuleDisplay(log, type)}
-                      </td>
-                      <td className="py-4 px-4">
-                        <p className="text-sm text-foreground max-w-xs truncate">
-                          {getDescription(log, type)}
-                        </p>
-                      </td>
-                      {activeTab === 'security' && (
-                        <td className="py-4 px-4 text-right">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {(log as AuditLog).ip_address ? String((log as AuditLog).ip_address) : '—'}
-                          </span>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-            <p className="text-sm text-muted-foreground">
-              Mostrando <span className="font-medium text-foreground">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> a{' '}
-              <span className="font-medium text-foreground">{Math.min(currentPage * ITEMS_PER_PAGE, currentLogs.length)}</span> de{' '}
-              <span className="font-medium text-foreground">{currentLogs.length}</span> resultados
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Anterior
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? 'default' : 'ghost'}
-                      size="sm"
-                      className="w-8 h-8 p-0"
-                      onClick={() => setCurrentPage(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Próximo
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-11 w-11 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center ring-1 ring-white/20 shadow-lg">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+                Logs de Auditoria
+              </h2>
+              <p className="text-indigo-200/60 text-[11px] sm:text-xs font-medium tracking-wide">
+                Monitoramento completo de atividades e modificações do sistema
+              </p>
             </div>
           </div>
-        )}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              onClick={fetchLogs}
+              className="flex-1 sm:flex-none rounded-xl bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 shadow-lg h-9 text-xs font-semibold ring-1 ring-white/10"
+            >
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+              Atualizar
+            </Button>
+            <Button
+              onClick={exportToCSV}
+              className="flex-1 sm:flex-none rounded-xl bg-white text-indigo-800 hover:bg-indigo-50 shadow-lg h-9 text-xs font-semibold"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Exportar CSV
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <CardContent className="p-4 sm:p-6 space-y-4">
+        {/* Search and Filters */}
+        <div className="rounded-xl border border-border/40 bg-muted/10 p-3.5 space-y-3">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por descrição, ID ou endereço IP..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-9 rounded-xl text-xs border-border/50 bg-background"
+              />
+            </div>
+            <div className="relative md:w-56">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Filtrar por usuário..."
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+                className="pl-9 h-9 rounded-xl text-xs border-border/50 bg-background"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+              <Filter className="h-3 w-3" />
+              Filtros:
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await testCouncilAuditLog();
+                setTimeout(() => fetchLogs(), 1000); // Refresh logs after test
+              }}
+              className="h-7 gap-1.5 rounded-lg text-[11px] font-medium border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700"
+            >
+              🧪 Testar Conselho
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                console.log('🔍 Checking raw database logs...');
+                try {
+                  const { data: rawLogs, error } = await supabase
+                    .from('security_audit_log')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                  
+                  console.log('🔍 Raw logs from database:', { rawLogs, error });
+                  
+                  if (rawLogs) {
+                    const councilLogs = rawLogs.filter(log => 
+                      log.action?.toLowerCase().includes('council') || 
+                      log.resource_type === 'council' ||
+                      log.additional_data?.description?.toLowerCase().includes('conselho')
+                    );
+                    console.log('🔍 Council logs found:', councilLogs);
+                  }
+                } catch (err) {
+                  console.error('❌ Error checking raw logs:', err);
+                }
+              }}
+              className="h-7 gap-1.5 rounded-lg text-[11px] font-medium border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+            >
+              🔍 Verificar Logs Brutos
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-1.5 rounded-lg text-[11px] font-medium border-border/50">
+                  <CalendarIcon className="h-3 w-3" />
+                  {getDateRangeLabel()}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Select value={actionFilter} onValueChange={(v) => setActionFilter(v as ActionType)}>
+              <SelectTrigger className="h-7 w-auto min-w-[110px] rounded-lg text-[11px] border-border/50">
+                <SelectValue placeholder="Ação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Ação: Todas</SelectItem>
+                <SelectItem value="create">Criações</SelectItem>
+                <SelectItem value="update">Atualizações</SelectItem>
+                <SelectItem value="delete">Exclusões</SelectItem>
+                <SelectItem value="cancel">Cancelamentos</SelectItem>
+                <SelectItem value="login">Logins</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {activeTab === 'bookings' && (
+              <Select value={moduleFilter} onValueChange={(v) => setModuleFilter(v as ModuleType)}>
+                <SelectTrigger className="h-7 w-auto min-w-[120px] rounded-lg text-[11px] border-border/50">
+                  <SelectValue placeholder="Módulo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Módulo: Todos</SelectItem>
+                  <SelectItem value="chromebook">Chromebooks</SelectItem>
+                  <SelectItem value="room">Salas</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters}
+              className="h-7 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Limpar
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1.5 flex-wrap">
+          <Button 
+            variant={activeTab === 'bookings' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('bookings')}
+            size="sm"
+            className={`h-8 rounded-lg text-xs font-semibold gap-1.5 ${activeTab === 'bookings' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md' : 'border-border/50'}`}
+          >
+            <CalendarIcon className="h-3 w-3" />
+            Agendamentos
+            <Badge variant={activeTab === 'bookings' ? 'outline' : 'secondary'} className={`ml-0.5 text-[9px] px-1.5 py-0 ${activeTab === 'bookings' ? 'border-white/30 text-white' : ''}`}>{filteredBookingLogs.length}</Badge>
+          </Button>
+          <Button 
+            variant={activeTab === 'school-planning' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('school-planning')}
+            size="sm"
+            className={`h-8 rounded-lg text-xs font-semibold gap-1.5 ${activeTab === 'school-planning' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md' : 'border-border/50'}`}
+          >
+            <GraduationCap className="h-3 w-3" />
+            Planejamento
+            <Badge variant={activeTab === 'school-planning' ? 'outline' : 'secondary'} className={`ml-0.5 text-[9px] px-1.5 py-0 ${activeTab === 'school-planning' ? 'border-white/30 text-white' : ''}`}>{filteredSchoolPlanningLogs.length}</Badge>
+          </Button>
+          <Button 
+            variant={activeTab === 'council' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('council')}
+            size="sm"
+            className={`h-8 rounded-lg text-xs font-semibold gap-1.5 ${activeTab === 'council' ? 'bg-purple-600 hover:bg-purple-700 shadow-md' : 'border-border/50'}`}
+          >
+            <GraduationCap className="h-3 w-3" />
+            Conselho
+            <Badge variant={activeTab === 'council' ? 'outline' : 'secondary'} className={`ml-0.5 text-[9px] px-1.5 py-0 ${activeTab === 'council' ? 'border-white/30 text-white' : ''}`}>{filteredCouncilLogs.length}</Badge>
+          </Button>
+          <Button 
+            variant={activeTab === 'security' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('security')}
+            size="sm"
+            className={`h-8 rounded-lg text-xs font-semibold gap-1.5 ${activeTab === 'security' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md' : 'border-border/50'}`}
+          >
+            <Shield className="h-3 w-3" />
+            Segurança
+            <Badge variant={activeTab === 'security' ? 'outline' : 'secondary'} className={`ml-0.5 text-[9px] px-1.5 py-0 ${activeTab === 'security' ? 'border-white/30 text-white' : ''}`}>{filteredAuditLogs.length}</Badge>
+          </Button>
+        </div>
+
+        {/* Table */}
+        <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Data/Hora
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Usuário
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Ação
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Módulo / Alvo
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Descrição
+                  </th>
+                  {activeTab === 'security' && (
+                    <th className="text-right py-3 px-4 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground">
+                      IP
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {paginatedLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={activeTab === 'security' ? 6 : 5} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-14 w-14 rounded-3xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                          <Activity className="h-6 w-6 text-indigo-400" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-foreground">Nenhum log encontrado</h3>
+                        <p className="text-xs text-muted-foreground">Tente ajustar os filtros de busca</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedLogs.map((log) => {
+                    const type = activeTab === 'bookings' ? 'booking' : activeTab === 'school-planning' ? 'planning' : activeTab === 'council' ? 'council' : 'security';
+                    const userInfo = getUserInfo(log, type);
+                    const action = type === 'booking' ? (log as BookingLog).action : 
+                                  type === 'planning' ? (log as SchoolPlanningLog).action : 
+                                  (log as AuditLog).action;
+                    
+                    return (
+                      <tr key={log.id} className="hover:bg-muted/20 transition-colors group">
+                        <td className="py-3 px-4">
+                          <p className="text-xs font-semibold text-foreground">
+                            {format(new Date(log.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR })}
+                          </p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="h-7 w-7 border border-border/30">
+                              <AvatarImage src={userInfo.avatar} />
+                              <AvatarFallback className="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 font-bold">
+                                {getInitials(userInfo.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-xs font-semibold text-foreground">{userInfo.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{userInfo.role}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          {getActionBadge(action, type)}
+                        </td>
+                        <td className="py-3 px-4">
+                          {getModuleDisplay(log, type)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <p className="text-xs text-foreground max-w-xs truncate">
+                            {getDescription(log, type)}
+                          </p>
+                        </td>
+                        {activeTab === 'security' && (
+                          <td className="py-3 px-4 text-right">
+                            <span className="font-mono text-[10px] text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded">
+                              {(log as AuditLog).ip_address ? String((log as AuditLog).ip_address) : '—'}
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border/30 bg-muted/10">
+              <p className="text-[11px] text-muted-foreground font-medium">
+                <span className="font-semibold text-foreground">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, currentLogs.length)}</span> de{' '}
+                <span className="font-semibold text-foreground">{currentLogs.length}</span>
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-7 rounded-lg text-[11px] font-medium border-border/50"
+                >
+                  <ChevronLeft className="h-3 w-3 mr-0.5" />
+                  Ant.
+                </Button>
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? 'default' : 'ghost'}
+                        size="sm"
+                        className={`w-7 h-7 p-0 rounded-lg text-[11px] ${currentPage === pageNum ? 'bg-indigo-600 hover:bg-indigo-700 shadow-sm' : ''}`}
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-7 rounded-lg text-[11px] font-medium border-border/50"
+                >
+                  Próx.
+                  <ChevronRight className="h-3 w-3 ml-0.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

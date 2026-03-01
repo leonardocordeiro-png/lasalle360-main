@@ -99,11 +99,19 @@ export function ChromebookTimeSlotCard({
   const isAvailable = availableCount > 0;
 
   const getStatusColor = () => {
-    if (isBlocked) return "border-gray-400 bg-gray-100 dark:bg-gray-900 cursor-not-allowed";
-    if (isSelected) return "border-blue-500 bg-blue-50 dark:bg-blue-950";
-    if (isFull) return "border-red-200 bg-red-50 dark:bg-red-950";
-    if (isPartial) return "border-amber-200 bg-amber-50 dark:bg-amber-950";
-    return "border-emerald-200 bg-emerald-50 dark:bg-emerald-950 hover:border-emerald-400";
+    if (isBlocked) return "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed";
+    if (isSelected) return "border-blue-400 dark:border-blue-500 bg-blue-50/80 dark:bg-blue-950/50 ring-2 ring-blue-500/20";
+    if (isFull) return "border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-950/30";
+    if (isPartial) return "border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/30 hover:border-amber-300 dark:hover:border-amber-700";
+    return "border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md";
+  };
+
+  const getAccentBar = () => {
+    if (isBlocked) return "bg-gray-400";
+    if (isSelected) return "bg-blue-500";
+    if (isFull) return "bg-red-500";
+    if (isPartial) return "bg-amber-500";
+    return "bg-emerald-500";
   };
 
   const getBlockReasonLabel = () => {
@@ -117,15 +125,15 @@ export function ChromebookTimeSlotCard({
 
   const getStatusBadge = () => {
     if (isBlocked) {
-      return <Badge variant="secondary" className="text-xs bg-gray-500 hover:bg-gray-600 text-white whitespace-nowrap"><Lock className="h-3 w-3 mr-1" />{getBlockReasonLabel()}</Badge>;
+      return <Badge variant="secondary" className="text-[10px] bg-gray-500 hover:bg-gray-600 text-white whitespace-nowrap px-1.5 py-0 h-5"><Lock className="h-2.5 w-2.5 mr-1" />{getBlockReasonLabel()}</Badge>;
     }
     if (isFull) {
-      return <Badge variant="destructive" className="text-xs whitespace-nowrap">Lotado</Badge>;
+      return <Badge variant="destructive" className="text-[10px] whitespace-nowrap px-1.5 py-0 h-5">Lotado</Badge>;
     }
     if (isPartial) {
-      return <Badge className="text-xs bg-amber-500 hover:bg-amber-600 whitespace-nowrap">{availableCount} disponíveis</Badge>;
+      return <Badge className="text-[10px] bg-amber-500 hover:bg-amber-600 whitespace-nowrap px-1.5 py-0 h-5">{availableCount} disponíveis</Badge>;
     }
-    return <Badge className="text-xs bg-emerald-500 hover:bg-emerald-600 whitespace-nowrap">{availableCount} disponíveis</Badge>;
+    return <Badge className="text-[10px] bg-emerald-500 hover:bg-emerald-600 whitespace-nowrap px-1.5 py-0 h-5">{availableCount} disponíveis</Badge>;
   };
 
   const handleCancelBooking = async () => {
@@ -252,58 +260,70 @@ export function ChromebookTimeSlotCard({
     <>
       <Card
         className={cn(
-          "p-3 transition-all duration-200 cursor-pointer border-2 min-w-0 overflow-hidden",
+          "relative overflow-hidden transition-all duration-300 cursor-pointer border min-w-0 group/card",
           getStatusColor(),
           (isPast || isBlocked) && "opacity-60 cursor-not-allowed",
-          isSelected && "ring-2 ring-blue-500 ring-offset-2"
         )}
         onClick={() => !isPast && !isBlocked && isAvailable && onSelect()}
       >
-        <div className="space-y-2 min-w-0">
+        {/* Left Accent Bar */}
+        <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l transition-all duration-300", getAccentBar())} />
+
+        <div className="pl-3.5 pr-3 py-3 space-y-2 min-w-0">
           {/* Header */}
-          <div className="flex items-start justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-medium text-sm whitespace-nowrap">{timeSlot.label}</span>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "flex items-center justify-center h-6 w-6 rounded-md transition-colors duration-200 flex-shrink-0",
+                isSelected ? "bg-blue-500/15" : isBlocked ? "bg-gray-200 dark:bg-gray-800" : "bg-muted/60"
+              )}>
+                <Clock className={cn(
+                  "h-3.5 w-3.5 transition-colors duration-200",
+                  isSelected ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"
+                )} />
+              </div>
+              <span className="font-semibold text-sm whitespace-nowrap tracking-tight">{timeSlot.label}</span>
             </div>
             {getStatusBadge()}
           </div>
 
           {/* Bookings List */}
           {hasBookings && (
-            <div className="space-y-2 mt-2 pt-2 border-t">
+            <div className="space-y-1.5 pt-2 border-t border-border/40">
               {bookings.slice(0, 3).map((booking) => (
                 <div
                   key={booking.id}
-                  className="flex items-center justify-between text-xs bg-background/50 rounded p-2"
+                  className="flex items-center justify-between text-xs bg-background/60 backdrop-blur-sm rounded-lg p-2 transition-colors duration-150 hover:bg-background/80"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <User className="h-2.5 w-2.5 text-primary" />
+                    </div>
                     <div className="truncate">
-                      <span className="font-medium">
+                      <span className="font-medium text-[11px]">
                         {(() => {
                           const parts = booking.full_name?.split(' ') || [];
                           if (parts.length <= 2) return booking.full_name;
                           return `${parts[0]} ${parts[parts.length - 1]}`;
                         })()}
                       </span>
-                      <span className="text-muted-foreground ml-1">({booking.class_name})</span>
+                      <span className="text-muted-foreground ml-1 text-[10px]">({booking.class_name})</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge variant="outline" className="text-xs">
-                      <Chrome className="h-3 w-3 mr-1" />
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 rounded-md border-primary/20">
+                      <Chrome className="h-2.5 w-2.5 mr-0.5" />
                       {booking.quantity}
                     </Badge>
                     {canManageBooking(booking) && !isPast && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                          <Button variant="ghost" size="sm" className="h-5 w-5 p-0 rounded-md hover:bg-muted">
                             <MoreVertical className="h-3 w-3" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => openEditDialog(booking)}
                           >
@@ -349,7 +369,7 @@ export function ChromebookTimeSlotCard({
                 </div>
               ))}
               {bookings.length > 3 && (
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-[10px] text-muted-foreground text-center pt-0.5">
                   +{bookings.length - 3} mais agendamentos
                 </p>
               )}
@@ -359,19 +379,19 @@ export function ChromebookTimeSlotCard({
           {/* Blocked State */}
           {isBlocked && (
             <div className="text-xs text-center py-2">
-              <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400">
+              <div className="flex items-center justify-center gap-1.5 text-gray-600 dark:text-gray-400">
                 <Lock className="h-3 w-3" />
                 <span className="font-medium">Horário Bloqueado</span>
               </div>
               {blockDescription && (
-                <p className="text-muted-foreground mt-1 truncate">{blockDescription}</p>
+                <p className="text-muted-foreground mt-1 truncate text-[10px]">{blockDescription}</p>
               )}
             </div>
           )}
 
           {/* Empty State */}
           {!hasBookings && !isBlocked && isAvailable && (
-            <p className="text-xs text-muted-foreground text-center py-2">
+            <p className="text-[11px] text-muted-foreground text-center py-1.5 group-hover/card:text-foreground/60 transition-colors duration-200">
               Clique para selecionar
             </p>
           )}

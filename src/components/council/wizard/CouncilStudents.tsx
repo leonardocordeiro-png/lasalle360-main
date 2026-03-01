@@ -139,15 +139,21 @@ export function CouncilStudents({ data, onComplete }: CouncilStudentsProps) {
   };
 
   return (
-    <div className="px-2 sm:px-0 space-y-6">
+    <div className="px-2 sm:px-0 space-y-5">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">Lista de Alunos</h3>
-          <p className="text-sm text-muted-foreground">
-            Adicione os alunos que participarão deste conselho
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+            <Plus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold">Lista de Alunos</h3>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              Adicione os alunos que participarão deste conselho
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           <input
             ref={fileInputRef}
             type="file"
@@ -155,35 +161,36 @@ export function CouncilStudents({ data, onComplete }: CouncilStudentsProps) {
             onChange={handleFileUpload}
             className="hidden"
           />
-          <Button variant="outline" size="sm" onClick={downloadTemplate}>
-            <Download className="mr-2 h-4 w-4" />
-            Baixar Modelo
+          <Button variant="outline" size="sm" onClick={downloadTemplate} className="h-8 rounded-lg text-xs font-medium border-border/50">
+            <Download className="mr-1.5 h-3 w-3" />
+            Modelo
           </Button>
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-4 w-4" />
-            Importar Excel
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 rounded-lg text-xs font-medium border-border/50">
+            <Upload className="mr-1.5 h-3 w-3" />
+            Importar
           </Button>
-          <Button onClick={addStudent} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={addStudent} size="sm" className="h-8 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-sm">
+            <Plus className="mr-1.5 h-3 w-3" />
             Adicionar
           </Button>
         </div>
       </div>
 
-      <Card>
+      {/* Table */}
+      <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm">
         <div className="w-full overflow-x-auto">
           <div className="min-w-[520px]">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24">Nº</TableHead>
-                  <TableHead>Nome do Aluno</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="w-20 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nº</TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome do Aluno</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {students.map((student) => (
-                  <TableRow key={student.id}>
+                  <TableRow key={student.id} className="group hover:bg-muted/20 transition-colors">
                     <TableCell>
                       <Input
                         type="number"
@@ -195,7 +202,7 @@ export function CouncilStudents({ data, onComplete }: CouncilStudentsProps) {
                             parseInt(e.target.value) || 0
                           )
                         }
-                        className="w-20"
+                        className="w-16 h-8 rounded-lg text-xs border-border/50 bg-muted/20 text-center font-mono"
                       />
                     </TableCell>
                     <TableCell>
@@ -205,15 +212,17 @@ export function CouncilStudents({ data, onComplete }: CouncilStudentsProps) {
                           updateStudent(student.id, "student_name", e.target.value)
                         }
                         placeholder="Nome completo do aluno"
+                        className="h-8 rounded-lg text-sm border-border/50 bg-muted/20"
                       />
                     </TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg opacity-40 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                         onClick={() => removeStudent(student.id)}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -222,13 +231,14 @@ export function CouncilStudents({ data, onComplete }: CouncilStudentsProps) {
             </Table>
           </div>
         </div>
-      </Card>
+      </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Total: {students.length} alunos
-        </p>
-        <Button onClick={handleContinue} className="w-full sm:w-auto">
+      {/* Footer */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+        <span className="text-[11px] text-muted-foreground font-medium">
+          {students.length} aluno{students.length !== 1 ? 's' : ''} adicionado{students.length !== 1 ? 's' : ''}
+        </span>
+        <Button onClick={handleContinue} className="w-full sm:w-auto rounded-xl h-9 px-6 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-md">
           Continuar
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -54,6 +54,32 @@ interface LoanEditDialogProps {
 export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEditDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
+
+  const fetchEquipmentMap = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('it_equipment')
+        .select('patrimony, id_number')
+        .not('id_number', 'is', null);
+      
+      if (error) throw error;
+      
+      const map: Record<string, string> = {};
+      data?.forEach(eq => {
+        if (eq.patrimony && eq.id_number) {
+          map[eq.patrimony.trim()] = eq.id_number;
+          const normalized = eq.patrimony.replace(/^0+/, '');
+          if (normalized !== eq.patrimony.trim()) {
+            map[normalized] = eq.id_number;
+          }
+        }
+      });
+      setEquipmentMap(map);
+    } catch (error) {
+      console.error('Error fetching equipment map:', error);
+    }
+  }, []);
 
   const form = useForm<EditLoanFormData>({
     resolver: zodResolver(editLoanSchema),
@@ -67,6 +93,12 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   });
 
   const borrowerType = form.watch("borrower_type");
+
+  useEffect(() => {
+    if (open) {
+      fetchEquipmentMap();
+    }
+  }, [open, fetchEquipmentMap]);
 
   useEffect(() => {
     if (open && loan) {
@@ -143,17 +175,24 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   const formatEquipmentForDisplay = (equipment: string, loan: any): string => {
     const trimmedEquipment = equipment.trim();
     
-    // Prioridade 1: Se tiver equipment_id e it_equipment com id_number, mostra o ID
+    // Prioridade 1: Buscar ID no mapa de equipamentos pelo patrimônio
+    if (equipmentMap[trimmedEquipment]) {
+      return equipmentMap[trimmedEquipment];
+    }
+    
+    // Prioridade 2: Tentar com patrimônio normalizado
+    const normalized = normalizePatrimony(trimmedEquipment);
+    if (equipmentMap[normalized]) {
+      return equipmentMap[normalized];
+    }
+    
+    // Prioridade 3: Se tiver equipment_id e it_equipment com id_number, mostra o ID
     if (loan.equipment_id && loan.it_equipment?.id_number) {
       return loan.it_equipment.id_number;
     }
     
-    // Prioridade 2: Tentar buscar ID do equipamento pelo patrimônio (se houver mapa)
-    // Nota: Aqui poderíamos implementar um mapa de equipamentos como no LoansManagement
-    // Por enquanto, vamos usar a lógica disponível
-    
-    // Prioridade 3: Se não tiver ID, mostra o patrimônio normalizado
-    return normalizePatrimony(equipment);
+    // Fallback: mostra o patrimônio normalizado
+    return normalized;
   };
 
   return (

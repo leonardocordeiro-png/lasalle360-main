@@ -11,26 +11,29 @@ export function EquipmentLoanBadge({ status, className }: EquipmentLoanBadgeProp
   const config = {
     ATIVO: {
       icon: CheckCircle,
-      color: "bg-green-500 hover:bg-green-600 text-white",
+      dotColor: "bg-emerald-500",
+      color: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
       label: "ATIVO"
     },
     EMPRESTIMO: {
       icon: Package,
-      color: "bg-yellow-500 hover:bg-yellow-600 text-black",
+      dotColor: "bg-amber-500",
+      color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
       label: "EMPRÉSTIMO"
     },
     DEFEITO: {
       icon: AlertTriangle,
-      color: "bg-red-500 hover:bg-red-600 text-white",
+      dotColor: "bg-red-500",
+      color: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
       label: "DEFEITO"
     }
   };
 
-  const { icon: Icon, color, label } = config[status];
+  const { dotColor, color, label } = config[status];
 
   return (
-    <Badge className={cn(color, "gap-1", className)}>
-      <Icon className="h-3 w-3" />
+    <Badge variant="outline" className={cn(color, "gap-1.5 text-[10px] font-bold", className)}>
+      <div className={cn("w-1.5 h-1.5 rounded-full", dotColor)} />
       {label}
     </Badge>
   );
