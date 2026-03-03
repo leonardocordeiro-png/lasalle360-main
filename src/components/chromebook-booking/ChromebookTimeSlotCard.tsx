@@ -290,11 +290,13 @@ export function ChromebookTimeSlotCard({
           {/* Bookings List */}
           {hasBookings && (
             <div className="space-y-1.5 pt-2 border-t border-border/40">
-              {bookings.slice(0, 3).map((booking) => (
+              <div className="max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-border/20 scrollbar-track-transparent">
+                {bookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-center justify-between text-xs bg-background/60 backdrop-blur-sm rounded-lg p-2 transition-colors duration-150 hover:bg-background/80"
                   onClick={(e) => e.stopPropagation()}
+                  title={`${booking.full_name} - ${booking.class_name} - ${booking.quantity} Chromebook(s) - ${booking.start_time} às ${booking.end_time}`}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -368,11 +370,7 @@ export function ChromebookTimeSlotCard({
                   </div>
                 </div>
               ))}
-              {bookings.length > 3 && (
-                <p className="text-[10px] text-muted-foreground text-center pt-0.5">
-                  +{bookings.length - 3} mais agendamentos
-                </p>
-              )}
+              </div>
             </div>
           )}
 

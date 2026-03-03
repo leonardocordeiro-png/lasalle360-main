@@ -175,20 +175,26 @@ export function ChromebookFilterPanel({
             </div>
             <Input
               id="chromebook-quantity"
-              type="number"
+              type="text"
               min={1}
               max={maxQuantity}
-              value={quantity || ''}
+              value={quantity.toString()}
               onChange={(e) => {
                 const inputValue = e.target.value;
-                if (inputValue === '') {
-                  onQuantityChange(0);
+                // Permitir apenas números
+                const numericValue = inputValue.replace(/[^0-9]/g, '');
+                if (numericValue === '') {
+                  onQuantityChange(1);
                   return;
                 }
-                const value = parseInt(inputValue);
+                const value = parseInt(numericValue);
                 if (!isNaN(value)) {
                   onQuantityChange(Math.min(Math.max(value, 1), maxQuantity));
                 }
+              }}
+              onFocus={(e) => {
+                // Selecionar todo o texto ao focar
+                e.target.select();
               }}
               onBlur={(e) => {
                 const value = parseInt(e.target.value);

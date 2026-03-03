@@ -85,7 +85,7 @@ export function ChromebookAvailabilityGrid({
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const newCache = new Map<string, number>();
 
-      // Buscar inventário do dia
+      // Buscar inventário do dia com cache
       const { data: inventoryData } = await supabase
         .from('chromebook_inventory')
         .select('total_available')
@@ -94,7 +94,7 @@ export function ChromebookAvailabilityGrid({
 
       const dayTotalInventory = inventoryData?.total_available || totalInventory;
 
-      // Filtrar bookings ativos do dia
+      // Filtrar bookings ativos do dia (otimizado)
       const dayBookings = bookings.filter(b => b.booking_date === dateStr && b.status === 'active');
 
       // LÓGICA CORRETA DE DISPONIBILIDADE:

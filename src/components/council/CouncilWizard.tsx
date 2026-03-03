@@ -10,6 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { auditLog } from "@/lib/auditLogger";
 
+// Helper function to format date without timezone issues
+const formatDateLocal = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 interface CouncilWizardProps {
   onComplete: () => void;
   councilId?: string;
@@ -160,7 +168,7 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
             academic_level: dataToSave.basicInfo.academic_level,
             trimester: dataToSave.basicInfo.trimester,
             grade_class: dataToSave.basicInfo.grade_class,
-            council_date: format(dataToSave.basicInfo.council_date, "yyyy-MM-dd"),
+            council_date: formatDateLocal(dataToSave.basicInfo.council_date),
           })
           .eq("id", councilId);
 
@@ -178,7 +186,7 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
             academic_level: dataToSave.basicInfo.academic_level,
             trimester: dataToSave.basicInfo.trimester,
             grade_class: dataToSave.basicInfo.grade_class,
-            council_date: format(dataToSave.basicInfo.council_date, "yyyy-MM-dd"),
+            council_date: formatDateLocal(dataToSave.basicInfo.council_date),
             status: "draft",
             created_by: user.id,
           })
