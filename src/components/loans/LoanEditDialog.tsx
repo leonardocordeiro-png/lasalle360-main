@@ -136,46 +136,6 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
     }
   }, [open, loan, form]);
 
-  const onSubmit = async (data: EditLoanFormData) => {
-    if (!loan) return;
-    
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from("chromebook_loans")
-        .update({
-          borrower_name: data.borrower_name,
-          borrower_type: data.borrower_type,
-          responsible_teacher: data.responsible_teacher || null,
-          class_name: data.class_name || null,
-          expected_return_date: data.expected_return_date ? formatLocalDate(data.expected_return_date) : null,
-          observations: data.observations || null,
-        })
-        .eq("id", loan.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Empréstimo atualizado!",
-        description: "As informações foram salvas com sucesso.",
-      });
-
-      onOpenChange(false);
-      onSuccess();
-    } catch (error: any) {
-      console.error("Error updating loan:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar empréstimo",
-        description: error.message,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (!loan) return null;
-
   const borrowerTypeOptions = [
     { value: "aluno", label: "Aluno", icon: GraduationCap },
     { value: "professor", label: "Professor", icon: User },
@@ -183,7 +143,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   ];
 
   // Obter lista de equipamentos com ID e Patrimônio
-  const equipmentsList = loan.chromebook_number 
+  const equipmentsList = loan?.chromebook_number 
     ? loan.chromebook_number.split(',').map((num: string) => num.trim()).filter((num: string) => num.length > 0)
     : [];
 
@@ -208,7 +168,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
     }
     
     // Prioridade 3: Se tiver equipment_id e it_equipment com id_number, mostra o ID
-    if (loan.equipment_id && loan.it_equipment?.id_number) {
+    if (loan?.equipment_id && loan.it_equipment?.id_number) {
       return loan.it_equipment.id_number;
     }
     
@@ -218,7 +178,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
   // Verificar se equipamento foi devolvido
   const isEquipmentReturned = (index: number): boolean => {
-    return index < (loan.returned_quantity || 0);
+    return index < (loan?.returned_quantity || 0);
   };
 
   // Processar observações para substituir patrimônios por IDs
@@ -259,6 +219,44 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   useEffect(() => {
     searchEquipment(newEquipment);
   }, [newEquipment, searchEquipment]);
+
+  const onSubmit = async (data: EditLoanFormData) => {
+    if (!loan) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from("chromebook_loans")
+        .update({
+          borrower_name: data.borrower_name,
+          borrower_type: data.borrower_type,
+          responsible_teacher: data.responsible_teacher || null,
+          class_name: data.class_name || null,
+          expected_return_date: data.expected_return_date ? formatLocalDate(data.expected_return_date) : null,
+          observations: data.observations || null,
+        })
+        .eq("id", loan.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Empréstimo atualizado!",
+        description: "As informações foram salvas com sucesso.",
+      });
+
+      onOpenChange(false);
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error updating loan:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar empréstimo",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Adicionar novo equipamento ao empréstimo
   const handleAddEquipment = async () => {
@@ -339,6 +337,8 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       });
     }
   };
+
+  if (!loan) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
