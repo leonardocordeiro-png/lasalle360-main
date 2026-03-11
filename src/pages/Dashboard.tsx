@@ -28,6 +28,9 @@ import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { NotificationPermissionBanner } from '@/components/NotificationPermissionBanner';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+import { SessionTimeoutDialog } from '@/components/auth/SessionTimeoutDialog';
+import { SessionIndicator } from '@/components/auth/SessionIndicator';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/types/database';
@@ -109,6 +112,15 @@ const DashboardComponent = () => {
   // Initialize notification hooks
   const { permission: notificationPermission } = useNotificationPermission();
   const { lastNotification } = useRealtimeNotifications();
+
+  // Initialize session timeout
+  const {
+    timeRemaining,
+    showWarning,
+    showFinalWarning,
+    isWarningOpen,
+    extendSession
+  } = useSessionTimeout();
 
   useEffect(() => {
     if (user) {
@@ -947,6 +959,20 @@ const DashboardComponent = () => {
           onProfileUpdated={handleProfileUpdated}
         />
       )}
+
+      {/* Session Timeout Dialog */}
+      <SessionTimeoutDialog
+        isOpen={isWarningOpen}
+        timeRemaining={timeRemaining}
+        warningLevel={showFinalWarning ? 'final' : 'warning'}
+        onExtend={extendSession}
+        onLogout={signOut}
+      />
+
+      {/* Session Indicator (optional - shows when less than 15 minutes) */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <SessionIndicator showIndicator={true} compact={false} />
+      </div>
     </div>
   );
 };
