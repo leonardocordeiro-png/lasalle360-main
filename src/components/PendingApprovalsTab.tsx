@@ -83,17 +83,37 @@ export function PendingApprovalsTab() {
   const [rejectReason, setRejectReason] = useState('');
 
   const checkApproverStatus = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('checkApproverStatus: No authenticated user');
+        return false;
+      }
 
-    const { data, error } = await supabase
-      .from('room_booking_approvers')
-      .select('is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .maybeSingle();
+      console.log('checkApproverStatus: Checking for user:', user.id);
 
-    return !error && data?.is_active === true;
+      const { data, error } = await supabase
+        .from('room_booking_approvers')
+        .select('is_active')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      console.log('checkApproverStatus result:', { data, error });
+
+      if (error) {
+        console.error('checkApproverStatus error:', error);
+        return false;
+      }
+
+      const isActive = data?.is_active === true;
+      console.log('checkApproverStatus: User is approver:', isActive);
+      
+      return isActive;
+    } catch (error) {
+      console.error('checkApproverStatus unexpected error:', error);
+      return false;
+    }
   }, []);
 
   const markNotificationsAsRead = useCallback(async () => {
@@ -217,29 +237,54 @@ export function PendingApprovalsTab() {
     const action = confirmDialog.action;
     const bookingIds = group.bookings.map(b => b.id);
 
+    console.log('Starting approval process:', { action, bookingIds, group });
+
     setProcessingId(group.bookings[0].id);
     setConfirmDialog({ open: false, action: 'approve', booking: null });
 
     try {
+      // Verify user is authenticated and has approver permissions
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      if (!user) {
+        console.error('User not authenticated');
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log('User authenticated:', user.id);
+
+      // Double-check approver status
+      const isUserApprover = await checkApproverStatus();
+      if (!isUserApprover) {
+        console.error('User is not an approver');
+        throw new Error('Você não tem permissão para aprovar reservas');
+      }
+
+      console.log('User has approver permissions');
 
       const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
-      const { error } = await supabase
+      // Update booking status
+      const { data: updateData, error } = await supabase
         .from('room_bookings')
         .update({
           approval_status: newStatus,
           approved_by: user.id,
           approved_at: new Date().toISOString(),
         })
-        .in('id', bookingIds);
+        .in('id', bookingIds)
+        .select();
 
-      if (error) throw error;
+      console.log('Update result:', { updateData, error });
 
-      // Send notification email to user
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      // Send notification email to user (non-blocking)
       try {
-        await supabase.functions.invoke('send-approval-result-email-gmail', {
+        console.log('Sending notification email...');
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-approval-result-email-gmail', {
           body: {
             bookings: group.bookings,
             userName: group.fullName,
@@ -249,24 +294,27 @@ export function PendingApprovalsTab() {
             rejectReason: action === 'reject' ? rejectReason : null,
           },
         });
+        console.log('Email result:', { emailData, emailError });
       } catch (emailError) {
         console.error('Error sending result email:', emailError);
+        // Don't throw error for email failures - approval still succeeded
       }
 
       toast({
         title: action === 'approve' ? 'Aprovado!' : 'Rejeitado',
         description: action === 'approve' 
-          ? `Reserva de ${group.fullName} foi aprovada.`
+          ? `Reserva de ${group.fullName} foi aprovada com sucesso.`
           : `Reserva de ${group.fullName} foi rejeitada.`,
       });
 
+      console.log('Approval completed successfully');
       fetchPendingBookings();
     } catch (error: any) {
       console.error('Error processing approval:', error);
       toast({
         variant: 'destructive',
-        title: 'Erro',
-        description: error.message || 'Não foi possível processar a solicitação',
+        title: 'Erro na Aprovação',
+        description: error.message || 'Não foi possível processar a solicitação. Tente novamente.',
       });
     } finally {
       setProcessingId(null);
@@ -465,7 +513,7 @@ export function PendingApprovalsTab() {
                       <div className="flex flex-wrap gap-2 pt-1">
                         <Button
                           onClick={() => handleApprove(group)}
-                          disabled={isProcessing || timeRemaining.isExpired}
+                          disabled={isProcessing || timeRemaining.isExpired || !isApprover}
                           className="flex-1 sm:flex-none h-9 text-sm font-semibold rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:opacity-90 transition-opacity shadow-md"
                         >
                           {isProcessing ? (
@@ -478,7 +526,7 @@ export function PendingApprovalsTab() {
                         <Button
                           variant="destructive"
                           onClick={() => handleReject(group)}
-                          disabled={isProcessing || timeRemaining.isExpired}
+                          disabled={isProcessing || timeRemaining.isExpired || !isApprover}
                           className="flex-1 sm:flex-none h-9 text-sm font-semibold rounded-xl shadow-md"
                         >
                           {isProcessing ? (
