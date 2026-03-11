@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -348,6 +348,9 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
             <Icon icon="solar:pen-bold-duotone" className="h-6 w-6 text-primary" />
             Editar Empréstimo
           </DialogTitle>
+          <DialogDescription>
+            Edite as informações do empréstimo, adicione mais equipamentos ou atualize os dados do solicitante.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Informações do Empréstimo (somente leitura) */}

@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -569,7 +569,9 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-white">Novo Empréstimo</DialogTitle>
-              <p className="text-blue-100 text-xs mt-0.5">Preencha os dados para registrar o empréstimo</p>
+              <DialogDescription className="text-blue-100 text-xs mt-0.5">
+                Preencha os dados para registrar o empréstimo de Chromebooks
+              </DialogDescription>
             </div>
           </div>
         </div>
