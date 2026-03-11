@@ -215,28 +215,46 @@ export function ChromebookTimeSlotCard({
     }
   };
 
-  const handleEditBooking = async () => {
+  const handleUpdateQuantity = async () => {
     if (!selectedBooking) return;
     setIsLoading(true);
 
     try {
+      // Buscar TODOS os agendamentos do mesmo usuário, mesma data e mesma turma
+      // para sincronizar a quantidade em todos os horários
+      const { data: relatedBookings, error: fetchError } = await supabase
+        .from('chromebook_bookings')
+        .select('id, quantity, start_time, end_time')
+        .eq('user_id', selectedBooking.user_id)
+        .eq('booking_date', selectedBooking.booking_date)
+        .eq('class_name', selectedBooking.class_name)
+        .eq('status', 'active');
+
+      if (fetchError) throw fetchError;
+
+      const bookingIds = relatedBookings?.map(b => b.id) || [selectedBooking.id];
+      const updateCount = bookingIds.length;
+
+      // Atualizar TODOS os agendamentos encontrados com a nova quantidade
       const { error } = await supabase
         .from('chromebook_bookings')
         .update({ quantity: editQuantity })
-        .eq('id', selectedBooking.id);
+        .in('id', bookingIds);
 
       if (error) throw error;
 
       toast({
-        title: "Agendamento atualizado!",
-        description: `Quantidade alterada para ${editQuantity} Chromebook(s).`,
+        title: "Agendamentos sincronizados!",
+        description: updateCount > 1 
+          ? `Quantidade alterada para ${editQuantity} Chromebook(s) em ${updateCount} horários.`
+          : `Quantidade alterada para ${editQuantity} Chromebook(s).`,
       });
 
       onBookingCancelled();
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao atualizar agendamento",
+        description: error.message || "Erro ao atualizar agendamentos",
         variant: "destructive",
       });
     } finally {
@@ -455,6 +473,8 @@ export function ChromebookTimeSlotCard({
             <DialogTitle>Editar Agendamento</DialogTitle>
             <DialogDescription>
               Altere a quantidade de Chromebooks para este agendamento.
+              <br /><br />
+              <strong>Atenção:</strong> Esta alteração será aplicada a todos os horários agendados pelo mesmo usuário ({selectedBooking?.full_name}) na mesma data e turma.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
