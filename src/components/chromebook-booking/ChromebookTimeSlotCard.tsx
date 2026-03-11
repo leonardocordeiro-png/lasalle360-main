@@ -497,7 +497,7 @@ export function ChromebookTimeSlotCard({
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleEditBooking} disabled={isLoading}>
+            <Button onClick={handleUpdateQuantity} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
