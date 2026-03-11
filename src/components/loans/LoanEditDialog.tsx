@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Calendar as CalendarIcon, User, GraduationCap, Briefcase } from "lucide-react";
+import { Loader2, Calendar as CalendarIcon, User, GraduationCap, Briefcase, Plus, X } from "lucide-react";
 import { Icon } from "@iconify/react";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,9 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
+  const [availableEquipments, setAvailableEquipments] = useState<any[]>([]);
+  const [newEquipment, setNewEquipment] = useState("");
+  const [showAddEquipment, setShowAddEquipment] = useState(false);
 
   const fetchEquipmentMap = useCallback(async () => {
     try {
@@ -81,6 +84,22 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
     }
   }, []);
 
+  const fetchAvailableEquipments = useCallback(async () => {
+    try {
+      // Buscar TODOS os equipamentos (não apenas ATIVOS) para validação
+      const { data, error } = await supabase
+        .from('it_equipment')
+        .select('id, patrimony, id_number, equipment_type, status')
+        .not('id_number', 'is', null)
+        .order('id_number');
+      
+      if (error) throw error;
+      setAvailableEquipments(data || []);
+    } catch (error) {
+      console.error('Error fetching equipment:', error);
+    }
+  }, []);
+
   const form = useForm<EditLoanFormData>({
     resolver: zodResolver(editLoanSchema),
     defaultValues: {
@@ -97,8 +116,9 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   useEffect(() => {
     if (open) {
       fetchEquipmentMap();
+      fetchAvailableEquipments();
     }
-  }, [open, fetchEquipmentMap]);
+  }, [open, fetchEquipmentMap, fetchAvailableEquipments]);
 
   useEffect(() => {
     if (open && loan) {
@@ -195,6 +215,94 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
     return normalized;
   };
 
+  // Verificar se equipamento foi devolvido
+  const isEquipmentReturned = (index: number): boolean => {
+    return index < (loan.returned_quantity || 0);
+  };
+
+  // Adicionar novo equipamento ao empréstimo
+  const handleAddEquipment = async () => {
+    if (!newEquipment.trim()) return;
+
+    try {
+      // Encontrar o equipamento selecionado
+      const selectedEquipment = availableEquipments.find(eq => 
+        eq.id_number === newEquipment.trim() || 
+        eq.patrimony === newEquipment.trim()
+      );
+
+      if (!selectedEquipment) {
+        toast({
+          variant: "destructive",
+          title: "Equipamento não encontrado",
+          description: "Verifique o ID ou patrimônio do equipamento."
+        });
+        return;
+      }
+
+      if (selectedEquipment.status !== 'ATIVO') {
+        toast({
+          variant: "destructive",
+          title: "Equipamento não disponível",
+          description: `Status atual: ${selectedEquipment.status}. Equipamentos emprestados não podem ser adicionados.`
+        });
+        return;
+      }
+
+      // Verificar se já está no empréstimo
+      const alreadyInLoan = equipmentsList.some(eq => 
+        formatEquipmentForDisplay(eq, loan) === selectedEquipment.id_number
+      );
+      
+      if (alreadyInLoan) {
+        toast({
+          variant: "destructive",
+          title: "Equipamento já no empréstimo",
+          description: "Este equipamento já está incluído neste empréstimo."
+        });
+        return;
+      }
+
+      // Atualizar o chromebook_number do empréstimo
+      const updatedEquipments = [...equipmentsList, selectedEquipment.patrimony || selectedEquipment.id_number];
+      const updatedChromebookNumber = updatedEquipments.join(', ');
+
+      // Atualizar quantidade
+      const { error } = await supabase
+        .from("chromebook_loans")
+        .update({
+          chromebook_number: updatedChromebookNumber,
+          quantity: updatedEquipments.length,
+        })
+        .eq("id", loan.id);
+
+      if (error) throw error;
+
+      // Atualizar status do equipamento para EM_USO
+      await supabase
+        .from('it_equipment')
+        .update({ status: 'EM_USO' })
+        .eq('id', selectedEquipment.id);
+
+      toast({
+        title: "Equipamento adicionado!",
+        description: `${selectedEquipment.id_number} foi adicionado ao empréstimo.`
+      });
+
+      setNewEquipment("");
+      setShowAddEquipment(false);
+      onSuccess(); // Recarregar a lista
+      onOpenChange(false); // Fechar e reabrir para atualizar
+    } catch (error: any) {
+      console.error("Error adding equipment:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao adicionar equipamento",
+        description: error.message,
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto p-0">
@@ -220,17 +328,90 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
             </div>
           </div>
           <div>
-            <p className="text-muted-foreground text-sm mb-1">Equipamento(s)</p>
-            <div className="flex flex-wrap gap-2">
-              {equipmentsList.map((eq: string, index: number) => (
-                <span 
-                  key={index} 
-                  className="inline-flex items-center px-2.5 py-1 rounded-md bg-background border text-sm font-mono"
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-muted-foreground text-sm">Equipamento(s)</p>
+              {loan.status !== 'devolvido' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddEquipment(!showAddEquipment)}
+                  className="text-xs h-7 gap-1"
                 >
-                  {formatEquipmentForDisplay(eq, loan)}
-                </span>
-              ))}
+                  <Plus className="h-3 w-3" />
+                  Adicionar
+                </Button>
+              )}
             </div>
+            <div className="flex flex-wrap gap-2">
+              {equipmentsList.map((eq: string, index: number) => {
+                const isReturned = isEquipmentReturned(index);
+                return (
+                  <span 
+                    key={index} 
+                    className={`inline-flex items-center px-2.5 py-1 rounded-md border text-sm font-mono transition-all ${
+                      isReturned 
+                        ? 'bg-gray-50 dark:bg-gray-900/30 border-gray-200 dark:border-gray-700 opacity-60 line-through text-gray-500 dark:text-gray-400' 
+                        : 'bg-background border'
+                    }`}
+                  >
+                    {formatEquipmentForDisplay(eq, loan)}
+                    {isReturned && (
+                      <span className="ml-1 text-xs text-gray-400">(devolvido)</span>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+            
+            {/* Seção para adicionar novos equipamentos */}
+            {showAddEquipment && (
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="ID ou Patrimônio do equipamento..."
+                      value={newEquipment}
+                      onChange={(e) => setNewEquipment(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddEquipment}
+                    disabled={!newEquipment.trim()}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Adicionar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setShowAddEquipment(false);
+                      setNewEquipment("");
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                {availableEquipments.length > 0 && (
+                  <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                    Disponíveis: {availableEquipments
+                      .filter(eq => eq.status === 'ATIVO')
+                      .slice(0, 5)
+                      .map(eq => eq.id_number)
+                      .join(', ')}
+                    {availableEquipments.filter(eq => eq.status === 'ATIVO').length > 5 && 
+                      ` e mais ${availableEquipments.filter(eq => eq.status === 'ATIVO').length - 5}`
+                    }
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
