@@ -160,10 +160,16 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       const promises: Promise<any>[] = [];
 
       // 1. Atualizar empréstimo
+      const loanUpdateData = {
+        ...updateData,
+        // Limpar equipment_id para equipamentos devolvidos
+        ...(isFullReturn ? { equipment_id: null } : {})
+      };
+      
       promises.push(
         supabase
           .from("chromebook_loans")
-          .update(updateData)
+          .update(loanUpdateData)
           .eq("id", loan.id)
       );
 
