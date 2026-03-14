@@ -200,6 +200,17 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
   // Busca em tempo real de equipamentos
   const searchEquipment = useCallback((searchTerm: string) => {
+    console.log('🔍 SEARCH EQUIPMENT DEBUG:', {
+      searchTerm: searchTerm.trim(),
+      availableEquipmentsCount: availableEquipments.length,
+      availableEquipments: availableEquipments.slice(0, 3).map(eq => ({
+        id: eq.id,
+        patrimony: eq.patrimony,
+        id_number: eq.id_number,
+        status: eq.status
+      }))
+    });
+    
     if (!searchTerm.trim()) {
       setSearchResult(null);
       setSearchResults([]);
@@ -214,6 +225,16 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       eq.patrimony === trimmedSearch
     );
     
+    console.log('🔍 EXACT MATCH SEARCH:', {
+      searchTerm: trimmedSearch,
+      exactMatch: exactMatch ? {
+        id: exactMatch.id,
+        patrimony: exactMatch.patrimony,
+        id_number: exactMatch.id_number,
+        status: exactMatch.status
+      } : null
+    });
+    
     if (exactMatch) {
       setSearchResult(exactMatch);
       setSearchResults([exactMatch]);
@@ -225,6 +246,16 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       eq.id_number.toLowerCase().includes(trimmedSearch.toLowerCase()) ||
       eq.patrimony.toLowerCase().includes(trimmedSearch.toLowerCase())
     ).slice(0, 5);
+    
+    console.log('🔍 PARTIAL MATCH SEARCH:', {
+      searchTerm: trimmedSearch,
+      partialResults: partialResults.map(eq => ({
+        id: eq.id,
+        patrimony: eq.patrimony,
+        id_number: eq.id_number,
+        status: eq.status
+      }))
+    });
     
     setSearchResult(null);
     setSearchResults(partialResults);
@@ -279,22 +310,84 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
     const selectedEquipment = equipment || searchResult;
 
+    // Debug completo para identificar o problema
+    console.log('🔍 EQUIPMENT SEARCH DEBUG:', {
+      searchTerm: newEquipment.trim(),
+      selectedEquipment,
+      searchResult,
+      availableEquipments: availableEquipments.length,
+      searchResults: searchResults.length
+    });
+
     if (!selectedEquipment) {
+      console.log('❌ Equipment not found - searching alternatives...');
+      
+      // Tentar busca direta no banco como fallback
+      try {
+        const { data: directSearch } = await supabase
+          .from('it_equipment')
+          .select('*')
+          .or(`id_number.eq.${newEquipment.trim()},patrimony.eq.${newEquipment.trim()}`)
+          .single();
+        
+        console.log('🔍 Direct database search result:', directSearch);
+        
+        if (directSearch) {
+          // Usar resultado da busca direta
+          return await handleAddEquipment(directSearch);
+        }
+      } catch (directError) {
+        console.log('❌ Direct search also failed:', directError);
+      }
+      
       toast({
         variant: "destructive",
         title: "Equipamento não encontrado",
-        description: "Verifique o ID ou patrimônio do equipamento.",
+        description: `Equipamento "${newEquipment.trim()}" não encontrado. Verifique o ID ou patrimônio.`,
       });
       return;
     }
 
+    console.log('✅ Equipment found, checking status:', {
+      id: selectedEquipment.id,
+      patrimony: selectedEquipment.patrimony,
+      id_number: selectedEquipment.id_number,
+      status: selectedEquipment.status
+    });
+
     if (selectedEquipment.status !== 'ATIVO') {
-      toast({
-        variant: "destructive",
-        title: "Equipamento não disponível",
-        description: `Status atual: ${selectedEquipment.status}. Equipamentos emprestados não podem ser adicionados.`
-      });
-      return;
+      console.log('❌ Equipment not ATIVO - attempting force refresh...');
+      
+      // Forçar busca atualizada do status
+      try {
+        const { data: freshData } = await supabase
+          .from('it_equipment')
+          .select('status, patrimony, id_number')
+          .eq('id', selectedEquipment.id)
+          .single();
+        
+        console.log('🔄 Fresh status data:', freshData);
+        
+        if (freshData && freshData.status === 'ATIVO') {
+          console.log('✅ Status updated to ATIVO, proceeding...');
+          selectedEquipment.status = 'ATIVO';
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Equipamento não disponível",
+            description: `Status atual: ${freshData?.status || selectedEquipment.status}. Apenas equipamentos ATIVO podem ser adicionados.`
+          });
+          return;
+        }
+      } catch (refreshError) {
+        console.error('❌ Error refreshing status:', refreshError);
+        toast({
+          variant: "destructive",
+          title: "Equipamento não disponível",
+          description: `Status atual: ${selectedEquipment.status}. Equipamentos emprestados não podem ser adicionados.`
+        });
+        return;
+      }
     }
 
     // Verificar se já está no empréstimo
