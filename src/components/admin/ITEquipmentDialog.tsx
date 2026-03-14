@@ -38,7 +38,7 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
     serial_number: '',
     mac_address: '',
     sector: '',
-    status: 'ATIVO' as 'ATIVO' | 'DEFEITO' | 'EMPRESTIMO',
+    status: 'ATIVO' as 'ATIVO' | 'DEFEITO' | 'EM_USO',
     responsible: '',
     description: ''
   });
@@ -88,7 +88,7 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
     };
 
     const fetchLoanInfo = async () => {
-      if (equipment?.status === 'EMPRESTIMO') {
+      if (equipment?.status === 'EM_USO') {
         let activeLoan = null;
 
         // 1. Try to find a direct loan (quantity = 1)
@@ -139,8 +139,8 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
         throw new Error('Usuário não autenticado');
       }
 
-      // Verificar se está tentando mudar status de EMPRESTIMO para ATIVO manualmente
-      if (equipment?.status === 'EMPRESTIMO' && formData.status === 'ATIVO') {
+      // Verificar se está tentando mudar status de EM_USO para ATIVO manualmente
+      if (equipment?.status === 'EM_USO' && formData.status === 'ATIVO') {
         // Check for active direct loan
         let activeLoan = null;
         const { data: directLoan } = await supabase
@@ -184,7 +184,7 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
             p_resource_type: 'it_equipment',
             p_resource_id: equipment.id,
             p_additional_data: {
-              old_status: 'EMPRESTIMO',
+              old_status: 'EM_USO',
               new_status: 'ATIVO',
               active_loan_id: activeLoan.id,
               reason: 'Manual override by user'
@@ -403,7 +403,7 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
               <Label htmlFor="status">Status *</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value: 'ATIVO' | 'DEFEITO' | 'EMPRESTIMO') => setFormData({ ...formData, status: value })}
+                onValueChange={(value: 'ATIVO' | 'DEFEITO' | 'EM_USO') => setFormData({ ...formData, status: value })}
                 required
               >
                 <SelectTrigger id="status">
@@ -416,10 +416,10 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
                       ATIVO
                     </div>
                   </SelectItem>
-                  <SelectItem value="EMPRESTIMO">
+                  <SelectItem value="EM_USO">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                      EMPRÉSTIMO
+                      EM_USO
                     </div>
                   </SelectItem>
                   <SelectItem value="DEFEITO">
@@ -432,7 +432,7 @@ export function ITEquipmentDialog({ open, onOpenChange, equipment, onSuccess }: 
               </Select>
             </div>
 
-            {equipment?.status === 'EMPRESTIMO' && loanInfo && (
+            {equipment?.status === 'EM_USO' && loanInfo && (
               <div className="col-span-1 sm:col-span-2">
                 <Alert className="bg-yellow-50 border-yellow-200">
                   <Package className="h-4 w-4 text-yellow-600" />

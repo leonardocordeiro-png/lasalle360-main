@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Package, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface EquipmentLoanBadgeProps {
-  status: 'ATIVO' | 'DEFEITO' | 'EMPRESTIMO';
+  status: 'ATIVO' | 'DEFEITO' | 'EM_USO';
   className?: string;
 }
 
@@ -15,11 +15,11 @@ export function EquipmentLoanBadge({ status, className }: EquipmentLoanBadgeProp
       color: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
       label: "ATIVO"
     },
-    EMPRESTIMO: {
+    EM_USO: {
       icon: Package,
       dotColor: "bg-amber-500",
       color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
-      label: "EMPRÉSTIMO"
+      label: "EM_USO"
     },
     DEFEITO: {
       icon: AlertTriangle,

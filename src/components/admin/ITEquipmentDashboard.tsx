@@ -36,7 +36,7 @@ interface ITEquipmentDashboardProps {
 const STATUS_COLORS = {
   ATIVO: "#22c55e",
   DEFEITO: "#ef4444",
-  EMPRESTIMO: "#3b82f6",
+  EM_USO: "#3b82f6",
 };
 
 const CHART_COLORS = [
@@ -55,7 +55,7 @@ export function ITEquipmentDashboard({ equipments }: ITEquipmentDashboardProps) 
     const total = equipments.length;
     const active = equipments.filter((eq) => eq.status === "ATIVO").length;
     const defective = equipments.filter((eq) => eq.status === "DEFEITO").length;
-    const onLoan = equipments.filter((eq) => eq.status === "EMPRESTIMO").length;
+    const onLoan = equipments.filter((eq) => eq.status === "EM_USO").length;
     const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
     const defectivePercentage = total > 0 ? Math.round((defective / total) * 100) : 0;
 
@@ -74,7 +74,7 @@ export function ITEquipmentDashboard({ equipments }: ITEquipmentDashboardProps) 
       typeData.total++;
       if (eq.status === "ATIVO") typeData.active++;
       if (eq.status === "DEFEITO") typeData.defective++;
-      if (eq.status === "EMPRESTIMO") typeData.onLoan++;
+      if (eq.status === "EM_USO") typeData.onLoan++;
     });
 
     return Array.from(typeMap.entries())
@@ -105,7 +105,7 @@ export function ITEquipmentDashboard({ equipments }: ITEquipmentDashboardProps) 
   const statusData = useMemo(() => [
     { name: "Ativos", value: stats.active, color: STATUS_COLORS.ATIVO },
     { name: "Com Defeito", value: stats.defective, color: STATUS_COLORS.DEFEITO },
-    { name: "Em Empréstimo", value: stats.onLoan, color: STATUS_COLORS.EMPRESTIMO },
+    { name: "Em Uso", value: stats.onLoan, color: STATUS_COLORS.EM_USO },
   ].filter(item => item.value > 0), [stats]);
 
   const brandDistribution = useMemo(() => {

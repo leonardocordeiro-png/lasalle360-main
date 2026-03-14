@@ -126,10 +126,25 @@ export function ITEquipmentManagement() {
   const fetchEquipments = async () => {
     setLoading(true);
     try {
+      // Busca otimizada com joins e filtros em uma única query
       const { data, error } = await supabase
         .from('it_equipment')
         .select(`
-          *,
+          id,
+          equipment_number,
+          id_number,
+          patrimony,
+          equipment_type,
+          brand,
+          model,
+          serial_number,
+          mac_address,
+          sector,
+          status,
+          responsible,
+          description,
+          created_at,
+          updated_at,
           direct_loan:chromebook_loans!chromebook_loans_equipment_id_fkey(
             id,
             borrower_name,
@@ -143,7 +158,29 @@ export function ITEquipmentManagement() {
 
       if (error) throw error;
       
-      const processedData = await Promise.all((data || []).map(async (eq: any) => {
+      // Processamento otimizado com cache de empréstimos consolidados
+      const consolidatedLoansMap = new Map();
+      
+      // Primeiro, buscar todos os empréstimos consolidados ativos de uma vez
+      if (data && data.length > 0) {
+        const { data: consolidatedLoans } = await supabase
+          .from('chromebook_loans')
+          .select('id, borrower_name, loan_date, status, responsible_teacher, quantity, chromebook_number')
+          .in('status', ['em_uso', 'atrasado'])
+          .gt('quantity', 1);
+          
+        if (consolidatedLoans) {
+          consolidatedLoans.forEach(loan => {
+            const patrimonies = loan.chromebook_number?.split(',').map(p => p.trim()) || [];
+            patrimonies.forEach(patrimony => {
+              consolidatedLoansMap.set(patrimony, loan);
+            });
+          });
+        }
+      }
+      
+      // Processar dados com o cache de empréstimos
+      const processedData = (data || []).map((eq: any) => {
         let activeLoan = null;
 
         // Check for direct loan
@@ -153,28 +190,26 @@ export function ITEquipmentManagement() {
           activeLoan = eq.direct_loan;
         }
 
-        // If no direct loan, check for consolidated loan
-        if (!activeLoan && eq.status === 'EMPRESTIMO') {
-          const { data: consolidatedLoan } = await supabase
-            .from('chromebook_loans')
-            .select('id, borrower_name, loan_date, status, responsible_teacher, quantity')
-            .like('chromebook_number', `%${eq.patrimony}%`)
-            .in('status', ['em_uso', 'atrasado'])
-            .maybeSingle();
-          
-          if (consolidatedLoan) {
-            activeLoan = consolidatedLoan;
-          }
+        // If no direct loan, check consolidated loan cache
+        if (!activeLoan && eq.status === 'EM_USO' && eq.patrimony) {
+          activeLoan = consolidatedLoansMap.get(eq.patrimony.trim()) || null;
         }
 
         return {
           ...eq,
           active_loan: activeLoan
         };
-      }));
+      });
+
+      console.log('🔍 EQUIPMENT MANAGEMENT DEBUG:', {
+        totalEquipments: processedData.length,
+        withActiveLoans: processedData.filter(eq => eq.active_loan).length,
+        consolidatedLoansCached: consolidatedLoansMap.size
+      });
 
       setEquipments(processedData);
     } catch (error: any) {
+      console.error('Error fetching equipments:', error);
       toast({
         title: "Erro ao carregar equipamentos",
         description: error.message,
@@ -239,7 +274,7 @@ export function ITEquipmentManagement() {
     try {
       // If the equipment is part of a consolidated loan, do not delete it directly
       // Instead, update the consolidated loan record (if it exists)
-      if (equipmentToDelete.status === 'EMPRESTIMO' && equipmentToDelete.active_loan?.quantity > 1) {
+      if (equipmentToDelete.status === 'EM_USO' && equipmentToDelete.active_loan?.quantity > 1) {
         toast({
           variant: "destructive",
           title: "Erro ao excluir",
@@ -288,7 +323,7 @@ export function ITEquipmentManagement() {
     try {
       // Check if any selected equipment is part of an active consolidated loan
       const consolidatedLoanEquipments = equipments.filter(eq => 
-        selectedIds.includes(eq.id) && eq.status === 'EMPRESTIMO' && eq.active_loan?.quantity > 1
+        selectedIds.includes(eq.id) && eq.status === 'EM_USO' && eq.active_loan?.quantity > 1
       );
 
       if (consolidatedLoanEquipments.length > 0) {
@@ -529,7 +564,7 @@ export function ITEquipmentManagement() {
                   <SelectContent>
                     <SelectItem value="all">Todos os status</SelectItem>
                     <SelectItem value="ATIVO">ATIVO</SelectItem>
-                    <SelectItem value="EMPRESTIMO">EMPRÉSTIMO</SelectItem>
+                    <SelectItem value="EM_USO">EM_USO</SelectItem>
                     <SelectItem value="DEFEITO">DEFEITO</SelectItem>
                   </SelectContent>
                 </Select>
@@ -656,7 +691,7 @@ export function ITEquipmentManagement() {
                               <EquipmentLoanBadge status={equipment.status} />
                             </TableCell>
                             <TableCell>
-                              {equipment.status === 'EMPRESTIMO' && equipment.active_loan ? (
+                              {equipment.status === 'EM_USO' && equipment.active_loan ? (
                                 <div className="space-y-0.5">
                                   <p className="text-sm font-semibold">{equipment.active_loan.borrower_name}</p>
                                   <p className="text-[11px] text-muted-foreground">
