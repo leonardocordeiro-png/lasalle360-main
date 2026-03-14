@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
 import CouncilClass from "./pages/CouncilClass";
 import NotFound from "./pages/NotFound";
+import "./utils/emergencyEquipmentFix";
 
 const queryClient = new QueryClient();
 
