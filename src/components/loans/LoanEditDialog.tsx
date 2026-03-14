@@ -60,6 +60,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   const [showAddEquipment, setShowAddEquipment] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [currentLoan, setCurrentLoan] = useState(loan);
 
   const fetchEquipmentMap = useCallback(async () => {
     try {
@@ -137,6 +138,11 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
     }
   }, [open, loan, form]);
 
+  // Sincronizar currentLoan quando o loan prop mudar
+  useEffect(() => {
+    setCurrentLoan(loan);
+  }, [loan]);
+
   const borrowerTypeOptions = [
     { value: "aluno", label: "Aluno", icon: GraduationCap },
     { value: "professor", label: "Professor", icon: User },
@@ -144,8 +150,8 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   ];
 
   // Obter lista de equipamentos com ID e Patrimônio
-  const equipmentsList = loan?.chromebook_number 
-    ? loan.chromebook_number.split(',').map((num: string) => num.trim()).filter((num: string) => num.length > 0)
+  const equipmentsList = currentLoan?.chromebook_number 
+    ? currentLoan.chromebook_number.split(',').map((num: string) => num.trim()).filter((num: string) => num.length > 0)
     : [];
 
   // Função para normalizar patrimônio (remover zeros à esquerda)
@@ -169,8 +175,8 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
     }
     
     // Prioridade 3: Se tiver equipment_id e it_equipment com id_number, mostra o ID
-    if (loan?.equipment_id && loan.it_equipment?.id_number) {
-      return loan.it_equipment.id_number;
+    if (currentLoan?.equipment_id && currentLoan.it_equipment?.id_number) {
+      return currentLoan.it_equipment.id_number;
     }
     
     // Fallback: mostra o patrimônio normalizado
@@ -179,7 +185,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
   // Verificar se equipamento foi devolvido
   const isEquipmentReturned = (index: number): boolean => {
-    return index < (loan?.returned_quantity || 0);
+    return index < (currentLoan?.returned_quantity || 0);
   };
 
   // Processar observações para substituir patrimônios por IDs
@@ -281,7 +287,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
           expected_return_date: data.expected_return_date ? formatLocalDate(data.expected_return_date) : null,
           observations: data.observations || null,
         })
-        .eq("id", loan.id);
+        .eq("id", currentLoan.id);
 
       if (error) throw error;
 
@@ -416,7 +422,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
           chromebook_number: updatedChromebookNumber,
           quantity: updatedEquipments.length,
         })
-        .eq("id", loan.id);
+        .eq("id", currentLoan.id);
 
       if (error) throw error;
 
@@ -439,15 +445,25 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
       toast({
         title: "Equipamento adicionado!",
-        description: `${selectedEquipment.id_number} foi adicionado ao empréstimo.`
+        description: `${selectedEquipment.id_number} foi adicionado ao empréstimo. Você pode adicionar mais equipamentos ou salvar as alterações.`
       });
 
+      // Limpar apenas o campo de busca, mantendo o diálogo aberto
       setNewEquipment("");
       setShowAddEquipment(false);
       setSearchResult(null);
       setSearchResults([]);
-      onSuccess(); // Recarregar a lista
-      onOpenChange(false); // Fechar e reabrir para atualizar
+      
+      // Atualizar currentLoan localmente com os novos dados
+      const updatedLoan = {
+        ...currentLoan,
+        chromebook_number: updatedChromebookNumber,
+        quantity: updatedEquipments.length
+      };
+      setCurrentLoan(updatedLoan);
+      
+      // Recarregar lista geral em background (sem fechar o diálogo)
+      onSuccess();
     } catch (error: any) {
       console.error("Error adding equipment:", error);
       toast({
@@ -479,18 +495,18 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
             <div>
               <p className="text-muted-foreground">Data do Empréstimo</p>
               <p className="font-medium">
-                {format(parse(loan.loan_date, "yyyy-MM-dd", new Date()), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                {format(parse(currentLoan.loan_date, "yyyy-MM-dd", new Date()), "dd 'de' MMMM, yyyy", { locale: ptBR })}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground">Horário de Retirada</p>
-              <p className="font-medium">{loan.pickup_time}</p>
+              <p className="font-medium">{currentLoan.pickup_time}</p>
             </div>
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
               <p className="text-muted-foreground text-sm">Equipamento(s)</p>
-              {loan.status !== 'devolvido' && (
+              {currentLoan.status !== 'devolvido' && (
                 <Button
                   type="button"
                   variant="outline"
@@ -803,7 +819,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
                       className="resize-none"
                       rows={3}
                       {...field}
-                      value={processObservations(field.value || loan.observations || "")}
+                      value={processObservations(field.value || currentLoan.observations || "")}
                       onChange={(e) => field.onChange(e.target.value)}
                     />
                   </FormControl>
