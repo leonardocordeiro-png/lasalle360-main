@@ -135,6 +135,15 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       const patrimonyNumbers = loan.chromebook_number?.split(',').map((s: string) => s.trim()) || [];
       const returnedEquipmentsList = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
       
+      // Debug para verificar a seleção
+      console.log('Equipment return debug:', {
+        patrimonyNumbers,
+        selectedEquipments,
+        returnedEquipmentsList,
+        alreadyReturned,
+        pendingQuantity
+      });
+      
       const returnObservation = data.observations 
         ? `Devolução ${isFullReturn ? 'completa' : 'parcial'} (${returnQuantity}/${pendingQuantity}): ${returnedEquipmentsList.join(', ')}. ${data.observations}`
         : `Devolução ${isFullReturn ? 'completa' : 'parcial'} de ${returnQuantity} equipamento(s): ${returnedEquipmentsList.join(', ')}`;
