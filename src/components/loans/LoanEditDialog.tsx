@@ -59,6 +59,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   const [newEquipment, setNewEquipment] = useState("");
   const [showAddEquipment, setShowAddEquipment] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   const fetchEquipmentMap = useCallback(async () => {
     try {
@@ -201,18 +202,32 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   const searchEquipment = useCallback((searchTerm: string) => {
     if (!searchTerm.trim()) {
       setSearchResult(null);
+      setSearchResults([]);
       return;
     }
     
     const trimmedSearch = searchTerm.trim();
-    const result = availableEquipments.find(eq => 
+    
+    // Busca exata primeiro
+    const exactMatch = availableEquipments.find(eq => 
       eq.id_number === trimmedSearch || 
-      eq.patrimony === trimmedSearch ||
-      eq.id_number.toLowerCase().includes(trimmedSearch.toLowerCase()) ||
-      eq.patrimony.toLowerCase().includes(trimmedSearch.toLowerCase())
+      eq.patrimony === trimmedSearch
     );
     
-    setSearchResult(result);
+    if (exactMatch) {
+      setSearchResult(exactMatch);
+      setSearchResults([exactMatch]);
+      return;
+    }
+    
+    // Se não encontrar exato, busca parcial (limitada a 5 resultados)
+    const partialResults = availableEquipments.filter(eq => 
+      eq.id_number.toLowerCase().includes(trimmedSearch.toLowerCase()) ||
+      eq.patrimony.toLowerCase().includes(trimmedSearch.toLowerCase())
+    ).slice(0, 5);
+    
+    setSearchResult(null);
+    setSearchResults(partialResults);
   }, [availableEquipments]);
 
   // Atualizar busca quando o input mudar
@@ -259,16 +274,16 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   };
 
   // Adicionar novo equipamento ao empréstimo
-  const handleAddEquipment = async () => {
+  const handleAddEquipment = async (equipment?: any) => {
     if (!newEquipment.trim()) return;
 
-    const selectedEquipment = searchResult;
+    const selectedEquipment = equipment || searchResult;
 
     if (!selectedEquipment) {
       toast({
         variant: "destructive",
         title: "Equipamento não encontrado",
-        description: "Verifique o ID ou patrimônio do equipamento."
+        description: "Verifique o ID ou patrimônio do equipamento.",
       });
       return;
     }
@@ -326,6 +341,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       setNewEquipment("");
       setShowAddEquipment(false);
       setSearchResult(null);
+      setSearchResults([]);
       onSuccess(); // Recarregar a lista
       onOpenChange(false); // Fechar e reabrir para atualizar
     } catch (error: any) {
@@ -434,6 +450,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
                       setShowAddEquipment(false);
                       setNewEquipment("");
                       setSearchResult(null);
+                      setSearchResults([]);
                     }}
                   >
                     <X className="h-3 w-3" />
@@ -470,6 +487,45 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
                         ) : (
                           <span className="text-xs text-red-600">✗ Indisponível</span>
                         )}
+                      </div>
+                    ) : searchResults.length > 0 ? (
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-500 p-2">
+                          Múltiplos resultados encontrados. Selecione o equipamento correto:
+                        </div>
+                        {searchResults.map((equipment, index) => (
+                          <div 
+                            key={equipment.id}
+                            className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                            onClick={() => handleAddEquipment(equipment)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                equipment.status === 'ATIVO' ? 'bg-green-500' :
+                                equipment.status === 'EM_USO' ? 'bg-red-500' :
+                                equipment.status === 'MANUTENÇÃO' ? 'bg-yellow-500' :
+                                'bg-gray-500'
+                              }`} />
+                              <span className="text-sm font-medium">{equipment.id_number}</span>
+                              {equipment.patrimony && (
+                                <span className="text-xs text-gray-500">(Pat: {equipment.patrimony})</span>
+                              )}
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                equipment.status === 'ATIVO' ? 'bg-green-100 text-green-800' :
+                                equipment.status === 'EM_USO' ? 'bg-red-100 text-red-800' :
+                                equipment.status === 'MANUTENÇÃO' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {equipment.status}
+                              </span>
+                            </div>
+                            {equipment.status === 'ATIVO' ? (
+                              <span className="text-xs text-green-600">Clique para adicionar</span>
+                            ) : (
+                              <span className="text-xs text-red-600">Indisponível</span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="text-xs text-gray-500 p-2">
