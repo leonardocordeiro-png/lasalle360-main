@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format, parse } from "date-fns";
-import { Loader2, Minus, Plus, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -84,10 +84,8 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
   // Reset selected equipments when loan changes
   useEffect(() => {
     if (loan) {
-      // Por padrão, selecionar todos os equipamentos pendentes (índices relativos)
-      const pending = loan.quantity - (loan.returned_quantity || 0);
-      const pendingIndexes = Array.from({ length: pending }, (_, i) => i);
-      setSelectedEquipments(pendingIndexes);
+      // Por padrão, NÃO selecionar nenhum equipamento (usuário deve escolher explicitamente)
+      setSelectedEquipments([]);
     }
   }, [loan, alreadyReturned]);
 
@@ -189,7 +187,7 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
           .eq("id", loan.id)
       );
 
-      // 2. Atualizar status dos equipamentos em batch (usando IN ao invés de múltiplas queries)
+      // 2. Atualizar status dos equipamentos em batch
       if (returnedEquipmentsList.length > 0) {
         console.log('Updating equipment status to ATIVO:', {
           returnedEquipmentsList,
@@ -209,24 +207,6 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
           .in('id_number', returnedEquipmentsList);
         
         promises.push(patrimonyUpdate, idNumberUpdate);
-        
-        // Adicionar verificação adicional para garantir que o equipamento foi atualizado
-        setTimeout(async () => {
-          for (const equipment of returnedEquipmentsList) {
-            const { data: checkData } = await supabase
-              .from('it_equipment')
-              .select('status, patrimony, id_number')
-              .or(`patrimony.eq.${equipment},id_number.eq.${equipment}`)
-              .single();
-            
-            console.log('Equipment status check after update:', {
-              equipment,
-              currentStatus: checkData?.status,
-              patrimony: checkData?.patrimony,
-              id_number: checkData?.id_number
-            });
-          }
-        }, 1000);
       }
 
       // 3. Criar notificação interna
@@ -247,29 +227,6 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       // Verificar erros
       const updateError = results[0]?.error;
       if (updateError) throw updateError;
-
-      // Enviar notificação externa em background (não bloqueia)
-      if (data.notify_it) {
-        supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("user_id", user.id)
-          .single()
-          .then(({ data: profile }) => {
-            supabase.functions.invoke("notify-loan-return", {
-              body: {
-                loanId: loan.id,
-                borrowerName: loan.borrower_name,
-                chromebookNumber: loan.chromebook_number,
-                returnedBy: profile?.full_name || "Usuário",
-                isPartialReturn: !isFullReturn,
-                returnedQuantity: returnQuantity,
-                totalQuantity: loan.quantity,
-              },
-            }).catch(err => console.error("Error sending notification:", err));
-          })
-          .catch(err => console.error("Error fetching profile:", err));
-      }
 
       toast({
         title: isFullReturn ? "Devolução Completa!" : "Devolução Parcial Registrada!",
@@ -300,12 +257,15 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Devolução</DialogTitle>
           <DialogDescription>
             {pendingQuantity > 1 
-              ? "Selecione quantos equipamentos estão sendo devolvidos"
+              ? <span>
+                <span className="text-red-600 font-semibold">Vermelho</span>: Equipamentos que SERÃO devolvidos • 
+                <span className="text-green-600 font-semibold"> Verde</span>: Equipamentos que PERMANECERÃO emprestados
+              </span>
               : "Confirme a devolução do equipamento"
             }
           </DialogDescription>
@@ -376,18 +336,20 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
                     onClick={() => toggleEquipment(globalIndex)}
                     className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
                       isSelected 
-                        ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' 
-                        : 'bg-muted/30 hover:bg-muted/50'
+                        ? 'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700' 
+                        : 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700'
                     }`}
                   >
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => toggleEquipment(globalIndex)}
-                      className={isSelected ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : ""}
+                      className={isSelected ? "data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600" : "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"}
                     />
-                    <span className={`font-mono text-sm ${isSelected ? 'font-medium' : ''}`}>{getEquipmentDisplay(num)}</span>
-                    {isSelected && (
-                      <Badge className="ml-auto text-xs bg-green-600">Será devolvido</Badge>
+                    <span className={`font-mono text-sm ${isSelected ? 'font-medium text-red-700' : 'text-green-700'}`}>{getEquipmentDisplay(num)}</span>
+                    {isSelected ? (
+                      <Badge className="ml-auto text-xs bg-red-600 text-white">SERÁ DEVOLVIDO</Badge>
+                    ) : (
+                      <Badge className="ml-auto text-xs bg-green-600 text-white">PERMANECERÁ</Badge>
                     )}
                   </div>
                 );
