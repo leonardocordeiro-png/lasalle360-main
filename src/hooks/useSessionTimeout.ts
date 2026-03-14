@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -31,7 +30,6 @@ export function useSessionTimeout(options: SessionTimeoutOptions = {}) {
     onTimeout
   } = options;
 
-  const navigate = useNavigate();
   const { toast } = useToast();
   
   const [timeRemaining, setTimeRemaining] = useState(timeout);
@@ -106,9 +104,25 @@ export function useSessionTimeout(options: SessionTimeoutOptions = {}) {
     
     try {
       // Fazer logout no Supabase
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+
+    // Limpar tokens de autenticação
+    try {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('sb-') || key.startsWith('supabase.')) {
+          localStorage.removeItem(key);
+        }
+      }
+      for (const key of Object.keys(sessionStorage)) {
+        if (key.startsWith('sb-') || key.startsWith('supabase.')) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch (error) {
+      console.error('Error clearing auth tokens:', error);
     }
 
     // Notificar usuário
@@ -119,14 +133,14 @@ export function useSessionTimeout(options: SessionTimeoutOptions = {}) {
       duration: 5000,
     });
 
-    // Redirecionar para login
-    navigate('/login');
+    // Redirecionar para login usando o mesmo método do signOut
+    window.location.replace('/#/auth');
     
     // Chamar callback personalizado se existir
     if (onTimeout) {
       onTimeout();
     }
-  }, [navigate, toast, onTimeout]);
+  }, [toast, onTimeout]);
 
   // Estender sessão manualmente
   const extendSession = useCallback(() => {
