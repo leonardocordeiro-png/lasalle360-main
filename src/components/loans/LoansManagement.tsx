@@ -517,6 +517,14 @@ export function LoansManagement() {
     return loan.chromebook_number.split(',').map((num: string) => num.trim()).filter((num: string) => num.length > 0);
   };
 
+  // Função para obter apenas equipamentos que ainda não foram devolvidos
+  const getPendingEquipmentsList = (loan: any): string[] => {
+    const allEquipments = getEquipmentsList(loan);
+    const alreadyReturned = loan.returned_quantity || 0;
+    // Retornar apenas equipamentos que ainda não foram devolvidos
+    return allEquipments.slice(alreadyReturned);
+  };
+
   // Função para formatar lista de equipamentos para exibição (prioriza ID sobre Patrimônio)
   const formatEquipmentForDisplay = (equipment: string, loan: any): string => {
     const trimmedEquipment = equipment.trim();
@@ -848,20 +856,25 @@ export function LoansManagement() {
                           ) : hasMultipleEquipments ? (
                             <div className="flex flex-col gap-1 items-center">
                               <div className="flex flex-wrap gap-1 justify-center max-w-[200px]">
-                                {equipmentsList.slice(0, 5).map((eq: string, idx: number) => (
+                                {getPendingEquipmentsList(loan).slice(0, 5).map((eq: string, idx: number) => (
                                   <span key={idx} className="inline-flex items-center bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md px-2 py-0.5 font-mono text-xs font-semibold text-blue-700 dark:text-blue-300">
                                     {formatEquipmentForDisplay(eq, loan)}
                                   </span>
                                 ))}
                               </div>
-                              {equipmentsList.length > 5 && (
+                              {getPendingEquipmentsList(loan).length > 5 && (
                                 <button
                                   onClick={() => handleViewEquipments(loan)}
                                   className="text-xs text-primary hover:text-primary/80 hover:underline flex items-center gap-1 mt-0.5"
                                 >
                                   <Eye className="h-3 w-3" />
-                                  +{equipmentsList.length - 5} mais
+                                  +{getPendingEquipmentsList(loan).length - 5} mais
                                 </button>
+                              )}
+                              {loan.returned_quantity > 0 && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {loan.returned_quantity} já devolvido(s)
+                                </div>
                               )}
                             </div>
                           ) : (
@@ -1047,18 +1060,43 @@ export function LoansManagement() {
           <div className="space-y-3 max-h-[300px] overflow-y-auto">
             {selectedLoan && getEquipmentsList(selectedLoan).map((equipment: string, index: number) => {
               const displayEquipment = formatEquipmentForDisplay(equipment, selectedLoan);
+              const isReturned = index < (selectedLoan.returned_quantity || 0);
+              const isPending = !isReturned;
+              
               return (
                 <div 
                   key={index} 
-                  className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border"
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    isReturned 
+                      ? 'bg-gray-50 dark:bg-gray-900/30 border-gray-200 dark:border-gray-700 opacity-60' 
+                      : 'bg-muted/50 border-border'
+                  }`}
                 >
-                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                  <div className={`flex items-center justify-center h-8 w-8 rounded-full font-semibold text-sm ${
+                    isReturned 
+                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400' 
+                      : 'bg-primary/10 text-primary'
+                  }`}>
                     {index + 1}
                   </div>
-                  <div>
-                    <p className="font-mono font-medium text-foreground">{displayEquipment}</p>
+                  <div className="flex-1">
+                    <p className={`font-mono font-medium ${
+                      isReturned ? 'text-gray-600 dark:text-gray-400 line-through' : 'text-foreground'
+                    }`}>{displayEquipment}</p>
                     <p className="text-xs text-muted-foreground">Chromebook</p>
                   </div>
+                  {isReturned && (
+                    <div className="flex items-center gap-1">
+                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">Devolvido</span>
+                    </div>
+                  )}
+                  {isPending && (
+                    <div className="flex items-center gap-1">
+                      <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Pendente</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
