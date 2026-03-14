@@ -328,10 +328,21 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       if (error) throw error;
 
       // Atualizar status do equipamento para EM_USO
-      await supabase
+      console.log('Updating equipment status to EM_USO:', {
+        equipment: selectedEquipment,
+        patrimony: selectedEquipment.patrimony,
+        id_number: selectedEquipment.id_number
+      });
+      
+      const { error: updateError } = await supabase
         .from('it_equipment')
         .update({ status: 'EM_USO' })
-        .eq('id', selectedEquipment.id);
+        .eq('patrimony', selectedEquipment.patrimony || selectedEquipment.id_number);
+      
+      if (updateError) {
+        console.error('Error updating equipment status:', updateError);
+        throw updateError;
+      }
 
       toast({
         title: "Equipamento adicionado!",

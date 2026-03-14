@@ -169,6 +169,11 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
 
       // 2. Atualizar status dos equipamentos em batch (usando IN ao invés de múltiplas queries)
       if (returnedEquipmentsList.length > 0) {
+        console.log('Updating equipment status to ATIVO:', {
+          returnedEquipmentsList,
+          patrimonyNumbers
+        });
+        
         promises.push(
           supabase
             .from('it_equipment')
