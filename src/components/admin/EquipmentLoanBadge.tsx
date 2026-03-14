@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Package, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface EquipmentLoanBadgeProps {
-  status: 'ATIVO' | 'DEFEITO' | 'EM_USO';
+  status: 'ATIVO' | 'DEFEITO' | 'EM_USO' | 'EMPRESTIMO' | string;
   className?: string;
 }
 
@@ -21,6 +21,12 @@ export function EquipmentLoanBadge({ status, className }: EquipmentLoanBadgeProp
       color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
       label: "EM_USO"
     },
+    EMPRESTIMO: {
+      icon: Package,
+      dotColor: "bg-amber-500",
+      color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+      label: "EMPRESTIMO"
+    },
     DEFEITO: {
       icon: AlertTriangle,
       dotColor: "bg-red-500",
@@ -29,7 +35,15 @@ export function EquipmentLoanBadge({ status, className }: EquipmentLoanBadgeProp
     }
   };
 
-  const { dotColor, color, label } = config[status];
+  // Defensive validation with fallback
+  const statusConfig = config[status] || {
+    icon: AlertTriangle,
+    dotColor: "bg-gray-500",
+    color: "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800",
+    label: status || "DESCONHECIDO"
+  };
+
+  const { dotColor, color, label } = statusConfig;
 
   return (
     <Badge variant="outline" className={cn(color, "gap-1.5 text-[10px] font-bold", className)}>
