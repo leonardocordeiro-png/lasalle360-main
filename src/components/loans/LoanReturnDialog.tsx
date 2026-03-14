@@ -90,18 +90,17 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
   }, [loan, alreadyReturned]);
 
   const toggleEquipment = (globalIndex: number) => {
-    // Converter índice global para índice relativo aos equipamentos pendentes
-    const relativeIndex = globalIndex - alreadyReturned;
+    // Usar índice global diretamente para evitar confusão
     setSelectedEquipments(prev => 
-      prev.includes(relativeIndex) 
-        ? prev.filter(i => i !== relativeIndex)
-        : [...prev, relativeIndex].sort((a, b) => a - b)
+      prev.includes(globalIndex) 
+        ? prev.filter(i => i !== globalIndex)
+        : [...prev, globalIndex].sort((a, b) => a - b)
     );
   };
 
   const selectAll = () => {
-    // Selecionar todos os equipamentos pendentes (índices relativos)
-    const pendingIndexes = Array.from({ length: pendingQuantity }, (_, i) => i);
+    // Selecionar todos os equipamentos pendentes (índices globais)
+    const pendingIndexes = Array.from({ length: pendingQuantity }, (_, i) => alreadyReturned + i);
     setSelectedEquipments(pendingIndexes);
   };
 
@@ -135,14 +134,12 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       // Preparar observação com lista de equipamentos devolvidos
       const patrimonyNumbers = loan.chromebook_number?.split(',').map((s: string) => s.trim()) || [];
       
-      // CORREÇÃO: Usar apenas os equipamentos pendentes para seleção
-      const pendingEquipments = patrimonyNumbers.slice(alreadyReturned);
-      const returnedEquipmentsList = selectedEquipments.map(index => pendingEquipments[index]).filter(Boolean);
+      // CORREÇÃO: Usar índices globais diretamente
+      const returnedEquipmentsList = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
       
       // Debug para verificar a seleção
       console.log('Equipment return debug:', {
         patrimonyNumbers,
-        pendingEquipments,
         selectedEquipments,
         returnedEquipmentsList,
         alreadyReturned,
@@ -314,8 +311,7 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
             <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-2">
               {equipmentsList.map((num: string, globalIndex: number) => {
                 const isAlreadyReturned = globalIndex < alreadyReturned;
-                const relativeIndex = globalIndex - alreadyReturned;
-                const isSelected = !isAlreadyReturned && selectedEquipments.includes(relativeIndex);
+                const isSelected = !isAlreadyReturned && selectedEquipments.includes(globalIndex);
                 
                 if (isAlreadyReturned) {
                   return (
