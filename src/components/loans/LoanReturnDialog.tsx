@@ -196,12 +196,37 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
           patrimonyNumbers
         });
         
-        promises.push(
-          supabase
-            .from('it_equipment')
-            .update({ status: 'ATIVO' })
-            .in('patrimony', returnedEquipmentsList)
-        );
+        // Tentar atualizar por patrimony primeiro
+        const patrimonyUpdate = supabase
+          .from('it_equipment')
+          .update({ status: 'ATIVO' })
+          .in('patrimony', returnedEquipmentsList);
+        
+        // Também tentar atualizar por id_number como fallback
+        const idNumberUpdate = supabase
+          .from('it_equipment')
+          .update({ status: 'ATIVO' })
+          .in('id_number', returnedEquipmentsList);
+        
+        promises.push(patrimonyUpdate, idNumberUpdate);
+        
+        // Adicionar verificação adicional para garantir que o equipamento foi atualizado
+        setTimeout(async () => {
+          for (const equipment of returnedEquipmentsList) {
+            const { data: checkData } = await supabase
+              .from('it_equipment')
+              .select('status, patrimony, id_number')
+              .or(`patrimony.eq.${equipment},id_number.eq.${equipment}`)
+              .single();
+            
+            console.log('Equipment status check after update:', {
+              equipment,
+              currentStatus: checkData?.status,
+              patrimony: checkData?.patrimony,
+              id_number: checkData?.id_number
+            });
+          }
+        }, 1000);
       }
 
       // 3. Criar notificação interna
