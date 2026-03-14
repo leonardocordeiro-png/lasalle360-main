@@ -84,23 +84,26 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
   // Reset selected equipments when loan changes
   useEffect(() => {
     if (loan) {
-      // Por padrão, selecionar todos os equipamentos pendentes
+      // Por padrão, selecionar todos os equipamentos pendentes (índices relativos)
       const pending = loan.quantity - (loan.returned_quantity || 0);
-      const pendingIndexes = Array.from({ length: pending }, (_, i) => alreadyReturned + i);
+      const pendingIndexes = Array.from({ length: pending }, (_, i) => i);
       setSelectedEquipments(pendingIndexes);
     }
   }, [loan, alreadyReturned]);
 
-  const toggleEquipment = (index: number) => {
+  const toggleEquipment = (globalIndex: number) => {
+    // Converter índice global para índice relativo aos equipamentos pendentes
+    const relativeIndex = globalIndex - alreadyReturned;
     setSelectedEquipments(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index].sort((a, b) => a - b)
+      prev.includes(relativeIndex) 
+        ? prev.filter(i => i !== relativeIndex)
+        : [...prev, relativeIndex].sort((a, b) => a - b)
     );
   };
 
   const selectAll = () => {
-    const pendingIndexes = Array.from({ length: pendingQuantity }, (_, i) => alreadyReturned + i);
+    // Selecionar todos os equipamentos pendentes (índices relativos)
+    const pendingIndexes = Array.from({ length: pendingQuantity }, (_, i) => i);
     setSelectedEquipments(pendingIndexes);
   };
 
@@ -133,11 +136,15 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
 
       // Preparar observação com lista de equipamentos devolvidos
       const patrimonyNumbers = loan.chromebook_number?.split(',').map((s: string) => s.trim()) || [];
-      const returnedEquipmentsList = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
+      
+      // CORREÇÃO: Usar apenas os equipamentos pendentes para seleção
+      const pendingEquipments = patrimonyNumbers.slice(alreadyReturned);
+      const returnedEquipmentsList = selectedEquipments.map(index => pendingEquipments[index]).filter(Boolean);
       
       // Debug para verificar a seleção
       console.log('Equipment return debug:', {
         patrimonyNumbers,
+        pendingEquipments,
         selectedEquipments,
         returnedEquipmentsList,
         alreadyReturned,
@@ -320,14 +327,15 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
             </div>
             
             <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-2">
-              {equipmentsList.map((num: string, index: number) => {
-                const isAlreadyReturned = index < alreadyReturned;
-                const isSelected = selectedEquipments.includes(index);
+              {equipmentsList.map((num: string, globalIndex: number) => {
+                const isAlreadyReturned = globalIndex < alreadyReturned;
+                const relativeIndex = globalIndex - alreadyReturned;
+                const isSelected = !isAlreadyReturned && selectedEquipments.includes(relativeIndex);
                 
                 if (isAlreadyReturned) {
                   return (
                     <div 
-                      key={index}
+                      key={globalIndex}
                       className="flex items-center gap-3 p-2 rounded bg-muted/30 opacity-60"
                     >
                       <Checkbox checked disabled className="data-[state=checked]:bg-gray-400" />
@@ -339,8 +347,8 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
                 
                 return (
                   <div 
-                    key={index}
-                    onClick={() => toggleEquipment(index)}
+                    key={globalIndex}
+                    onClick={() => toggleEquipment(globalIndex)}
                     className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
                       isSelected 
                         ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' 
@@ -349,7 +357,7 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
                   >
                     <Checkbox 
                       checked={isSelected} 
-                      onCheckedChange={() => toggleEquipment(index)}
+                      onCheckedChange={() => toggleEquipment(globalIndex)}
                       className={isSelected ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : ""}
                     />
                     <span className={`font-mono text-sm ${isSelected ? 'font-medium' : ''}`}>{getEquipmentDisplay(num)}</span>
