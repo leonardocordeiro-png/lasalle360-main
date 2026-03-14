@@ -140,6 +140,11 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
   // Sincronizar currentLoan quando o loan prop mudar
   useEffect(() => {
+    console.log('🔍 LOAN EDIT DEBUG:', {
+      loan: loan,
+      currentLoan: currentLoan,
+      open: open
+    });
     setCurrentLoan(loan);
   }, [loan]);
 
@@ -489,24 +494,36 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
           </DialogDescription>
         </DialogHeader>
 
+        {!currentLoan ? (
+          <div className="flex items-center justify-center p-12">
+            <div className="text-center space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground">Carregando dados do empréstimo...</p>
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Informações do Empréstimo (somente leitura) */}
         <div className="px-6 py-4 bg-muted/30 border-b space-y-3">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Data do Empréstimo</p>
               <p className="font-medium">
-                {format(parse(currentLoan.loan_date, "yyyy-MM-dd", new Date()), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                {currentLoan?.loan_date 
+                  ? format(parse(currentLoan.loan_date, "yyyy-MM-dd", new Date()), "dd 'de' MMMM, yyyy", { locale: ptBR })
+                  : "Carregando..."
+                }
               </p>
             </div>
             <div>
               <p className="text-muted-foreground">Horário de Retirada</p>
-              <p className="font-medium">{currentLoan.pickup_time}</p>
+              <p className="font-medium">{currentLoan?.pickup_time || "Carregando..."}</p>
             </div>
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
               <p className="text-muted-foreground text-sm">Equipamento(s)</p>
-              {currentLoan.status !== 'devolvido' && (
+              {currentLoan?.status !== 'devolvido' && (
                 <Button
                   type="button"
                   variant="outline"
@@ -854,6 +871,8 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
             </div>
           </form>
         </Form>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
