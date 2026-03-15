@@ -28,7 +28,7 @@ export async function emergencyFixEquipment111() {
       .from('chromebook_loans')
       .select('*')
       .or(`chromebook_number.ilike.%111%,equipment_id.eq.${equipment[0].id}`)
-      .in('status', ['ativo', 'EMPRESTIMO']);
+      .in('status', ['em_uso', 'atrasado']);
     
     if (loansError) {
       console.error('Error finding active loans:', loansError);

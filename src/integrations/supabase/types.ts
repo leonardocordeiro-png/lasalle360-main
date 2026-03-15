@@ -128,6 +128,7 @@ export type Database = {
           return_time: string | null
           returned_at: string | null
           returned_by: string | null
+          returned_quantity: number
           status: Database["public"]["Enums"]["loan_status"]
           updated_at: string | null
         }
@@ -151,6 +152,7 @@ export type Database = {
           return_time?: string | null
           returned_at?: string | null
           returned_by?: string | null
+          returned_quantity?: number
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string | null
         }
@@ -174,6 +176,7 @@ export type Database = {
           return_time?: string | null
           returned_at?: string | null
           returned_by?: string | null
+          returned_quantity?: number
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string | null
         }
@@ -1188,7 +1191,7 @@ export type Database = {
         | "destaques"
       app_role: "admin" | "moderator" | "user" | "coordinator"
       council_status_enum: "draft" | "in_progress" | "completed" | "approved"
-      equipment_status: "ATIVO" | "DEFEITO" | "EMPRESTIMO"
+      equipment_status: "ATIVO" | "DEFEITO" | "EM_USO" | "EMPRESTIMO"
       equipment_type_loan: "professor" | "aluno" | "colaborador"
       grade_status_enum: "AP" | "REC" | "-"
       loan_status: "em_uso" | "devolvido" | "atrasado"
@@ -1330,7 +1333,7 @@ export const Constants = {
       ],
       app_role: ["admin", "moderator", "user", "coordinator"],
       council_status_enum: ["draft", "in_progress", "completed", "approved"],
-      equipment_status: ["ATIVO", "DEFEITO", "EMPRESTIMO"],
+      equipment_status: ["ATIVO", "DEFEITO", "EM_USO", "EMPRESTIMO"],
       equipment_type_loan: ["professor", "aluno", "colaborador"],
       grade_status_enum: ["AP", "REC", "-"],
       loan_status: ["em_uso", "devolvido", "atrasado"],

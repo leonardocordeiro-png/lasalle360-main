@@ -137,15 +137,6 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       // CORREÇÃO: Usar índices globais diretamente
       const returnedEquipmentsList = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
       
-      // Debug para verificar a seleção
-      console.log('Equipment return debug:', {
-        patrimonyNumbers,
-        selectedEquipments,
-        returnedEquipmentsList,
-        alreadyReturned,
-        pendingQuantity
-      });
-      
       const returnObservation = data.observations 
         ? `Devolução ${isFullReturn ? 'completa' : 'parcial'} (${returnQuantity}/${pendingQuantity}): ${returnedEquipmentsList.join(', ')}. ${data.observations}`
         : `Devolução ${isFullReturn ? 'completa' : 'parcial'} de ${returnQuantity} equipamento(s): ${returnedEquipmentsList.join(', ')}`;
@@ -185,25 +176,30 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
       );
 
       // 2. Atualizar status dos equipamentos em batch
+      // Usa o equipmentMap (patrimony → id_number) para distinguir o tipo de identificador
+      // e evitar atualizar equipamentos errados por coincidência de valor
       if (returnedEquipmentsList.length > 0) {
-        console.log('Updating equipment status to ATIVO:', {
-          returnedEquipmentsList,
-          patrimonyNumbers
-        });
-        
-        // Tentar atualizar por patrimony primeiro
-        const patrimonyUpdate = supabase
-          .from('it_equipment')
-          .update({ status: 'ATIVO' })
-          .in('patrimony', returnedEquipmentsList);
-        
-        // Também tentar atualizar por id_number como fallback
-        const idNumberUpdate = supabase
-          .from('it_equipment')
-          .update({ status: 'ATIVO' })
-          .in('id_number', returnedEquipmentsList);
-        
-        promises.push(patrimonyUpdate, idNumberUpdate);
+        // Itens que são patrimônio conhecido (encontrados no mapa)
+        const patrimonyItems = returnedEquipmentsList.filter(v => equipmentMap[v]);
+        // Itens que NÃO estão no mapa como patrimônio (provavelmente são id_number)
+        const idNumberItems = returnedEquipmentsList.filter(v => !equipmentMap[v]);
+
+        if (patrimonyItems.length > 0) {
+          promises.push(
+            supabase
+              .from('it_equipment')
+              .update({ status: 'ATIVO' })
+              .in('patrimony', patrimonyItems)
+          );
+        }
+        if (idNumberItems.length > 0) {
+          promises.push(
+            supabase
+              .from('it_equipment')
+              .update({ status: 'ATIVO' })
+              .in('id_number', idNumberItems)
+          );
+        }
       }
 
       // 3. Criar notificação interna

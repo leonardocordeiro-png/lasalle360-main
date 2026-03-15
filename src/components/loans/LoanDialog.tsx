@@ -140,6 +140,9 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
 
   const borrowerType = form.watch("borrower_type");
   const quantity = form.watch("quantity");
+  const equipmentTypeWatch = form.watch("equipment_type");
+  // Converte o tipo do formulário para categoria de busca no inventário
+  const equipmentCategory = equipmentTypeWatch === "professor" ? "notebook" : "chromebook";
 
   // Keep quantityDisplay in sync with form value
   useEffect(() => {
@@ -150,7 +153,10 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
   useEffect(() => {
     if (borrowerType === "aluno") {
       form.setValue("equipment_type", "aluno");
+    } else if (borrowerType === "professor") {
+      form.setValue("equipment_type", "professor");
     } else {
+      // funcionario → Chromebook para colaborador
       form.setValue("equipment_type", "colaborador");
     }
   }, [borrowerType, form]);
@@ -219,7 +225,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
 
       setIsSearching(true);
       try {
-        const results = await searchEquipmentForLoan(searchQuery);
+        const results = await searchEquipmentForLoan(searchQuery, equipmentCategory);
         setSearchResults(results);
       } catch (error) {
         console.error('Erro ao buscar equipamentos:', error);
@@ -395,7 +401,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     
     setIsSearching(true);
     try {
-      const validation = await validateEquipmentForLoan(searchQuery);
+      const validation = await validateEquipmentForLoan(searchQuery, equipmentCategory);
       if (validation.valid && validation.equipment) {
         // Validar consistência do tipo de equipamento
         const equipmentType = form.getValues("equipment_type");
@@ -511,19 +517,6 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
         
         const chromebookNumbers = selectedEquipments.map(eq => getBestIdentifierForSave(eq)).join(', ');
 
-        // Debug para múltiplos equipamentos
-        console.log('🔍 MULTIPLE EQUIPMENT LOAN DEBUG:', {
-          selectedEquipments: selectedEquipments.map(eq => ({
-            id: eq.id,
-            patrimony: eq.patrimony,
-            id_number: eq.id_number,
-            equipment_type: eq.equipment_type
-          })),
-          chromebookNumbers,
-          quantity: data.quantity,
-          equipment_type: data.equipment_type
-        });
-
         const { data: newLoan, error: insertError } = await supabase
           .from("chromebook_loans")
           .insert({
@@ -547,8 +540,6 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
         if (insertError) throw insertError;
         loanRecord = newLoan;
 
-        console.log('✅ Multiple equipment loan created:', { loanId: newLoan.id, chromebookNumbers });
-
         // Atualizar status de todos os equipamentos em batch usando IN
         const equipmentIds = selectedEquipments.map(eq => eq.id);
         await supabase.from('it_equipment')
@@ -564,7 +555,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
         let equipmentToUse = selectedEquipment;
 
         if (!equipmentToUse) {
-          const validation = await validateEquipmentForLoan(data.chromebook_number!);
+          const validation = await validateEquipmentForLoan(data.chromebook_number!, equipmentCategory);
           if (!validation.valid) {
             toast({
               variant: "destructive",
@@ -576,19 +567,6 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
           }
           equipmentToUse = validation.equipment;
         }
-
-        // Debug para empréstimo individual
-        console.log('🔍 SINGLE EQUIPMENT LOAN DEBUG:', {
-          equipment: {
-            id: equipmentToUse.id,
-            patrimony: equipmentToUse.patrimony,
-            id_number: equipmentToUse.id_number,
-            equipment_type: equipmentToUse.equipment_type
-          },
-          chromebook_number: data.chromebook_number,
-          quantity: data.quantity,
-          equipment_type: data.equipment_type
-        });
 
         const { data: newLoan, error: insertError } = await supabase
           .from("chromebook_loans")
@@ -612,8 +590,6 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
 
         if (insertError) throw insertError;
         loanRecord = newLoan;
-
-        console.log('✅ Single equipment loan created:', { loanId: newLoan.id, equipmentId: equipmentToUse.id });
 
         // Atualizar status do equipamento individual
         await supabase.from('it_equipment')

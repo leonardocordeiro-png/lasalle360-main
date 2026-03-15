@@ -140,11 +140,6 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
   // Sincronizar currentLoan quando o loan prop mudar
   useEffect(() => {
-    console.log('🔍 LOAN EDIT DEBUG:', {
-      loan: loan,
-      currentLoan: currentLoan,
-      open: open
-    });
     setCurrentLoan(loan);
   }, [loan]);
 
@@ -211,63 +206,32 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
   // Busca em tempo real de equipamentos
   const searchEquipment = useCallback((searchTerm: string) => {
-    console.log('🔍 SEARCH EQUIPMENT DEBUG:', {
-      searchTerm: searchTerm.trim(),
-      availableEquipmentsCount: availableEquipments.length,
-      availableEquipments: availableEquipments.slice(0, 3).map(eq => ({
-        id: eq.id,
-        patrimony: eq.patrimony,
-        id_number: eq.id_number,
-        status: eq.status
-      }))
-    });
-    
     if (!searchTerm.trim()) {
       setSearchResult(null);
       setSearchResults([]);
       return;
     }
-    
-    const trimmedSearch = searchTerm.trim();
-    
-    // Busca exata primeiro
-    const exactMatch = availableEquipments.find(eq => 
-      eq.id_number === trimmedSearch || 
-      eq.patrimony === trimmedSearch
+
+    const trimmedSearch = searchTerm.trim().toLowerCase();
+
+    // Busca exata primeiro (case-insensitive)
+    const exactMatch = availableEquipments.find(eq =>
+      eq.id_number?.toLowerCase() === trimmedSearch ||
+      eq.patrimony?.toLowerCase() === trimmedSearch
     );
-    
-    console.log('🔍 EXACT MATCH SEARCH:', {
-      searchTerm: trimmedSearch,
-      exactMatch: exactMatch ? {
-        id: exactMatch.id,
-        patrimony: exactMatch.patrimony,
-        id_number: exactMatch.id_number,
-        status: exactMatch.status
-      } : null
-    });
-    
+
     if (exactMatch) {
       setSearchResult(exactMatch);
       setSearchResults([exactMatch]);
       return;
     }
-    
-    // Se não encontrar exato, busca parcial (limitada a 5 resultados)
-    const partialResults = availableEquipments.filter(eq => 
-      eq.id_number.toLowerCase().includes(trimmedSearch.toLowerCase()) ||
-      eq.patrimony.toLowerCase().includes(trimmedSearch.toLowerCase())
+
+    // Busca parcial com proteção contra null
+    const partialResults = availableEquipments.filter(eq =>
+      eq.id_number?.toLowerCase().includes(trimmedSearch) ||
+      eq.patrimony?.toLowerCase().includes(trimmedSearch)
     ).slice(0, 5);
-    
-    console.log('🔍 PARTIAL MATCH SEARCH:', {
-      searchTerm: trimmedSearch,
-      partialResults: partialResults.map(eq => ({
-        id: eq.id,
-        patrimony: eq.patrimony,
-        id_number: eq.id_number,
-        status: eq.status
-      }))
-    });
-    
+
     setSearchResult(null);
     setSearchResults(partialResults);
   }, [availableEquipments]);
@@ -319,38 +283,26 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   const handleAddEquipment = async (equipment?: any) => {
     if (!newEquipment.trim()) return;
 
-    const selectedEquipment = equipment || searchResult;
-
-    // Debug completo para identificar o problema
-    console.log('🔍 EQUIPMENT SEARCH DEBUG:', {
-      searchTerm: newEquipment.trim(),
-      selectedEquipment,
-      searchResult,
-      availableEquipments: availableEquipments.length,
-      searchResults: searchResults.length
-    });
+    let selectedEquipment = equipment || searchResult;
 
     if (!selectedEquipment) {
-      console.log('❌ Equipment not found - searching alternatives...');
-      
-      // Tentar busca direta no banco como fallback
+      // Fallback: busca direta no banco pelo termo digitado
       try {
         const { data: directSearch } = await supabase
           .from('it_equipment')
           .select('*')
           .or(`id_number.eq.${newEquipment.trim()},patrimony.eq.${newEquipment.trim()}`)
-          .single();
-        
-        console.log('🔍 Direct database search result:', directSearch);
-        
+          .maybeSingle();
+
         if (directSearch) {
-          // Usar resultado da busca direta
-          return await handleAddEquipment(directSearch);
+          selectedEquipment = directSearch;
         }
-      } catch (directError) {
-        console.log('❌ Direct search also failed:', directError);
+      } catch {
+        // fallback silencioso
       }
-      
+    }
+
+    if (!selectedEquipment) {
       toast({
         variant: "destructive",
         title: "Equipamento não encontrado",
@@ -359,29 +311,18 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       return;
     }
 
-    console.log('✅ Equipment found, checking status:', {
-      id: selectedEquipment.id,
-      patrimony: selectedEquipment.patrimony,
-      id_number: selectedEquipment.id_number,
-      status: selectedEquipment.status
-    });
-
     if (selectedEquipment.status !== 'ATIVO') {
-      console.log('❌ Equipment not ATIVO - attempting force refresh...');
-      
-      // Forçar busca atualizada do status
+      // Verificar status atualizado diretamente no banco
       try {
         const { data: freshData } = await supabase
           .from('it_equipment')
           .select('status, patrimony, id_number')
           .eq('id', selectedEquipment.id)
           .single();
-        
-        console.log('🔄 Fresh status data:', freshData);
-        
-        if (freshData && freshData.status === 'ATIVO') {
-          console.log('✅ Status updated to ATIVO, proceeding...');
-          selectedEquipment.status = 'ATIVO';
+
+        if (freshData?.status === 'ATIVO') {
+          // Usar cópia imutável com status atualizado
+          selectedEquipment = { ...selectedEquipment, status: 'ATIVO' };
         } else {
           toast({
             variant: "destructive",
@@ -390,8 +331,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
           });
           return;
         }
-      } catch (refreshError) {
-        console.error('❌ Error refreshing status:', refreshError);
+      } catch {
         toast({
           variant: "destructive",
           title: "Equipamento não disponível",
@@ -431,22 +371,13 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
       if (error) throw error;
 
-      // Atualizar status do equipamento para EM_USO
-      console.log('Updating equipment status to EM_USO:', {
-        equipment: selectedEquipment,
-        patrimony: selectedEquipment.patrimony,
-        id_number: selectedEquipment.id_number
-      });
-      
+      // Atualizar status do equipamento para EM_USO usando o UUID (sempre único e confiável)
       const { error: updateError } = await supabase
         .from('it_equipment')
         .update({ status: 'EM_USO' })
-        .eq('patrimony', selectedEquipment.patrimony || selectedEquipment.id_number);
-      
-      if (updateError) {
-        console.error('Error updating equipment status:', updateError);
-        throw updateError;
-      }
+        .eq('id', selectedEquipment.id);
+
+      if (updateError) throw updateError;
 
       toast({
         title: "Equipamento adicionado!",

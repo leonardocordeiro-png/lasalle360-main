@@ -1,7 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Package, AlertTriangle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// Retorna a data local em Brasília no formato yyyy-MM-dd
+const getBrazilDate = (offsetDays = 0): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date).reduce<Record<string, string>>(
+    (acc, p) => ({ ...acc, [p.type]: p.value }),
+    {}
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
 
 export function ActiveLoansWidget() {
   const [stats, setStats] = useState({
@@ -9,6 +23,7 @@ export function ActiveLoansWidget() {
     overdue: 0,
     dueSoon: 0,
   });
+  const realtimeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -19,12 +34,15 @@ export function ActiveLoansWidget() {
         "postgres_changes",
         { event: "*", schema: "public", table: "chromebook_loans" },
         () => {
-          fetchStats();
+          // Debounce: evita múltiplas chamadas para eventos em rajada
+          if (realtimeTimerRef.current) clearTimeout(realtimeTimerRef.current);
+          realtimeTimerRef.current = setTimeout(() => fetchStats(), 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (realtimeTimerRef.current) clearTimeout(realtimeTimerRef.current);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -43,17 +61,16 @@ export function ActiveLoansWidget() {
         .select("*", { count: "exact", head: true })
         .eq("status", "atrasado");
 
-      // Empréstimos que vencem hoje ou amanhã
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Empréstimos que vencem hoje ou amanhã — usando fuso de Brasília
+      const todayBR = getBrazilDate(0);
+      const tomorrowBR = getBrazilDate(1);
 
       const { count: dueSoonCount } = await supabase
         .from("chromebook_loans")
         .select("*", { count: "exact", head: true })
         .eq("status", "em_uso")
-        .lte("expected_return_date", tomorrow.toISOString().split("T")[0])
-        .gte("expected_return_date", today.toISOString().split("T")[0]);
+        .lte("expected_return_date", tomorrowBR)
+        .gte("expected_return_date", todayBR);
 
       setStats({
         active: activeCount || 0,

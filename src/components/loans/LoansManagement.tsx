@@ -153,8 +153,7 @@ export function LoansManagement() {
     try {
       const { data, error } = await supabase
         .from('it_equipment')
-        .select('patrimony, id_number')
-        .ilike('equipment_type', '%chromebook%');
+        .select('patrimony, id_number');
       
       if (error) throw error;
       
@@ -339,25 +338,36 @@ export function LoansManagement() {
     setShowEquipmentsDialog(true);
   };
 
+  // Reativar equipamentos de um empréstimo ao excluir/limpar histórico.
+  // Usa equipment_id (UUID) quando disponível (empréstimos de 1 equip.) ou
+  // distingue patrimônio vs id_number pelo equipmentMap para empréstimos múltiplos.
+  const reactivateEquipmentsFromLoan = async (loan: any) => {
+    if (loan.equipment_id) {
+      // Equipamento único registrado por UUID — mais confiável
+      await supabase.from('it_equipment').update({ status: 'ATIVO' }).eq('id', loan.equipment_id);
+      return;
+    }
+    if (!loan.chromebook_number) return;
+
+    const identifiers = loan.chromebook_number.split(',').map((s: string) => s.trim()).filter(Boolean);
+    const patrimonyItems = identifiers.filter((v: string) => equipmentMap[v]);
+    const idNumberItems = identifiers.filter((v: string) => !equipmentMap[v]);
+
+    const ops: Promise<any>[] = [];
+    if (patrimonyItems.length > 0) {
+      ops.push(supabase.from('it_equipment').update({ status: 'ATIVO' }).in('patrimony', patrimonyItems));
+    }
+    if (idNumberItems.length > 0) {
+      ops.push(supabase.from('it_equipment').update({ status: 'ATIVO' }).in('id_number', idNumberItems));
+    }
+    if (ops.length > 0) await Promise.all(ops);
+  };
+
   const handleDeleteLoan = async () => {
     if (!loanToDelete) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (loanToDelete.quantity > 1 && loanToDelete.chromebook_number) {
-        const patrimonyNumbers = loanToDelete.chromebook_number.split(',').map((s: string) => s.trim());
-        const updateEquipmentPromises = patrimonyNumbers.map(patrimony =>
-          supabase.from('it_equipment')
-            .update({ status: 'ATIVO' })
-            .eq('patrimony', patrimony)
-        );
-        await Promise.all(updateEquipmentPromises);
-      } else if (loanToDelete.equipment_id) {
-        await supabase.from('it_equipment')
-          .update({ status: 'ATIVO' })
-          .eq('id', loanToDelete.equipment_id);
-      }
+      await reactivateEquipmentsFromLoan(loanToDelete);
 
       const { error } = await supabase
         .from('chromebook_loans')
@@ -385,25 +395,9 @@ export function LoansManagement() {
 
   const handleClearHistory = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const historicoLoans = getFilteredLoans('devolvido');
 
-      const updateEquipmentPromises = historicoLoans.map(async (loan) => {
-        if (loan.quantity > 1 && loan.chromebook_number) {
-          const patrimonyNumbers = loan.chromebook_number.split(',').map((s: string) => s.trim());
-          return Promise.all(patrimonyNumbers.map(patrimony =>
-            supabase.from('it_equipment')
-              .update({ status: 'ATIVO' })
-              .eq('patrimony', patrimony)
-          ));
-        } else if (loan.equipment_id) {
-          return supabase.from('it_equipment')
-            .update({ status: 'ATIVO' })
-            .eq('id', loan.equipment_id);
-        }
-        return Promise.resolve();
-      });
-      await Promise.all(updateEquipmentPromises);
+      await Promise.all(historicoLoans.map(reactivateEquipmentsFromLoan));
 
       const { error } = await supabase
         .from('chromebook_loans')
@@ -461,7 +455,7 @@ export function LoansManagement() {
         loan.quantity,
         loan.expected_return_date || "",
         loan.status,
-        loan.returned_at ? format(parse(loan.returned_at, "yyyy-MM-dd HH:mm:ss", new Date()), "dd/MM/yyyy") : "",
+        loan.returned_at ? format(new Date(loan.returned_at), "dd/MM/yyyy") : "",
         loan.return_time || ""
       ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(","))
     ].join("\n");
