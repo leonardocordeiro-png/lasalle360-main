@@ -133,13 +133,16 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
 
       // Preparar observação com lista de equipamentos devolvidos
       const patrimonyNumbers = loan.chromebook_number?.split(',').map((s: string) => s.trim()) || [];
-      
-      // CORREÇÃO: Usar índices globais diretamente
+
+      // Usar índices globais diretamente para obter os valores brutos de chromebook_number
       const returnedEquipmentsList = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
-      
-      const returnObservation = data.observations 
-        ? `Devolução ${isFullReturn ? 'completa' : 'parcial'} (${returnQuantity}/${pendingQuantity}): ${returnedEquipmentsList.join(', ')}. ${data.observations}`
-        : `Devolução ${isFullReturn ? 'completa' : 'parcial'} de ${returnQuantity} equipamento(s): ${returnedEquipmentsList.join(', ')}`;
+
+      // Para o texto da observação, usar o identificador visível ao usuário (id_number quando disponível)
+      const returnedEquipmentsDisplayList = returnedEquipmentsList.map(v => getEquipmentDisplay(v));
+
+      const returnObservation = data.observations
+        ? `Devolução ${isFullReturn ? 'completa' : 'parcial'} (${returnQuantity}/${pendingQuantity}): ${returnedEquipmentsDisplayList.join(', ')}. ${data.observations}`
+        : `Devolução ${isFullReturn ? 'completa' : 'parcial'} de ${returnQuantity} equipamento(s): ${returnedEquipmentsDisplayList.join(', ')}`;
       
       const newObservations = loan.observations 
         ? `${loan.observations}\n\n${format(new Date(), 'dd/MM/yyyy HH:mm')} - ${returnObservation}`
@@ -175,13 +178,20 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
           .eq("id", loan.id)
       );
 
-      // 2. Atualizar status dos equipamentos em batch
-      // Usa o equipmentMap (patrimony → id_number) para distinguir o tipo de identificador
-      // e evitar atualizar equipamentos errados por coincidência de valor
-      if (returnedEquipmentsList.length > 0) {
-        // Itens que são patrimônio conhecido (encontrados no mapa)
+      // 2. Atualizar status dos equipamentos
+      // Prioridade: usar equipment_id (UUID) quando disponível — evita ambiguidade
+      // entre patrimony e id_number que causava retorno do equipamento errado.
+      if (loan.equipment_id) {
+        // Empréstimo de equipamento único com UUID conhecido: usar sempre o UUID
+        promises.push(
+          supabase
+            .from('it_equipment')
+            .update({ status: 'ATIVO' })
+            .eq('id', loan.equipment_id)
+        );
+      } else if (returnedEquipmentsList.length > 0) {
+        // Empréstimo múltiplo sem UUID individual: busca por patrimônio ou id_number
         const patrimonyItems = returnedEquipmentsList.filter(v => equipmentMap[v]);
-        // Itens que NÃO estão no mapa como patrimônio (provavelmente são id_number)
         const idNumberItems = returnedEquipmentsList.filter(v => !equipmentMap[v]);
 
         if (patrimonyItems.length > 0) {
