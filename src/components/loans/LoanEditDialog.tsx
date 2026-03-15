@@ -360,12 +360,19 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       const updatedEquipments = [...equipmentsList, selectedEquipment.patrimony || selectedEquipment.id_number];
       const updatedChromebookNumber = updatedEquipments.join(', ');
 
-      // Atualizar quantidade
+      // Atualizar equipment_ids incluindo o novo UUID
+      const updatedEquipmentIds = [
+        ...(currentLoan.equipment_ids || []),
+        selectedEquipment.id,
+      ];
+
+      // Atualizar quantidade + chromebook_number + equipment_ids
       const { error } = await supabase
         .from("chromebook_loans")
         .update({
           chromebook_number: updatedChromebookNumber,
           quantity: updatedEquipments.length,
+          equipment_ids: updatedEquipmentIds,
         })
         .eq("id", currentLoan.id);
 
@@ -389,12 +396,13 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       setShowAddEquipment(false);
       setSearchResult(null);
       setSearchResults([]);
-      
+
       // Atualizar currentLoan localmente com os novos dados
       const updatedLoan = {
         ...currentLoan,
         chromebook_number: updatedChromebookNumber,
-        quantity: updatedEquipments.length
+        quantity: updatedEquipments.length,
+        equipment_ids: updatedEquipmentIds,
       };
       setCurrentLoan(updatedLoan);
       
