@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export type PermissionLevel = 'none' | 'read' | 'write';
@@ -52,31 +52,26 @@ export const checkUserPermission = async (
 };
 
 /**
- * Hook para verificar permissões em componentes React
+ * Hook para verificar permissões em componentes React.
+ * Usa React Query para cachear resultados por 5 minutos,
+ * evitando queries repetidas ao banco para cada render/mount.
  */
 export const useModulePermission = (moduleName: string) => {
-  const [permission, setPermission] = useState<ModulePermission>({
-    canAccess: false,
-    level: 'none'
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkPermission = async () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['module-permission', moduleName],
+    queryFn: async (): Promise<ModulePermission> => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setPermission({ canAccess: false, level: 'none' });
-        setLoading(false);
-        return;
-      }
+      if (!user) return { canAccess: false, level: 'none' };
+      return checkUserPermission(user.id, moduleName);
+    },
+    staleTime: 5 * 60 * 1000, // cache por 5 minutos
+    gcTime: 10 * 60 * 1000,   // mantém em memória por 10 minutos
+    retry: 1,
+  });
 
-      const perm = await checkUserPermission(user.id, moduleName);
-      setPermission(perm);
-      setLoading(false);
-    };
-
-    checkPermission();
-  }, [moduleName]);
-
-  return { ...permission, loading };
+  return {
+    canAccess: data?.canAccess ?? false,
+    level: data?.level ?? 'none' as PermissionLevel,
+    loading: isLoading,
+  };
 };

@@ -2,14 +2,23 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Configurações
-const GMAIL_CLIENT_ID = "GOOGLE_CLIENT_ID_REMOVED";
-const GMAIL_CLIENT_SECRET = "GOOGLE_CLIENT_SECRET_REMOVED";
+const GMAIL_CLIENT_ID = Deno.env.get("GMAIL_CLIENT_ID") || "";
+const GMAIL_CLIENT_SECRET = Deno.env.get("GMAIL_CLIENT_SECRET") || "";
 const GMAIL_REFRESH_TOKEN = Deno.env.get("GMAIL_REFRESH_TOKEN");
-const GMAIL_USER = "leonardo.cordeiro@lasalle.org.br";
+const GMAIL_USER = Deno.env.get("GMAIL_USER") || "leonardo.cordeiro@lasalle.org.br";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const buildCorsHeaders = (origin: string | null) => {
+  const allowed = Deno.env.get("ALLOWED_ORIGINS") || "*";
+  const allowOrigin =
+    allowed === "*"
+      ? "*"
+      : origin && allowed.split(",").map((o) => o.trim()).includes(origin)
+      ? origin
+      : "null";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
 };
 
 interface Booking {
@@ -107,13 +116,18 @@ async function sendGmailEmail(to: string[], subject: string, htmlContent: string
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  };
+  const corsHeaders = buildCorsHeaders(req.headers.get("Origin"));
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 
   try {
