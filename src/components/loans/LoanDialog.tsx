@@ -533,6 +533,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
             observations: data.observations || null,
             created_by: user.id,
             equipment_id: null,
+            equipment_ids: selectedEquipments.map(eq => eq.id),
           })
           .select()
           .single();
@@ -584,6 +585,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
             observations: data.observations || null,
             created_by: user.id,
             equipment_id: equipmentToUse.id,
+            equipment_ids: [equipmentToUse.id],
           })
           .select()
           .single();

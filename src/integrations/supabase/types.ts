@@ -116,6 +116,7 @@ export type Database = {
           created_at: string | null
           created_by: string
           equipment_id: string | null
+          equipment_ids: string[] | null
           equipment_type: Database["public"]["Enums"]["equipment_type_loan"]
           expected_return_date: string | null
           id: string
@@ -128,6 +129,7 @@ export type Database = {
           return_time: string | null
           returned_at: string | null
           returned_by: string | null
+          returned_equipment_ids: string[] | null
           returned_quantity: number
           status: Database["public"]["Enums"]["loan_status"]
           updated_at: string | null
@@ -140,6 +142,7 @@ export type Database = {
           created_at?: string | null
           created_by: string
           equipment_id?: string | null
+          equipment_ids?: string[] | null
           equipment_type: Database["public"]["Enums"]["equipment_type_loan"]
           expected_return_date?: string | null
           id?: string
@@ -152,6 +155,7 @@ export type Database = {
           return_time?: string | null
           returned_at?: string | null
           returned_by?: string | null
+          returned_equipment_ids?: string[] | null
           returned_quantity?: number
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string | null
@@ -164,6 +168,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           equipment_id?: string | null
+          equipment_ids?: string[] | null
           equipment_type?: Database["public"]["Enums"]["equipment_type_loan"]
           expected_return_date?: string | null
           id?: string
@@ -176,6 +181,7 @@ export type Database = {
           return_time?: string | null
           returned_at?: string | null
           returned_by?: string | null
+          returned_equipment_ids?: string[] | null
           returned_quantity?: number
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string | null

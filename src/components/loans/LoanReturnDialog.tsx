@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format, parse } from "date-fns";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -15,14 +15,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+// ---------------------------------------------------------------------------
+// Schema de validação
+// ---------------------------------------------------------------------------
 const returnSchema = z.object({
   return_time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
   observations: z.string().optional(),
-  notify_it: z.boolean().default(true),
-  return_quantity: z.number().min(1),
 });
 
 type ReturnFormData = z.infer<typeof returnSchema>;
+
+// ---------------------------------------------------------------------------
+// Tipos
+// ---------------------------------------------------------------------------
+interface EquipmentInfo {
+  id: string;
+  id_number: string | null;
+  patrimony: string | null;
+  brand: string;
+  model: string;
+}
 
 interface LoanReturnDialogProps {
   open: boolean;
@@ -31,219 +43,253 @@ interface LoanReturnDialogProps {
   onSuccess: () => void;
 }
 
+// ---------------------------------------------------------------------------
+// Componente
+// ---------------------------------------------------------------------------
 export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanReturnDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedEquipments, setSelectedEquipments] = useState<number[]>([]);
-  const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [equipmentDetails, setEquipmentDetails] = useState<Record<string, EquipmentInfo>>({});
+  const [isFetchingEquipment, setIsFetchingEquipment] = useState(false);
 
-  // Buscar mapa de IDs dos equipamentos
-  useEffect(() => {
-    const fetchEquipmentIds = async () => {
-      if (!loan?.chromebook_number) return;
-      
-      const patrimonyList = loan.chromebook_number.split(',').map((s: string) => s.trim());
-      
-      try {
-        const { data, error } = await supabase
-          .from('it_equipment')
-          .select('patrimony, id_number')
-          .in('patrimony', patrimonyList);
-        
-        if (error) throw error;
-        
-        const map: Record<string, string> = {};
-        data?.forEach(eq => {
-          if (eq.patrimony && eq.id_number) {
-            map[eq.patrimony.trim()] = eq.id_number;
-          }
-        });
-        setEquipmentMap(map);
-      } catch (error) {
-        console.error('Error fetching equipment IDs:', error);
-      }
-    };
-    
-    if (open && loan) {
-      fetchEquipmentIds();
+  // -------------------------------------------------------------------------
+  // Helpers: extrair UUIDs confiáveis do empréstimo
+  // -------------------------------------------------------------------------
+
+  /** Todos os UUIDs de equipamentos deste empréstimo */
+  const getAllUuids = (): string[] => {
+    if (!loan) return [];
+    // Novo caminho: coluna equipment_ids (UUID[])
+    if (loan.equipment_ids && loan.equipment_ids.length > 0) {
+      return loan.equipment_ids as string[];
     }
-  }, [open, loan]);
-
-  // Função para obter o identificador do equipamento (prioriza ID sobre patrimônio)
-  const getEquipmentDisplay = (patrimony: string): string => {
-    const trimmed = patrimony.trim();
-    return equipmentMap[trimmed] || trimmed;
+    // Legado: empréstimo simples com equipment_id
+    if (loan.equipment_id) {
+      return [loan.equipment_id as string];
+    }
+    return [];
   };
 
-  // Calcular quantidade pendente (total - já devolvidos)
-  const alreadyReturned = loan?.returned_quantity || 0;
-  const pendingQuantity = loan ? loan.quantity - alreadyReturned : 0;
-  const returnQuantity = selectedEquipments.length;
-  const isPartialReturn = returnQuantity > 0 && returnQuantity < pendingQuantity;
-
-  // Reset selected equipments when loan changes
-  useEffect(() => {
-    if (loan) {
-      // Por padrão, NÃO selecionar nenhum equipamento (usuário deve escolher explicitamente)
-      setSelectedEquipments([]);
+  /** UUIDs que já foram devolvidos */
+  const getReturnedUuids = (): string[] => {
+    if (!loan) return [];
+    // Novo caminho: coluna returned_equipment_ids (UUID[])
+    if (loan.returned_equipment_ids && loan.returned_equipment_ids.length > 0) {
+      return loan.returned_equipment_ids as string[];
     }
-  }, [loan, alreadyReturned]);
+    // Legado: usar returned_quantity para inferir os primeiros N da lista
+    const all = getAllUuids();
+    if (loan.returned_quantity > 0 && all.length > 0) {
+      return all.slice(0, loan.returned_quantity);
+    }
+    return [];
+  };
 
-  const toggleEquipment = (globalIndex: number) => {
-    // Usar índice global diretamente para evitar confusão
-    setSelectedEquipments(prev => 
-      prev.includes(globalIndex) 
-        ? prev.filter(i => i !== globalIndex)
-        : [...prev, globalIndex].sort((a, b) => a - b)
+  const allUuids = getAllUuids();
+  const returnedUuids = getReturnedUuids();
+  const pendingUuids = allUuids.filter(id => !returnedUuids.includes(id));
+
+  // Empréstimo legado sem UUIDs (multi-equipment criado antes da migration)
+  const isLegacyLoan = allUuids.length === 0;
+
+  // -------------------------------------------------------------------------
+  // Buscar detalhes dos equipamentos por UUID
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!open || !loan) {
+      setSelectedIds([]);
+      setEquipmentDetails({});
+      return;
+    }
+
+    if (allUuids.length === 0) {
+      setSelectedIds([]);
+      return;
+    }
+
+    const fetchDetails = async () => {
+      setIsFetchingEquipment(true);
+      try {
+        const { data, error } = await supabase
+          .from("it_equipment")
+          .select("id, id_number, patrimony, brand, model")
+          .in("id", allUuids);
+
+        if (error) throw error;
+
+        const map: Record<string, EquipmentInfo> = {};
+        data?.forEach(eq => {
+          map[eq.id] = eq;
+        });
+        setEquipmentDetails(map);
+      } catch (err) {
+        console.error("Erro ao buscar detalhes dos equipamentos:", err);
+      } finally {
+        setIsFetchingEquipment(false);
+      }
+    };
+
+    fetchDetails();
+    setSelectedIds([]);
+  }, [open, loan?.id]);
+
+  // -------------------------------------------------------------------------
+  // Rótulo de exibição: prioriza id_number → patrimony → brand+model
+  // -------------------------------------------------------------------------
+  const getDisplayLabel = (uuid: string): string => {
+    const eq = equipmentDetails[uuid];
+    if (!eq) return uuid.slice(0, 8) + "…";
+    if (eq.id_number?.trim()) return eq.id_number.trim();
+    if (eq.patrimony?.trim()) return eq.patrimony.trim();
+    return `${eq.brand} ${eq.model}`;
+  };
+
+  // -------------------------------------------------------------------------
+  // Seleção de equipamentos
+  // -------------------------------------------------------------------------
+  const toggleEquipment = (uuid: string) => {
+    setSelectedIds(prev =>
+      prev.includes(uuid) ? prev.filter(id => id !== uuid) : [...prev, uuid]
     );
   };
 
-  const selectAll = () => {
-    // Selecionar todos os equipamentos pendentes (índices globais)
-    const pendingIndexes = Array.from({ length: pendingQuantity }, (_, i) => alreadyReturned + i);
-    setSelectedEquipments(pendingIndexes);
-  };
+  const selectAll = () => setSelectedIds([...pendingUuids]);
+  const deselectAll = () => setSelectedIds([]);
 
-  const deselectAll = () => {
-    setSelectedEquipments([]);
-  };
+  // -------------------------------------------------------------------------
+  // Contadores
+  // -------------------------------------------------------------------------
+  const returnQuantity = isLegacyLoan ? loan?.quantity - (loan?.returned_quantity || 0) : selectedIds.length;
+  const pendingQuantity = isLegacyLoan ? loan?.quantity - (loan?.returned_quantity || 0) : pendingUuids.length;
+  const newReturnedCount = returnedUuids.length + (isLegacyLoan ? pendingQuantity : selectedIds.length);
+  const isFullReturn = newReturnedCount >= (loan?.quantity || 0);
+  const isPartialReturn = !isLegacyLoan && selectedIds.length > 0 && !isFullReturn;
 
+  // -------------------------------------------------------------------------
+  // Form
+  // -------------------------------------------------------------------------
   const form = useForm<ReturnFormData>({
     resolver: zodResolver(returnSchema),
     defaultValues: {
       return_time: format(new Date(), "HH:mm"),
-      notify_it: true,
-      return_quantity: pendingQuantity,
     },
   });
 
-  // Update form when returnQuantity changes
-  useEffect(() => {
-    form.setValue('return_quantity', returnQuantity);
-  }, [returnQuantity, form]);
-
+  // -------------------------------------------------------------------------
+  // Submit
+  // -------------------------------------------------------------------------
   const onSubmit = async (data: ReturnFormData) => {
+    if (!isLegacyLoan && selectedIds.length === 0) return;
     setIsLoading(true);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const newReturnedQuantity = alreadyReturned + returnQuantity;
-      const isFullReturn = newReturnedQuantity >= loan.quantity;
+      // Rótulos visíveis para o texto da observação
+      const returnedLabels = isLegacyLoan
+        ? [loan.chromebook_number]
+        : selectedIds.map(id => getDisplayLabel(id));
 
-      // Preparar observação com lista de equipamentos devolvidos
-      const patrimonyNumbers = loan.chromebook_number?.split(',').map((s: string) => s.trim()) || [];
+      const returnNote = data.observations
+        ? `Devolução ${isFullReturn ? "completa" : "parcial"} (${returnQuantity}/${pendingQuantity}): ${returnedLabels.join(", ")}. ${data.observations}`
+        : `Devolução ${isFullReturn ? "completa" : "parcial"} de ${returnQuantity} equipamento(s): ${returnedLabels.join(", ")}`;
 
-      // Usar índices globais diretamente para obter os valores brutos de chromebook_number
-      const returnedEquipmentsList = selectedEquipments.map(index => patrimonyNumbers[index]).filter(Boolean);
+      const newObservations = loan.observations
+        ? `${loan.observations}\n\n${format(new Date(), "dd/MM/yyyy HH:mm")} - ${returnNote}`
+        : `${format(new Date(), "dd/MM/yyyy HH:mm")} - ${returnNote}`;
 
-      // Para o texto da observação, usar o identificador visível ao usuário (id_number quando disponível)
-      const returnedEquipmentsDisplayList = returnedEquipmentsList.map(v => getEquipmentDisplay(v));
+      // Novos UUIDs devolvidos (acumulativo)
+      const newReturnedEquipmentIds = isLegacyLoan
+        ? returnedUuids
+        : [...returnedUuids, ...selectedIds];
 
-      const returnObservation = data.observations
-        ? `Devolução ${isFullReturn ? 'completa' : 'parcial'} (${returnQuantity}/${pendingQuantity}): ${returnedEquipmentsDisplayList.join(', ')}. ${data.observations}`
-        : `Devolução ${isFullReturn ? 'completa' : 'parcial'} de ${returnQuantity} equipamento(s): ${returnedEquipmentsDisplayList.join(', ')}`;
-      
-      const newObservations = loan.observations 
-        ? `${loan.observations}\n\n${format(new Date(), 'dd/MM/yyyy HH:mm')} - ${returnObservation}`
-        : `${format(new Date(), 'dd/MM/yyyy HH:mm')} - ${returnObservation}`;
-
-      // Preparar dados de atualização do empréstimo
-      const updateData: any = {
-        returned_quantity: newReturnedQuantity,
+      // Dados de atualização do empréstimo
+      const loanUpdate: Record<string, unknown> = {
+        returned_quantity: newReturnedCount,
+        returned_equipment_ids: newReturnedEquipmentIds,
         observations: newObservations,
       };
 
       if (isFullReturn) {
-        updateData.status = "devolvido";
-        updateData.return_time = data.return_time;
-        updateData.returned_by = user.id;
-        updateData.returned_at = new Date().toISOString();
+        loanUpdate.status = "devolvido";
+        loanUpdate.return_time = data.return_time;
+        loanUpdate.returned_by = user.id;
+        loanUpdate.returned_at = new Date().toISOString();
+        loanUpdate.equipment_id = null;
       }
 
-      // Executar operações principais em paralelo
-      const promises: Promise<any>[] = [];
+      // -----------------------------------------------------------------------
+      // Atualizar empréstimo
+      // -----------------------------------------------------------------------
+      const { error: loanError } = await supabase
+        .from("chromebook_loans")
+        .update(loanUpdate)
+        .eq("id", loan.id);
 
-      // 1. Atualizar empréstimo
-      const loanUpdateData = {
-        ...updateData,
-        // Limpar equipment_id para equipamentos devolvidos
-        ...(isFullReturn ? { equipment_id: null } : {})
-      };
-      
-      promises.push(
-        supabase
-          .from("chromebook_loans")
-          .update(loanUpdateData)
-          .eq("id", loan.id)
-      );
+      if (loanError) throw loanError;
 
-      // 2. Atualizar status dos equipamentos
-      // Prioridade: usar equipment_id (UUID) quando disponível — evita ambiguidade
-      // entre patrimony e id_number que causava retorno do equipamento errado.
-      if (loan.equipment_id) {
-        // Empréstimo de equipamento único com UUID conhecido: usar sempre o UUID
-        promises.push(
-          supabase
-            .from('it_equipment')
-            .update({ status: 'ATIVO' })
-            .eq('id', loan.equipment_id)
-        );
-      } else if (returnedEquipmentsList.length > 0) {
-        // Empréstimo múltiplo sem UUID individual: busca por patrimônio ou id_number
-        const patrimonyItems = returnedEquipmentsList.filter(v => equipmentMap[v]);
-        const idNumberItems = returnedEquipmentsList.filter(v => !equipmentMap[v]);
+      // -----------------------------------------------------------------------
+      // Atualizar status dos equipamentos — EXCLUSIVAMENTE por UUID
+      // Sem conversão de texto, sem ambiguidade.
+      // -----------------------------------------------------------------------
+      if (!isLegacyLoan && selectedIds.length > 0) {
+        const { error: eqError } = await supabase
+          .from("it_equipment")
+          .update({ status: "ATIVO" })
+          .in("id", selectedIds);
 
-        if (patrimonyItems.length > 0) {
-          promises.push(
-            supabase
-              .from('it_equipment')
-              .update({ status: 'ATIVO' })
-              .in('patrimony', patrimonyItems)
-          );
-        }
-        if (idNumberItems.length > 0) {
-          promises.push(
-            supabase
-              .from('it_equipment')
-              .update({ status: 'ATIVO' })
-              .in('id_number', idNumberItems)
-          );
+        if (eqError) throw eqError;
+      } else if (isLegacyLoan) {
+        // Fallback para empréstimos legados sem UUIDs:
+        // Tenta usar equipment_id (single) ou, como último recurso, id_number
+        if (loan.equipment_id) {
+          await supabase
+            .from("it_equipment")
+            .update({ status: "ATIVO" })
+            .eq("id", loan.equipment_id);
+        } else {
+          // Empréstimo múltiplo legado: não temos UUIDs confiáveis.
+          // Atualiza apenas os que conseguimos encontrar via id_number.
+          const numbers = (loan.chromebook_number || "")
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+          if (numbers.length > 0) {
+            await supabase
+              .from("it_equipment")
+              .update({ status: "ATIVO" })
+              .in("id_number", numbers);
+          }
         }
       }
 
-      // 3. Criar notificação interna
-      promises.push(
-        supabase.from('notifications' as any).insert({
-          user_id: user.id,
-          message: isFullReturn 
-            ? `Devolução completa registrada: ${loan.chromebook_number} (${loan.borrower_name})`
-            : `Devolução parcial registrada: ${returnQuantity} de ${pendingQuantity} equipamentos (${loan.borrower_name})`,
-          type: 'loan_returned',
-          related_id: loan.id,
-        } as any)
-      );
-
-      // Aguardar todas as operações principais
-      const results = await Promise.all(promises);
-      
-      // Verificar erros
-      const updateError = results[0]?.error;
-      if (updateError) throw updateError;
+      // -----------------------------------------------------------------------
+      // Notificação interna
+      // -----------------------------------------------------------------------
+      await supabase.from("notifications" as any).insert({
+        user_id: user.id,
+        message: isFullReturn
+          ? `Devolução completa: ${returnedLabels.join(", ")} (${loan.borrower_name})`
+          : `Devolução parcial: ${returnedLabels.join(", ")} devolvido(s) por ${loan.borrower_name}`,
+        type: "loan_returned",
+        related_id: loan.id,
+      } as any);
 
       toast({
         title: isFullReturn ? "Devolução Completa!" : "Devolução Parcial Registrada!",
-        description: isFullReturn 
-          ? "Todos os equipamentos foram devolvidos"
-          : `${returnQuantity} equipamento(s) devolvido(s). Restam ${pendingQuantity - returnQuantity} com o solicitante.`,
+        description: isFullReturn
+          ? "Todos os equipamentos foram devolvidos e estão disponíveis no inventário."
+          : `${returnQuantity} equipamento(s) devolvido(s). Restam ${pendingQuantity - selectedIds.length} com ${loan.borrower_name}.`,
       });
 
       form.reset();
-      setSelectedEquipments([]);
+      setSelectedIds([]);
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      console.error("Error returning loan:", error);
+      console.error("Erro ao registrar devolução:", error);
       toast({
         variant: "destructive",
         title: "Erro ao registrar devolução",
@@ -256,20 +302,21 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
 
   if (!loan) return null;
 
-  const equipmentsList = loan.chromebook_number?.split(',').map((s: string) => s.trim()) || [];
-
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Devolução</DialogTitle>
           <DialogDescription>
-            {pendingQuantity > 1 
+            {!isLegacyLoan && pendingQuantity > 1
               ? <span>
-                <span className="text-red-600 font-semibold">Vermelho</span>: Equipamentos que SERÃO devolvidos • 
-                <span className="text-green-600 font-semibold"> Verde</span>: Equipamentos que PERMANECERÃO emprestados
-              </span>
-              : "Confirme a devolução do equipamento"
+                  <span className="text-red-600 font-semibold">Vermelho</span>: Será devolvido •{" "}
+                  <span className="text-green-600 font-semibold">Verde</span>: Permanecerá emprestado
+                </span>
+              : "Confirme a devolução do(s) equipamento(s)"
             }
           </DialogDescription>
         </DialogHeader>
@@ -283,94 +330,117 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
             </div>
             <div className="text-right">
               <div className="text-sm text-muted-foreground">Data Empréstimo</div>
-              <div className="font-medium">{format(parse(loan.loan_date, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")}</div>
+              <div className="font-medium">
+                {format(parse(loan.loan_date, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")}
+              </div>
             </div>
           </div>
 
-          {/* Status de devolução parcial anterior */}
-          {alreadyReturned > 0 && (
+          {/* Alerta: devoluções anteriores */}
+          {returnedUuids.length > 0 && (
             <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800 dark:text-blue-200">
-                <strong>{alreadyReturned}</strong> de <strong>{loan.quantity}</strong> equipamento(s) já foram devolvidos anteriormente.
-                Restam <strong>{pendingQuantity}</strong> para devolver.
+                <strong>{returnedUuids.length}</strong> de <strong>{allUuids.length}</strong>{" "}
+                equipamento(s) já devolvidos. Restam <strong>{pendingUuids.length}</strong>.
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Seleção de equipamentos para devolução */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">Selecione os equipamentos a devolver</div>
-              {pendingQuantity > 1 && (
-                <div className="flex gap-2">
-                  <Button type="button" variant="ghost" size="sm" onClick={selectAll} className="text-xs h-7">
-                    Selecionar todos
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={deselectAll} className="text-xs h-7">
-                    Limpar
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-2">
-              {equipmentsList.map((num: string, globalIndex: number) => {
-                const isAlreadyReturned = globalIndex < alreadyReturned;
-                const isSelected = !isAlreadyReturned && selectedEquipments.includes(globalIndex);
-                
-                if (isAlreadyReturned) {
-                  return (
-                    <div 
-                      key={globalIndex}
-                      className="flex items-center gap-3 p-2 rounded bg-muted/30 opacity-60"
-                    >
-                      <Checkbox checked disabled className="data-[state=checked]:bg-gray-400" />
-                      <span className="font-mono text-sm line-through">{getEquipmentDisplay(num)}</span>
-                      <Badge variant="secondary" className="ml-auto text-xs">Já devolvido</Badge>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div 
-                    key={globalIndex}
-                    onClick={() => toggleEquipment(globalIndex)}
-                    className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
-                      isSelected 
-                        ? 'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700' 
-                        : 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700'
-                    }`}
-                  >
-                    <Checkbox 
-                      checked={isSelected} 
-                      onCheckedChange={() => toggleEquipment(globalIndex)}
-                      className={isSelected ? "data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600" : "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"}
-                    />
-                    <span className={`font-mono text-sm ${isSelected ? 'font-medium text-red-700' : 'text-green-700'}`}>{getEquipmentDisplay(num)}</span>
-                    {isSelected ? (
-                      <Badge className="ml-auto text-xs bg-red-600 text-white">SERÁ DEVOLVIDO</Badge>
-                    ) : (
-                      <Badge className="ml-auto text-xs bg-green-600 text-white">PERMANECERÁ</Badge>
-                    )}
+          {/* Seleção de equipamentos */}
+          {!isLegacyLoan ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Selecione os equipamentos a devolver</div>
+                {pendingUuids.length > 1 && (
+                  <div className="flex gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={selectAll} className="text-xs h-7">
+                      Todos
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={deselectAll} className="text-xs h-7">
+                      Limpar
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
-            
-            <div className="text-center text-sm">
-              <span className="font-medium text-primary">{returnQuantity}</span>
-              <span className="text-muted-foreground"> de {pendingQuantity} selecionado(s)</span>
-            </div>
-          </div>
+                )}
+              </div>
 
-          {/* Alerta de devolução parcial */}
-          {isPartialReturn && returnQuantity > 0 && (
+              <div className="space-y-2 max-h-[220px] overflow-y-auto border rounded-lg p-2">
+                {isFetchingEquipment ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">Carregando equipamentos…</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Já devolvidos */}
+                    {returnedUuids.map(uuid => (
+                      <div key={uuid} className="flex items-center gap-3 p-2 rounded bg-muted/30 opacity-60">
+                        <Checkbox checked disabled className="data-[state=checked]:bg-gray-400" />
+                        <Package className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-mono text-sm line-through">{getDisplayLabel(uuid)}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">Já devolvido</Badge>
+                      </div>
+                    ))}
+
+                    {/* Pendentes */}
+                    {pendingUuids.map(uuid => {
+                      const isSelected = selectedIds.includes(uuid);
+                      return (
+                        <div
+                          key={uuid}
+                          onClick={() => toggleEquipment(uuid)}
+                          className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                            isSelected
+                              ? "bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700"
+                              : "bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleEquipment(uuid)}
+                            className={isSelected
+                              ? "data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                              : ""}
+                          />
+                          <Package className={`h-3 w-3 ${isSelected ? "text-red-600" : "text-green-600"}`} />
+                          <span className={`font-mono text-sm ${isSelected ? "font-semibold text-red-700" : "text-green-700"}`}>
+                            {getDisplayLabel(uuid)}
+                          </span>
+                          {isSelected ? (
+                            <Badge className="ml-auto text-xs bg-red-600 text-white">SERÁ DEVOLVIDO</Badge>
+                          ) : (
+                            <Badge className="ml-auto text-xs bg-green-600 text-white">PERMANECERÁ</Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+
+              <div className="text-center text-sm">
+                <span className="font-medium text-primary">{selectedIds.length}</span>
+                <span className="text-muted-foreground"> de {pendingUuids.length} selecionado(s)</span>
+              </div>
+            </div>
+          ) : (
+            // Empréstimo legado sem equipment_ids: confirmação simples
             <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 dark:text-amber-200">
-                <strong>Devolução parcial:</strong> {pendingQuantity - returnQuantity} equipamento(s) continuarão 
-                atribuídos a {loan.borrower_name}.
+                <strong>Empréstimo legado.</strong> Equipamento(s): <span className="font-mono">{loan.chromebook_number}</span>.
+                Confirme a devolução de <strong>{pendingQuantity}</strong> equipamento(s).
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Alerta devolução parcial */}
+          {isPartialReturn && (
+            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200">
+                <strong>Devolução parcial:</strong> {pendingUuids.length - selectedIds.length} equipamento(s)
+                continuarão com {loan.borrower_name}.
               </AlertDescription>
             </Alert>
           )}
@@ -407,32 +477,11 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
                   <FormLabel>Observações (Opcional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Adicione observações sobre a devolução..."
+                      placeholder="Adicione observações sobre a devolução…"
                       {...field}
                     />
                   </FormControl>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notify_it"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Notificar equipe TI</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Enviar notificação sobre a devolução
-                    </p>
-                  </div>
                 </FormItem>
               )}
             />
@@ -447,16 +496,16 @@ export function LoanReturnDialog({ open, onOpenChange, loan, onSuccess }: LoanRe
               >
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading || returnQuantity === 0}
+              <Button
+                type="submit"
+                disabled={isLoading || (!isLegacyLoan && selectedIds.length === 0)}
                 className={`w-full sm:w-auto ${isPartialReturn ? "bg-amber-600 hover:bg-amber-700" : "bg-green-600 hover:bg-green-700"}`}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {returnQuantity === 0 
-                  ? "Selecione"
-                  : isPartialReturn 
-                    ? `Devolver ${returnQuantity}` 
+                {!isLegacyLoan && selectedIds.length === 0
+                  ? "Selecione equipamentos"
+                  : isPartialReturn
+                    ? `Devolver ${selectedIds.length}`
                     : "Confirmar Devolução"
                 }
               </Button>

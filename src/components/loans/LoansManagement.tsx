@@ -197,7 +197,9 @@ export function LoansManagement() {
           chromebook_number, equipment_type, quantity, loan_date, pickup_time,
           expected_return_date, status, observations, return_time, returned_at,
           returned_by, returned_quantity, created_at, equipment_id,
+          equipment_ids, returned_equipment_ids,
           it_equipment (
+            id,
             id_number,
             patrimony
           )
