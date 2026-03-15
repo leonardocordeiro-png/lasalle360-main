@@ -503,7 +503,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
                   <Button
                     type="button"
                     size="sm"
-                    onClick={handleAddEquipment}
+                    onClick={() => handleAddEquipment()}
                     disabled={!newEquipment.trim() || (searchResult && searchResult.status !== 'ATIVO')}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
