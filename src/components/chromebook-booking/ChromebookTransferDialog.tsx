@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getUserMaxQuantityOnDate, calculateAvailableQuantity } from "@/lib/availabilityUtils";
 
 interface ChromebookBooking {
   id: string;
@@ -107,6 +108,25 @@ export function ChromebookTransferDialog({
 
     setIsTransferring(true);
     try {
+      // Validar disponibilidade para o usuário destino antes de transferir
+      // O destinatário pode já ter Chromebooks reservados no mesmo dia
+      const targetUserMax = await getUserMaxQuantityOnDate(selectedUser.user_id, booking.booking_date);
+      const available = await calculateAvailableQuantity(booking.booking_date, booking.start_time, booking.end_time);
+
+      // Quantia extra que o destinatário precisaria além do seu máximo atual
+      const additionalNeeded = Math.max(0, booking.quantity - targetUserMax);
+
+      if (additionalNeeded > available) {
+        const totalForTarget = targetUserMax + available;
+        toast({
+          title: "Transferência não permitida",
+          description: `${selectedUser.full_name} já possui ${targetUserMax} Chromebook(s) reservado(s) neste dia. Disponível para transferência: ${totalForTarget} un. (solicitado: ${booking.quantity} un.)`,
+          variant: "destructive",
+        });
+        setIsTransferring(false);
+        return;
+      }
+
       // Transferir TODOS os agendamentos do mesmo usuário, mesma data e mesma turma
       // Isso garante que múltiplos horários sejam transferidos juntos
       const { data: relatedBookings, error: fetchError } = await supabase

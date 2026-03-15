@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { Chrome, Calendar, Clock, GraduationCap, Loader2, CheckCircle, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { validateBookingAvailability } from "@/lib/availabilityUtils";
 
 interface TimeSlot {
   start: string;
@@ -72,6 +73,25 @@ export function ChromebookBookingSummary({
 
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
+      // Validar disponibilidade antes de inserir (previne overbooking)
+      const validation = await validateBookingAvailability(
+        dateStr,
+        selectedSlots[0].start,
+        selectedSlots[0].end,
+        quantity,
+        user.id
+      );
+
+      if (!validation.available) {
+        toast({
+          title: "Sem disponibilidade",
+          description: validation.message || "Não há Chromebooks suficientes disponíveis para esta data.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Criar um agendamento para cada slot selecionado
       const bookingsToCreate = selectedSlots.map(slot => ({
         user_id: user.id,
@@ -88,7 +108,20 @@ export function ChromebookBookingSummary({
         .from('chromebook_bookings')
         .insert(bookingsToCreate);
 
-      if (error) throw error;
+      if (error) {
+        // Mensagens de erro específicas baseadas no código/mensagem do Supabase
+        if (error.message?.includes('past')) {
+          throw new Error("Não é possível agendar para uma data passada.");
+        } else if (error.message?.includes('3 months') || error.message?.includes('months')) {
+          throw new Error("A data máxima para agendamento é 3 meses à frente.");
+        } else if (error.message?.includes('weekday') || error.message?.includes('weekend')) {
+          throw new Error("Agendamentos são permitidos apenas em dias úteis (segunda a sexta).");
+        } else if (error.message?.includes('quantity') || error.message?.includes('Quantity')) {
+          throw new Error("Quantidade inválida. Informe entre 1 e 50 Chromebooks.");
+        } else {
+          throw error;
+        }
+      }
 
       toast({
         title: "Agendamento realizado!",

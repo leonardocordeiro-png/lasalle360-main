@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from "react";
+import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { ChromebookTimeSlotCard } from "./ChromebookTimeSlotCard";
 import { ChromebookTransferDialog } from "./ChromebookTransferDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Chrome, Laptop, RefreshCw } from "lucide-react";
+import { Chrome, Laptop, RefreshCw, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { intervalsOverlap } from "@/lib/timeUtils";
 
@@ -60,6 +60,8 @@ export function ChromebookAvailabilityGrid({
   totalInventory,
 }: ChromebookAvailabilityGridProps) {
   const [availabilityCache, setAvailabilityCache] = useState<Map<string, number>>(new Map());
+  const [isCalculating, setIsCalculating] = useState(false);
+  const prevDateRef = useRef<string>("");
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedBookingForTransfer, setSelectedBookingForTransfer] = useState<ChromebookBooking | null>(null);
   const [calendarBlocks, setCalendarBlocks] = useState<CalendarBlock[]>([]);
@@ -83,6 +85,12 @@ export function ChromebookAvailabilityGrid({
   useEffect(() => {
     const calculateAvailability = async () => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+      // Exibe spinner apenas quando a data mudou (não em re-fetches por realtime)
+      if (prevDateRef.current !== dateStr) {
+        setIsCalculating(true);
+        prevDateRef.current = dateStr;
+      }
       const newCache = new Map<string, number>();
 
       // Buscar inventário do dia com cache
@@ -126,15 +134,17 @@ export function ChromebookAvailabilityGrid({
       }
 
       setAvailabilityCache(newCache);
+      setIsCalculating(false);
     };
 
     calculateAvailability();
   }, [selectedDate, bookings, totalInventory, timeSlots]);
 
-  // Fetch calendar blocks for the selected date
+  // Fetch calendar blocks for the selected date + realtime subscription
   useEffect(() => {
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
     const fetchBlocks = async () => {
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('calendar_blocks')
         .select('*')
@@ -147,6 +157,24 @@ export function ChromebookAvailabilityGrid({
     };
 
     fetchBlocks();
+
+    // Subscription para bloqueios de calendário — admin pode bloquear horários
+    // em tempo real e todos os usuários veem imediatamente
+    const channel = supabase
+      .channel(`calendar-blocks-chromebook-${dateStr}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_blocks',
+          filter: `resource_type=eq.chromebook`,
+        },
+        () => { fetchBlocks(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [selectedDate]);
 
   const isSlotBlocked = useCallback((slot: { start: string; end: string }): CalendarBlock | null => {
@@ -288,7 +316,13 @@ export function ChromebookAvailabilityGrid({
           )}
 
           {/* Grid de Horários */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2.5 sm:gap-3">
+          {isCalculating ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+              <span className="text-sm text-muted-foreground">Carregando disponibilidade...</span>
+            </div>
+          ) : null}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2.5 sm:gap-3 transition-opacity duration-200 ${isCalculating ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
             {timeSlots.map((slot) => {
               const slotBookings = getBookingsForSlot(slot);
               const availableCount = getAvailableCount(slot);

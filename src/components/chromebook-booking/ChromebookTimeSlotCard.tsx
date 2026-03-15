@@ -188,7 +188,7 @@ export function ChromebookTimeSlotCard({
 
       const { error } = await supabase
         .from('chromebook_bookings')
-        .delete()
+        .update({ status: 'returned' })
         .in('id', bookingIds);
 
       if (error) throw error;
@@ -196,7 +196,7 @@ export function ChromebookTimeSlotCard({
       const deleteCount = bookingIds.length;
       toast({
         title: "Devolução realizada!",
-        description: deleteCount > 1 
+        description: deleteCount > 1
           ? `${deleteCount} horários foram devolvidos com sucesso.`
           : "O agendamento foi devolvido com sucesso.",
       });
