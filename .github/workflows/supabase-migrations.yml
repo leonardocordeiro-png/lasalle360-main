@@ -28,7 +28,25 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Apply migrations to production
-        run: supabase db push
+        run: |
+          set +e
+          PUSH_OUTPUT=$(supabase db push 2>&1)
+          PUSH_EXIT=$?
+          echo "$PUSH_OUTPUT"
+
+          if [ $PUSH_EXIT -ne 0 ]; then
+            # Extrair IDs de migrations remotas sem arquivo local
+            REPAIR_IDS=$(echo "$PUSH_OUTPUT" | grep "migration repair --status reverted" | sed 's/.*reverted //')
+            if [ -n "$REPAIR_IDS" ]; then
+              echo "Reparando histórico de migrations remotas sem arquivo local..."
+              supabase migration repair --status reverted $REPAIR_IDS
+              echo "Reaplicando migrations locais..."
+              supabase db push
+            else
+              echo "Erro desconhecido — não foram encontrados IDs para reparar."
+              exit 1
+            fi
+          fi
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
