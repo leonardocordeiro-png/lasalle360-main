@@ -30,35 +30,38 @@ jobs:
       - name: Apply migrations to production
         run: |
           set +e
+
+          # Tentativa 1: push direto (funciona em runs futuros com histórico em sincronia)
           PUSH_OUTPUT=$(supabase db push 2>&1)
           PUSH_EXIT=$?
           echo "$PUSH_OUTPUT"
 
-          if [ $PUSH_EXIT -ne 0 ]; then
-            REPAIR_IDS=$(echo "$PUSH_OUTPUT" | grep "migration repair --status reverted" | sed 's/.*reverted //')
-
-            if [ -n "$REPAIR_IDS" ]; then
-              echo "=== Passo 1: Removendo migrations remotas sem arquivo local ==="
-              supabase migration repair --status reverted $REPAIR_IDS
-
-              echo "=== Passo 2: Marcando migrations antigas como já aplicadas (baseline) ==="
-              # Todas as migrations locais sem prefixo 20260314 já existem no banco
-              # com outros IDs de rastreamento — apenas marcamos como aplicadas.
-              PRE_EXISTING=$(ls supabase/migrations/*.sql \
-                | sed 's|.*/||' | grep -oP '^\d+' | grep -v '^20260314' | sort | tr '\n' ' ')
-              if [ -n "$PRE_EXISTING" ]; then
-                supabase migration repair --status applied $PRE_EXISTING
-              fi
-
-              echo "=== Passo 3: Aplicando apenas as novas migrations (20260314*) ==="
-              supabase db push
-            else
-              echo "Erro desconhecido — sem IDs para reparar."
-              exit 1
-            fi
-          else
+          if [ $PUSH_EXIT -eq 0 ]; then
             echo "Migrations aplicadas com sucesso."
+            exit 0
           fi
+
+          echo "Push falhou — iniciando sincronização de histórico (setup inicial)..."
+
+          # Passo 1: remover IDs remotos sem arquivo local (caso ainda existam)
+          REPAIR_IDS=$(echo "$PUSH_OUTPUT" | grep "migration repair --status reverted" | sed 's/.*reverted //')
+          if [ -n "$REPAIR_IDS" ]; then
+            echo "Removendo migrations remotas sem arquivo local..."
+            supabase migration repair --status reverted $REPAIR_IDS
+          fi
+
+          # Passo 2: marcar TODAS as migrations antigas como aplicadas (baseline)
+          # O banco já tem o schema dessas migrations — só sincronizamos o histórico.
+          echo "Marcando migrations pré-existentes como baseline..."
+          PRE_EXISTING=$(ls supabase/migrations/*.sql \
+            | sed 's|.*/||' | grep -oP '^\d+' | grep -v '^20260314' | sort | tr '\n' ' ')
+          if [ -n "$PRE_EXISTING" ]; then
+            supabase migration repair --status applied $PRE_EXISTING
+          fi
+
+          # Passo 3: push final — aplica somente as migrations 20260314*
+          echo "Aplicando novas migrations..."
+          supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
