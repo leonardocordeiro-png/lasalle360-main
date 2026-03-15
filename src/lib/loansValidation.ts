@@ -82,7 +82,7 @@ export async function validateEquipmentById(id: string) {
   const { data: activeLoan } = await supabase
     .from('chromebook_loans')
     .select('id, borrower_name, loan_date')
-    .eq('equipment_id', equipment.id)
+    .or(`equipment_id.eq.${equipment.id},equipment_ids.cs.{${equipment.id}}`)
     .in('status', ['em_uso', 'atrasado'])
     .maybeSingle();
 
@@ -124,7 +124,8 @@ export async function validateEquipmentForLoan(identifier: string, equipmentCate
     }
     const { data: activeLoan } = await supabase
       .from('chromebook_loans').select('id, borrower_name, loan_date')
-      .eq('equipment_id', equipment.id).in('status', ['em_uso', 'atrasado']).maybeSingle();
+      .or(`equipment_id.eq.${equipment.id},equipment_ids.cs.{${equipment.id}}`)
+      .in('status', ['em_uso', 'atrasado']).maybeSingle();
     if (activeLoan) {
       return { valid: false, message: `Equipamento já emprestado para ${activeLoan.borrower_name} desde ${activeLoan.loan_date?.split('-').reverse().join('/')}` };
     }
@@ -153,7 +154,8 @@ export async function validateEquipmentForLoan(identifier: string, equipmentCate
 
   const { data: activeLoan } = await supabase
     .from('chromebook_loans').select('id, borrower_name, loan_date')
-    .eq('equipment_id', equipment.id).in('status', ['em_uso', 'atrasado']).maybeSingle();
+    .or(`equipment_id.eq.${equipment.id},equipment_ids.cs.{${equipment.id}}`)
+    .in('status', ['em_uso', 'atrasado']).maybeSingle();
   if (activeLoan) {
     return { valid: false, message: `Equipamento já emprestado para ${activeLoan.borrower_name} desde ${activeLoan.loan_date?.split('-').reverse().join('/')}` };
   }
