@@ -516,8 +516,19 @@ export function LoansManagement() {
   // Função para obter apenas equipamentos que ainda não foram devolvidos
   const getPendingEquipmentsList = (loan: any): string[] => {
     const allEquipments = getEquipmentsList(loan);
+
+    // Caminho UUID: equipment_ids[i] mapeia para chromebook_number[i]
+    // Filtrar pelos itens cujo UUID NÃO está em returned_equipment_ids
+    if (loan.equipment_ids?.length > 0) {
+      const returnedSet = new Set<string>(loan.returned_equipment_ids || []);
+      return allEquipments.filter((_: string, idx: number) => {
+        const uuid = loan.equipment_ids[idx];
+        return uuid ? !returnedSet.has(uuid) : true;
+      });
+    }
+
+    // Fallback legado: fatiar pelo returned_quantity
     const alreadyReturned = loan.returned_quantity || 0;
-    // Retornar apenas equipamentos que ainda não foram devolvidos
     return allEquipments.slice(alreadyReturned);
   };
 
