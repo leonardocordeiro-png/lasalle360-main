@@ -100,6 +100,7 @@ export function LoansManagement() {
   const [equipmentTypeFilter, setEquipmentTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
+  const [uuidToIdMap, setUuidToIdMap] = useState<Record<string, string>>({});
 
   // Função para verificar se o patrimônio é válido (não é "SEM PATRIMÔNIO" ou similar)
   const isValidPatrimony = (patrimony: string | null | undefined): boolean => {
@@ -153,17 +154,22 @@ export function LoansManagement() {
     try {
       const { data, error } = await supabase
         .from('it_equipment')
-        .select('patrimony, id_number');
-      
+        .select('id, patrimony, id_number');
+
       if (error) throw error;
-      
+
       const map: Record<string, string> = {};
+      const uuidMap: Record<string, string> = {};
       data?.forEach(eq => {
         if (eq.patrimony && eq.id_number) {
           map[eq.patrimony.trim()] = eq.id_number;
         }
+        if (eq.id && eq.id_number) {
+          uuidMap[eq.id] = eq.id_number;
+        }
       });
       setEquipmentMap(map);
+      setUuidToIdMap(uuidMap);
     } catch (error) {
       console.error('Error fetching equipment map:', error);
     }
@@ -515,19 +521,15 @@ export function LoansManagement() {
 
   // Função para obter apenas equipamentos que ainda não foram devolvidos
   const getPendingEquipmentsList = (loan: any): string[] => {
-    const allEquipments = getEquipmentsList(loan);
-
-    // Caminho UUID: equipment_ids[i] mapeia para chromebook_number[i]
-    // Filtrar pelos itens cujo UUID NÃO está em returned_equipment_ids
+    // Caminho UUID: filtrar diretamente pelos UUIDs não devolvidos
     if (loan.equipment_ids?.length > 0) {
       const returnedSet = new Set<string>(loan.returned_equipment_ids || []);
-      return allEquipments.filter((_: string, idx: number) => {
-        const uuid = loan.equipment_ids[idx];
-        return uuid ? !returnedSet.has(uuid) : true;
-      });
+      const pendingUuids = (loan.equipment_ids as string[]).filter(uuid => !returnedSet.has(uuid));
+      return pendingUuids.map(uuid => uuidToIdMap[uuid] || uuid.substring(0, 8));
     }
 
-    // Fallback legado: fatiar pelo returned_quantity
+    // Fallback legado: usar chromebook_number fatiado pelo returned_quantity
+    const allEquipments = getEquipmentsList(loan);
     const alreadyReturned = loan.returned_quantity || 0;
     return allEquipments.slice(alreadyReturned);
   };

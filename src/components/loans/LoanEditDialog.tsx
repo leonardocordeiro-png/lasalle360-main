@@ -324,18 +324,20 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
           // Usar cópia imutável com status atualizado
           selectedEquipment = { ...selectedEquipment, status: 'ATIVO' };
         } else {
+          const currentStatus = freshData?.status || selectedEquipment.status || 'EM_USO';
           toast({
             variant: "destructive",
             title: "Equipamento não disponível",
-            description: `Status atual: ${freshData?.status || selectedEquipment.status}. Apenas equipamentos ATIVO podem ser adicionados.`
+            description: `Status atual: ${currentStatus}. Apenas equipamentos ATIVO podem ser adicionados.`
           });
           return;
         }
       } catch {
+        const currentStatus = selectedEquipment.status || 'EM_USO';
         toast({
           variant: "destructive",
           title: "Equipamento não disponível",
-          description: `Status atual: ${selectedEquipment.status}. Equipamentos emprestados não podem ser adicionados.`
+          description: `Status atual: ${currentStatus}. Equipamentos emprestados não podem ser adicionados.`
         });
         return;
       }
