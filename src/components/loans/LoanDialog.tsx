@@ -142,7 +142,8 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
   const quantity = form.watch("quantity");
   const equipmentTypeWatch = form.watch("equipment_type");
   // Converte o tipo do formulário para categoria de busca no inventário
-  const equipmentCategory = equipmentTypeWatch === "professor" ? "notebook" : "chromebook";
+  // Professor pode pegar Chromebook ou Notebook → sem filtro (undefined)
+  const equipmentCategory: string | undefined = equipmentTypeWatch === "professor" ? undefined : "chromebook";
 
   // Keep quantityDisplay in sync with form value
   useEffect(() => {
@@ -237,7 +238,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
 
     const timer = setTimeout(searchEquipments, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, equipmentCategory]);
 
   const handleUserInputChange = async (value: string) => {
     setUserSearchQuery(value);
