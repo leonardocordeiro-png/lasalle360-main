@@ -1,5 +1,12 @@
 project_id = "bacqgdjiarwkgkwiqgpa"
 
+[auth]
+site_url = "https://lasalle360.vercel.app"
+additional_redirect_urls = [
+  "https://lasalle360.vercel.app",
+  "https://lasalle360.vercel.app/**"
+]
+
 [functions.create-user]
 verify_jwt = true
 

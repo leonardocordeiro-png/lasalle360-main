@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/config.toml'
   workflow_dispatch:
 
 jobs:
@@ -51,7 +52,6 @@ jobs:
           fi
 
           # Passo 2: marcar TODAS as migrations antigas como aplicadas (baseline)
-          # O banco já tem o schema dessas migrations — só sincronizamos o histórico.
           echo "Marcando migrations pré-existentes como baseline..."
           PRE_EXISTING=$(ls supabase/migrations/*.sql \
             | sed 's|.*/||' | grep -oP '^\d+' | grep -v '^20260314' | sort | tr '\n' ' ')
@@ -59,12 +59,27 @@ jobs:
             supabase migration repair --status applied $PRE_EXISTING
           fi
 
-          # Passo 3: push final — aplica somente as migrations 20260314*
+          # Passo 3: push final — aplica somente as migrations novas
           echo "Aplicando novas migrations..."
           supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Lock Supabase Auth URLs to production domain
+        run: |
+          curl -sf -X PATCH \
+            "https://api.supabase.com/v1/projects/bacqgdjiarwkgkwiqgpa/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "site_url": "https://lasalle360.vercel.app",
+              "uri_allow_list": "https://lasalle360.vercel.app,https://lasalle360.vercel.app/**"
+            }' \
+            && echo "Auth URLs travadas em https://lasalle360.vercel.app" \
+            || echo "Aviso: falha ao atualizar Auth URLs (verificar SUPABASE_ACCESS_TOKEN)"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Confirm deployment
         run: echo "Deploy concluído no projeto bacqgdjiarwkgkwiqgpa"
