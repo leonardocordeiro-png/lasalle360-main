@@ -147,7 +147,7 @@ export function ChromebookAvailabilityGrid({
     const fetchBlocks = async () => {
       const { data, error } = await supabase
         .from('calendar_blocks')
-        .select('*')
+        .select('id, resource_type, block_date, start_time, end_time, reason, description, reserved_for, created_by, created_at, updated_at')
         .eq('resource_type', 'chromebook')
         .eq('block_date', dateStr);
 

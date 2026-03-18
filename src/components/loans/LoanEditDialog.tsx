@@ -290,7 +290,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
       try {
         const { data: directSearch } = await supabase
           .from('it_equipment')
-          .select('*')
+          .select('id, id_number, patrimony, serial_number, brand, model, status, equipment_type')
           .or(`id_number.eq.${newEquipment.trim()},patrimony.eq.${newEquipment.trim()}`)
           .maybeSingle();
 

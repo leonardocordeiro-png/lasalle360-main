@@ -139,7 +139,7 @@ export function UserPermissionsDialog({ open, onOpenChange, userId, userName }: 
       setLoading(true);
       const { data, error } = await supabase
         .from('user_permissions' as any)
-        .select('*')
+        .select('id, module_name, can_access, permission_level')
         .eq('user_id', userId);
 
       if (error) {

@@ -88,7 +88,7 @@ export function RoomBookingPage({ onBookingCreated, initialRoomType = 'auditorio
     try {
       const { data, error } = await supabase
         .from('room_bookings')
-        .select('*')
+        .select('id, class_name, booking_date, start_time, end_time, status, user_id, full_name, observations')
         .eq('room_type', roomTypeToFetch)
         .eq('status', 'active')
         .gte('booking_date', format(fromDate, 'yyyy-MM-dd'))

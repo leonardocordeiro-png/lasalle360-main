@@ -66,7 +66,7 @@ export function ProfileDialog({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('full_name, username, avatar_url')
         .eq('user_id', user.id)
         .single()
 

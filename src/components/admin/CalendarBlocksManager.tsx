@@ -77,7 +77,7 @@ export default function CalendarBlocksManager() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('calendar_blocks')
-                .select('*')
+                .select('id, resource_type, block_date, start_time, end_time, reason, description, reserved_for, created_by, created_at, updated_at')
                 .gte('block_date', format(new Date(), 'yyyy-MM-dd'))
                 .order('block_date', { ascending: true })
                 .order('start_time', { ascending: true });

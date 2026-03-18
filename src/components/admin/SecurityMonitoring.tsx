@@ -81,7 +81,7 @@ export default function SecurityMonitoring() {
 
       const { data: auditLogs, error } = await supabase
         .from('security_audit_log')
-        .select('*')
+        .select('id, action, resource_type, created_at, user_id, additional_data')
         .order('created_at', { ascending: false })
         .limit(50);
 

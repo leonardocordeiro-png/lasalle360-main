@@ -140,60 +140,27 @@ export default function AuditLogs() {
       // Fetch security audit logs
       const { data: securityLogs, error: securityError } = await supabase
         .from('security_audit_log')
-        .select('*')
+        .select('id, user_id, action, resource_type, resource_id, ip_address, user_agent, session_id, additional_data, created_at')
         .order('created_at', { ascending: false })
-        .limit(500);
-
-      console.log('🔍 Security Logs Debug:', { 
-        count: securityLogs?.length || 0, 
-        logs: securityLogs,
-        error: securityError 
-      });
+        .limit(100);
 
       if (securityError) {
-        console.log('Security logs not accessible:', securityError);
         setAuditLogs([]);
       } else {
         const filteredLogs = (Array.isArray(securityLogs) ? securityLogs : []).filter(log => {
           const actionMatch = log.action?.toLowerCase().includes('council');
           const resourceTypeMatch = log.resource_type === 'council';
-          
-          // Parse additional_data if it's a string
-          let additionalData = {};
+
+          let additionalData: any = {};
           if (typeof log.additional_data === 'string') {
-            try {
-              additionalData = JSON.parse(log.additional_data);
-            } catch (e) {
-              console.warn('Failed to parse additional_data:', e);
-            }
+            try { additionalData = JSON.parse(log.additional_data); } catch {}
           } else if (log.additional_data) {
             additionalData = log.additional_data;
           }
-          
+
           const descriptionMatch = additionalData?.description?.toLowerCase().includes('conselho');
           const moduleMatch = additionalData?.module === 'council';
-          
-          console.log('🔍 Filtering council log:', {
-            logId: log.id,
-            action: log.action,
-            resource_type: log.resource_type,
-            additionalData,
-            matches: { actionMatch, resourceTypeMatch, descriptionMatch, moduleMatch }
-          });
-          
-          // The issue: logs are created with action "council_update" which should match actionMatch
-          const isCouncilLog = actionMatch || resourceTypeMatch || descriptionMatch || moduleMatch;
-          
-          if (isCouncilLog) {
-            console.log('✅ Found council log:', log);
-          }
-          
-          return isCouncilLog;
-        });
-        console.log('🔍 Council Logs Filtered:', { 
-          total: securityLogs?.length || 0, 
-          council: filteredLogs.length,
-          councilLogs: filteredLogs
+          return actionMatch || resourceTypeMatch || descriptionMatch || moduleMatch;
         });
         setAuditLogs(Array.isArray(securityLogs) ? securityLogs : []);
         setCouncilLogs(filteredLogs);
@@ -202,9 +169,9 @@ export default function AuditLogs() {
       // Fetch chromebook booking history
       const { data: chromebookBookings, error: chromebookError } = await supabase
         .from('chromebook_bookings')
-        .select('*')
+        .select('id, user_id, full_name, status, booking_date, quantity, class_name, created_at')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(100);
 
       if (chromebookError) {
         console.error('Error fetching chromebook bookings:', chromebookError);
@@ -214,9 +181,9 @@ export default function AuditLogs() {
       // Fetch room booking history
       const { data: roomBookings, error: roomError } = await supabase
         .from('room_bookings')
-        .select('*')
+        .select('id, user_id, full_name, status, booking_date, class_name, created_at, room_type')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(100);
 
       if (roomError) {
         console.error('Error fetching room bookings:', roomError);
@@ -261,9 +228,9 @@ export default function AuditLogs() {
       // Fetch school planning audit logs
       const { data: planningLogs, error: planningError } = await supabase
         .from('school_planning_audit_log')
-        .select('*')
+        .select('id, user_id, user_email, user_name, action, table_name, record_id, old_data, new_data, changes, created_at')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(100);
 
       if (planningError) {
         console.log('School planning logs not accessible:', planningError);
@@ -470,7 +437,7 @@ export default function AuditLogs() {
     );
   };
 
-  const getModuleDisplay = (log: BookingLog | SchoolPlanningLog | AuditLog, type: 'booking' | 'planning' | 'security') => {
+  const getModuleDisplay = (log: BookingLog | SchoolPlanningLog | AuditLog, type: 'booking' | 'planning' | 'security' | 'council') => {
     if (type === 'booking') {
       const bookingLog = log as BookingLog;
       if (bookingLog.booking_type === 'chromebook') {
@@ -845,48 +812,6 @@ export default function AuditLogs() {
               <Filter className="h-3 w-3" />
               Filtros:
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                await testCouncilAuditLog();
-                setTimeout(() => fetchLogs(), 1000); // Refresh logs after test
-              }}
-              className="h-7 gap-1.5 rounded-lg text-[11px] font-medium border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700"
-            >
-              🧪 Testar Conselho
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                console.log('🔍 Checking raw database logs...');
-                try {
-                  const { data: rawLogs, error } = await supabase
-                    .from('security_audit_log')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(10);
-                  
-                  console.log('🔍 Raw logs from database:', { rawLogs, error });
-                  
-                  if (rawLogs) {
-                    const councilLogs = rawLogs.filter(log => 
-                      log.action?.toLowerCase().includes('council') || 
-                      log.resource_type === 'council' ||
-                      log.additional_data?.description?.toLowerCase().includes('conselho')
-                    );
-                    console.log('🔍 Council logs found:', councilLogs);
-                  }
-                } catch (err) {
-                  console.error('❌ Error checking raw logs:', err);
-                }
-              }}
-              className="h-7 gap-1.5 rounded-lg text-[11px] font-medium border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
-            >
-              🔍 Verificar Logs Brutos
-            </Button>
-
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 gap-1.5 rounded-lg text-[11px] font-medium border-border/50">

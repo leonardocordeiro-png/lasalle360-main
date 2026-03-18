@@ -140,7 +140,7 @@ export default function UserManagement() {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('user_id, email, full_name, avatar_url, created_at, last_login, is_blocked')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

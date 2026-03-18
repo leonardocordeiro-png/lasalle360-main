@@ -73,7 +73,7 @@ export default function AdminPanel() {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('full_name, email, avatar_url')
         .eq('user_id', user?.id)
         .maybeSingle();
 

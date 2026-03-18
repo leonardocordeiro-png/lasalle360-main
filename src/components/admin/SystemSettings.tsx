@@ -73,7 +73,7 @@ export default function SystemSettings() {
     try {
       const { data, error } = await supabase
         .from('system_config')
-        .select('*');
+        .select('config_key, config_value');
 
       if (error) throw error;
 

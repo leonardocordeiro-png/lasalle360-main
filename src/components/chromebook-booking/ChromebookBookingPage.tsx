@@ -79,7 +79,7 @@ export function ChromebookBookingPage({ onBookingCreated, totalInventory, onDate
     try {
       const { data, error } = await supabase
         .from('chromebook_bookings')
-        .select('*')
+        .select('id, class_name, booking_date, start_time, end_time, status, user_id, quantity, full_name')
         .eq('status', 'active')
         .gte('booking_date', format(fromDate, 'yyyy-MM-dd'))
         .lte('booking_date', format(toDate, 'yyyy-MM-dd'));

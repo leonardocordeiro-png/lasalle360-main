@@ -67,7 +67,7 @@ export default function InventoryManagement() {
   const fetchInventory = async () => {
     const { data, error } = await supabase
       .from('chromebook_inventory')
-      .select('*')
+      .select('id, date, total_available, created_at, updated_at')
       .order('date', { ascending: true });
 
     if (error) throw error;

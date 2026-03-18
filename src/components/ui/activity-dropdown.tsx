@@ -88,7 +88,7 @@ export function ActivityDropdown() {
     try {
       const { data, error } = await supabase
         .from('notifications' as any)
-        .select('*')
+        .select('id, user_id, message, type, related_id, is_read, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)

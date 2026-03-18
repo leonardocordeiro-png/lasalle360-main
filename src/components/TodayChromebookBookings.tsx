@@ -80,7 +80,7 @@ export function TodayChromebookBookings({ totalInventory, selectedDate }: TodayC
       
       const { data, error } = await supabase
         .from('chromebook_bookings')
-        .select('*')
+        .select('id, full_name, class_name, quantity, booking_date, start_time, end_time, status, user_id')
         .eq('booking_date', dateStr)
         .eq('status', 'active')
         .order('start_time', { ascending: true });
