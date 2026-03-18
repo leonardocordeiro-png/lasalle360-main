@@ -142,8 +142,11 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
   const quantity = form.watch("quantity");
   const equipmentTypeWatch = form.watch("equipment_type");
   // Converte o tipo do formulário para categoria de busca no inventário
-  // "professor" → busca Notebooks | "professor_chromebook" / "aluno" / "colaborador" → busca Chromebooks
-  const equipmentCategory: string = equipmentTypeWatch === "professor" ? "notebook" : "chromebook";
+  // Só usa "notebook" quando é explicitamente professor notebook; qualquer outro caso busca chromebook.
+  // Usa borrowerType como fallback para garantir que professor sempre busque chromebook
+  // (mesmo que o useEffect de sincronização ainda não tenha disparado).
+  const equipmentCategory: string =
+    (equipmentTypeWatch === "professor" && borrowerType === "professor") ? "notebook" : "chromebook";
 
   // Keep quantityDisplay in sync with form value
   useEffect(() => {
