@@ -144,7 +144,7 @@ export function PendingApprovalsTab() {
 
       const { data, error } = await supabase
         .from('room_bookings')
-        .select('*')
+        .select('id, user_id, full_name, class_name, booking_date, start_time, end_time, resources, observations, approval_deadline, created_at, room_type, approval_status, status')
         .eq('room_type', 'auditorio')
         .eq('approval_status', 'pending')
         .eq('status', 'active')

@@ -122,7 +122,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
     try {
       const { data, error } = await supabase
         .from('room_bookings')
-        .select('*')
+        .select('id, class_name, booking_date, start_time, end_time, status, user_id, full_name, observations')
         .eq('room_type', roomType)
         .eq('status', 'active')
         .gte('booking_date', format(fromDate, 'yyyy-MM-dd'))
@@ -134,7 +134,7 @@ export function RoomCalendarView({ roomType, roomName, onBookingCreated }: RoomC
       // Fetch blocks
       const { data: blockData, error: blockError } = await supabase
         .from('calendar_blocks')
-        .select('*')
+        .select('id, resource_type, block_date, start_time, end_time, reason, description, reserved_for, created_by, created_at, updated_at')
         .eq('resource_type', roomType)
         .gte('block_date', format(fromDate, 'yyyy-MM-dd'))
         .lte('block_date', format(toDate, 'yyyy-MM-dd'));

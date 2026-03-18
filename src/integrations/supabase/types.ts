@@ -41,6 +41,246 @@ export type Database = {
         }
         Relationships: []
       }
+      activities_audit_log: {
+        Row: {
+          action: string
+          changes: Json | null
+          created_at: string
+          id: string
+          ip_address: unknown
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string
+          table_name: string
+          user_agent: string | null
+          user_email: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          action: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id: string
+          table_name: string
+          user_agent?: string | null
+          user_email: string
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          action?: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string
+          table_name?: string
+          user_agent?: string | null
+          user_email?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: []
+      }
+      activities_calendars: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          school_year_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          school_year_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          school_year_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_calendars_school_year_id_fkey"
+            columns: ["school_year_id"]
+            isOneToOne: false
+            referencedRelation: "school_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_events: {
+        Row: {
+          calendar_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          event_date: string
+          event_time: string | null
+          id: string
+          location: string
+          materials: string | null
+          observations: string | null
+          responsibles: string
+          shift: Database["public"]["Enums"]["day_shift_enum"] | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          calendar_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          event_date: string
+          event_time?: string | null
+          id?: string
+          location: string
+          materials?: string | null
+          observations?: string | null
+          responsibles: string
+          shift?: Database["public"]["Enums"]["day_shift_enum"] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          calendar_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          event_date?: string
+          event_time?: string | null
+          id?: string
+          location?: string
+          materials?: string | null
+          observations?: string | null
+          responsibles?: string
+          shift?: Database["public"]["Enums"]["day_shift_enum"] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "activities_calendars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_notifications: {
+        Row: {
+          approver_id: string
+          booking_date: string
+          booking_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          observations: string | null
+          requester_email: string
+          requester_name: string
+          resources: string[] | null
+          room_name: string
+          time_slots: string
+        }
+        Insert: {
+          approver_id: string
+          booking_date: string
+          booking_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          observations?: string | null
+          requester_email: string
+          requester_name: string
+          resources?: string[] | null
+          room_name: string
+          time_slots: string
+        }
+        Update: {
+          approver_id?: string
+          booking_date?: string
+          booking_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          observations?: string | null
+          requester_email?: string
+          requester_name?: string
+          resources?: string[] | null
+          room_name?: string
+          time_slots?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "room_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_blocks: {
+        Row: {
+          block_date: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_time: string
+          id: string
+          reason: string
+          reserved_for: string | null
+          resource_type: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          block_date: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time: string
+          id?: string
+          reason: string
+          reserved_for?: string | null
+          resource_type: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          block_date?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string
+          id?: string
+          reason?: string
+          reserved_for?: string | null
+          resource_type?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chromebook_bookings: {
         Row: {
           booking_date: string
@@ -130,7 +370,7 @@ export type Database = {
           returned_at: string | null
           returned_by: string | null
           returned_equipment_ids: string[] | null
-          returned_quantity: number
+          returned_quantity: number | null
           status: Database["public"]["Enums"]["loan_status"]
           updated_at: string | null
         }
@@ -156,7 +396,7 @@ export type Database = {
           returned_at?: string | null
           returned_by?: string | null
           returned_equipment_ids?: string[] | null
-          returned_quantity?: number
+          returned_quantity?: number | null
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string | null
         }
@@ -182,7 +422,7 @@ export type Database = {
           returned_at?: string | null
           returned_by?: string | null
           returned_equipment_ids?: string[] | null
-          returned_quantity?: number
+          returned_quantity?: number | null
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string | null
         }
@@ -731,8 +971,54 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      room_booking_approvers: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       room_bookings: {
         Row: {
+          approval_deadline: string | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           booking_date: string
           class_name: string
           created_at: string
@@ -740,6 +1026,7 @@ export type Database = {
           full_name: string
           id: string
           observations: string | null
+          resources: Json | null
           room_type: string
           start_time: string
           status: string
@@ -747,6 +1034,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_deadline?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           booking_date: string
           class_name: string
           created_at?: string
@@ -754,6 +1045,7 @@ export type Database = {
           full_name: string
           id?: string
           observations?: string | null
+          resources?: Json | null
           room_type: string
           start_time: string
           status?: string
@@ -761,6 +1053,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_deadline?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           booking_date?: string
           class_name?: string
           created_at?: string
@@ -768,6 +1064,7 @@ export type Database = {
           full_name?: string
           id?: string
           observations?: string | null
+          resources?: Json | null
           room_type?: string
           start_time?: string
           status?: string
@@ -1122,6 +1419,7 @@ export type Database = {
       }
     }
     Functions: {
+      auto_return_chromebook_bookings: { Args: never; Returns: undefined }
       check_booking_availability: {
         Args: {
           p_booking_date: string
@@ -1132,6 +1430,18 @@ export type Database = {
           p_user_id?: string
         }
         Returns: boolean
+      }
+      check_rate_limit: {
+        Args: {
+          p_action: string
+          p_max_attempts?: number
+          p_window_ms?: number
+        }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          reset_time: number
+        }[]
       }
       get_chromebook_day_usage: {
         Args: { p_date: string }
@@ -1197,7 +1507,8 @@ export type Database = {
         | "destaques"
       app_role: "admin" | "moderator" | "user" | "coordinator"
       council_status_enum: "draft" | "in_progress" | "completed" | "approved"
-      equipment_status: "ATIVO" | "DEFEITO" | "EM_USO" | "EMPRESTIMO"
+      day_shift_enum: "morning" | "afternoon" | "night"
+      equipment_status: "ATIVO" | "DEFEITO" | "EMPRESTIMO" | "EM_USO"
       equipment_type_loan: "professor" | "aluno" | "colaborador"
       grade_status_enum: "AP" | "REC" | "-"
       loan_status: "em_uso" | "devolvido" | "atrasado"
@@ -1339,7 +1650,8 @@ export const Constants = {
       ],
       app_role: ["admin", "moderator", "user", "coordinator"],
       council_status_enum: ["draft", "in_progress", "completed", "approved"],
-      equipment_status: ["ATIVO", "DEFEITO", "EM_USO", "EMPRESTIMO"],
+      day_shift_enum: ["morning", "afternoon", "night"],
+      equipment_status: ["ATIVO", "DEFEITO", "EMPRESTIMO", "EM_USO"],
       equipment_type_loan: ["professor", "aluno", "colaborador"],
       grade_status_enum: ["AP", "REC", "-"],
       loan_status: ["em_uso", "devolvido", "atrasado"],
