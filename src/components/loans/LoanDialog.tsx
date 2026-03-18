@@ -318,14 +318,6 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     try {
       // Validar consistência do tipo de equipamento
       const equipmentType = form.getValues("equipment_type");
-      if (equipmentType === "professor" && !equipment.equipment_type?.toLowerCase().includes('notebook')) {
-        toast({
-          variant: "destructive",
-          title: "Tipo incompatível",
-          description: "Para professores, selecione apenas notebooks. Este é um Chromebook.",
-        });
-        return;
-      }
       if (equipmentType === "aluno" && !equipment.equipment_type?.toLowerCase().includes('chromebook')) {
         toast({
           variant: "destructive",
@@ -406,15 +398,6 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
       if (validation.valid && validation.equipment) {
         // Validar consistência do tipo de equipamento
         const equipmentType = form.getValues("equipment_type");
-        if (equipmentType === "professor" && !validation.equipment.equipment_type?.toLowerCase().includes('notebook')) {
-          toast({
-            variant: "destructive",
-            title: "Tipo incompatível",
-            description: "Para professores, selecione apenas notebooks. Este é um Chromebook.",
-          });
-          setIsSearching(false);
-          return;
-        }
         if (equipmentType === "aluno" && !validation.equipment.equipment_type?.toLowerCase().includes('chromebook')) {
           toast({
             variant: "destructive",
