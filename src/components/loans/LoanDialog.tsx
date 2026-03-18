@@ -644,8 +644,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
 
   const borrowerTypeOptions = [
     { value: "aluno", label: "Aluno", sublabel: "Estudante", icon: GraduationCap },
-    { value: "professor", label: "Professor", sublabel: "Docente", icon: User },
-    { value: "funcionario", label: "Funcionário", sublabel: "Staff", icon: Briefcase },
+    { value: "funcionario", label: "Colaborador", sublabel: "Staff", icon: Briefcase },
   ];
 
   return (
