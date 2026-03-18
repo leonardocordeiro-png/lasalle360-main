@@ -147,6 +147,15 @@ const equipmentCategory: string = "chromebook";
     setQuantityDisplay(String(quantity));
   }, [quantity]);
 
+  // Limpar equipamento individual quando muda para seleção múltipla
+  useEffect(() => {
+    if (quantity > 1) {
+      form.setValue("chromebook_number", "");
+      setSelectedEquipment(null);
+      setEquipmentValidated(false);
+    }
+  }, [quantity, form]);
+
   // Auto-select equipment_type based on borrower_type
   useEffect(() => {
     if (borrowerType === "aluno") {
@@ -475,6 +484,27 @@ const equipmentCategory: string = "chromebook";
   const onSubmit = async (data: LoanFormData) => {
     setIsLoading(true);
     try {
+      // Validações antecipadas antes de qualquer chamada ao banco
+      if (data.quantity === 1 && !selectedEquipment) {
+        toast({
+          variant: "destructive",
+          title: "Equipamento não validado",
+          description: "Busque e selecione um equipamento válido antes de continuar.",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.quantity > 1 && selectedEquipments.length !== data.quantity) {
+        toast({
+          variant: "destructive",
+          title: "Seleção incompleta",
+          description: `Selecione ${data.quantity} equipamentos (${selectedEquipments.length}/${data.quantity})`,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -482,15 +512,6 @@ const equipmentCategory: string = "chromebook";
       let loanRecord: any;
 
       if (data.quantity > 1) {
-        if (selectedEquipments.length !== data.quantity) {
-          toast({
-            variant: "destructive",
-            title: "Seleção incompleta",
-            description: `Você precisa selecionar exatamente ${data.quantity} equipamentos`
-          });
-          setIsLoading(false);
-          return;
-        }
         
         const chromebookNumbers = selectedEquipments.map(eq => getBestIdentifierForSave(eq)).join(', ');
 
@@ -910,6 +931,12 @@ const equipmentCategory: string = "chromebook";
                               const val = Math.min(50, Math.max(1, parseInt(quantityDisplay) || 1));
                               field.onChange(val);
                               setQuantityDisplay(String(val));
+                              if (val !== quantity) {
+                                setSelectedEquipment(null);
+                                setSelectedEquipments([]);
+                                setEquipmentValidated(false);
+                                form.setValue("chromebook_number", "");
+                              }
                             }}
                           />
                           <button
@@ -1191,7 +1218,11 @@ const equipmentCategory: string = "chromebook";
               </Button>
               <Button 
                 type="submit" 
-                disabled={isLoading || (quantity > 1 && selectedEquipments.length !== quantity) || (quantity === 1 && !equipmentValidated && !selectedEquipment)}
+                disabled={
+                  isLoading ||
+                  (quantity > 1 && selectedEquipments.length !== quantity) ||
+                  (quantity === 1 && !equipmentValidated)
+                }
                 className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg px-6 h-10"
               >
                 {isLoading ? (
