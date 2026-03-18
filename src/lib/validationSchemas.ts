@@ -142,7 +142,7 @@ export const roomBookingSchema = z.object({
 // Loan validation schema
 export const loanSchema = z.object({
   borrower_name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-  borrower_type: z.enum(["aluno", "professor", "funcionario"]),
+  borrower_type: z.enum(["aluno", "professor", "colaborador"]),
   responsible_teacher: z.string().optional(),
   class_name: z.string().optional(),
   equipment_type: z.enum(["professor", "aluno"]),

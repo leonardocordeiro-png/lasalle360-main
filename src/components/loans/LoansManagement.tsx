@@ -324,8 +324,8 @@ export function LoansManagement() {
     if (type === "professor_chromebook") {
       return <span className={`${baseClasses} bg-indigo-100 text-indigo-700`}>Chromebook Prof.</span>;
     }
-    if (type === "funcionario") {
-      return <span className={`${baseClasses} bg-orange-100 text-orange-700`}>Funcionário</span>;
+    if (type === "colaborador") {
+      return <span className={`${baseClasses} bg-orange-100 text-orange-700`}>Colaborador</span>;
     }
     return <span className={`${baseClasses} bg-gray-100 text-gray-700`}>{type}</span>;
   };

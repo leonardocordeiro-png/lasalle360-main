@@ -27,7 +27,7 @@ const formatLocalDate = (date: Date): string => {
 
 const editLoanSchema = z.object({
   borrower_name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-  borrower_type: z.enum(["aluno", "professor", "funcionario"]),
+  borrower_type: z.enum(["aluno", "professor", "colaborador"]),
   responsible_teacher: z.string().optional(),
   class_name: z.string().optional(),
   expected_return_date: z.date().optional(),
@@ -146,7 +146,7 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
   const borrowerTypeOptions = [
     { value: "aluno", label: "Aluno", icon: GraduationCap },
     { value: "professor", label: "Professor", icon: User },
-    { value: "funcionario", label: "Funcionário", icon: Briefcase },
+    { value: "colaborador", label: "Colaborador", icon: Briefcase },
   ];
 
   // Obter lista de equipamentos com ID e Patrimônio

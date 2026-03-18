@@ -72,7 +72,7 @@ const getBrazilNow = () => {
 
 const loanSchema = z.object({
   borrower_name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-  borrower_type: z.enum(["aluno", "professor", "funcionario"]),
+  borrower_type: z.enum(["aluno", "professor", "colaborador"]),
   responsible_teacher: z.string().optional(),
   class_name: z.string().optional(),
   equipment_type: z.enum(["professor", "aluno", "colaborador", "professor_chromebook"]),
@@ -160,7 +160,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     } else if (borrowerType === "professor") {
       form.setValue("equipment_type", "professor_chromebook");
     } else {
-      // funcionario → Chromebook para colaborador
+      // colaborador → Chromebook para colaborador
       form.setValue("equipment_type", "colaborador");
     }
   }, [borrowerType, form]);
@@ -169,7 +169,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     switch (borrowerType) {
       case "aluno": return "Nome do Estudante";
       case "professor": return "Nome do Professor";
-      case "funcionario": return "Nome do Colaborador";
+      case "colaborador": return "Nome do Colaborador";
       default: return "Nome do Solicitante";
     }
   };
@@ -644,7 +644,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
 
   const borrowerTypeOptions = [
     { value: "aluno", label: "Aluno", sublabel: "Estudante", icon: GraduationCap },
-    { value: "funcionario", label: "Colaborador", sublabel: "Staff", icon: Briefcase },
+    { value: "colaborador", label: "Colaborador", sublabel: "Staff", icon: Briefcase },
   ];
 
   return (
