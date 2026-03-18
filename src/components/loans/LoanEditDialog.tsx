@@ -145,7 +145,6 @@ export function LoanEditDialog({ open, onOpenChange, loan, onSuccess }: LoanEdit
 
   const borrowerTypeOptions = [
     { value: "aluno", label: "Aluno", icon: GraduationCap },
-    { value: "professor", label: "Professor", icon: User },
     { value: "colaborador", label: "Colaborador", icon: Briefcase },
   ];
 
