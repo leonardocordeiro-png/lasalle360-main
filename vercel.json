@@ -1,1 +1,21 @@
-{"headers": [{"source": "/(.*).js", "headers": [{"key": "Content-Type", "value": "application/javascript"}]}, {"source": "/(.*).mjs", "headers": [{"key": "Content-Type", "value": "application/javascript"}]}, {"source": "/(.*).wasm", "headers": [{"key": "Content-Type", "value": "application/wasm"}]}]}
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "headers": [
+    {
+      "source": "/(.*).js",
+      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+    },
+    {
+      "source": "/(.*).mjs",
+      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+    },
+    {
+      "source": "/(.*).wasm",
+      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
+    }
+  ],
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
