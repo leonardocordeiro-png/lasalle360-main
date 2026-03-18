@@ -1509,7 +1509,7 @@ export type Database = {
       council_status_enum: "draft" | "in_progress" | "completed" | "approved"
       day_shift_enum: "morning" | "afternoon" | "night"
       equipment_status: "ATIVO" | "DEFEITO" | "EMPRESTIMO" | "EM_USO"
-      equipment_type_loan: "professor" | "aluno" | "colaborador"
+      equipment_type_loan: "professor" | "aluno" | "colaborador" | "professor_chromebook"
       grade_status_enum: "AP" | "REC" | "-"
       loan_status: "em_uso" | "devolvido" | "atrasado"
       signature_role_enum: "prof_reg" | "sse" | "soe" | "sct" | "scp"
@@ -1652,7 +1652,7 @@ export const Constants = {
       council_status_enum: ["draft", "in_progress", "completed", "approved"],
       day_shift_enum: ["morning", "afternoon", "night"],
       equipment_status: ["ATIVO", "DEFEITO", "EMPRESTIMO", "EM_USO"],
-      equipment_type_loan: ["professor", "aluno", "colaborador"],
+      equipment_type_loan: ["professor", "aluno", "colaborador", "professor_chromebook"],
       grade_status_enum: ["AP", "REC", "-"],
       loan_status: ["em_uso", "devolvido", "atrasado"],
       signature_role_enum: ["prof_reg", "sse", "soe", "sct", "scp"],

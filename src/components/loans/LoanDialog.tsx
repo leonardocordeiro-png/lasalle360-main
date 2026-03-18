@@ -75,7 +75,7 @@ const loanSchema = z.object({
   borrower_type: z.enum(["aluno", "professor", "funcionario"]),
   responsible_teacher: z.string().optional(),
   class_name: z.string().optional(),
-  equipment_type: z.enum(["professor", "aluno", "colaborador"]),
+  equipment_type: z.enum(["professor", "aluno", "colaborador", "professor_chromebook"]),
   chromebook_number: z.string().optional(),
   quantity: z.number().min(1).max(50),
   loan_date: z.date(),
@@ -142,8 +142,8 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
   const quantity = form.watch("quantity");
   const equipmentTypeWatch = form.watch("equipment_type");
   // Converte o tipo do formulário para categoria de busca no inventário
-  // Professor pode pegar Chromebook ou Notebook → sem filtro (undefined)
-  const equipmentCategory: string | undefined = equipmentTypeWatch === "professor" ? undefined : "chromebook";
+  // "professor" → busca Notebooks | "professor_chromebook" / "aluno" / "colaborador" → busca Chromebooks
+  const equipmentCategory: string = equipmentTypeWatch === "professor" ? "notebook" : "chromebook";
 
   // Keep quantityDisplay in sync with form value
   useEffect(() => {
@@ -155,7 +155,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     if (borrowerType === "aluno") {
       form.setValue("equipment_type", "aluno");
     } else if (borrowerType === "professor") {
-      form.setValue("equipment_type", "professor");
+      form.setValue("equipment_type", "professor_chromebook");
     } else {
       // funcionario → Chromebook para colaborador
       form.setValue("equipment_type", "colaborador");
@@ -318,6 +318,22 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
     try {
       // Validar consistência do tipo de equipamento
       const equipmentType = form.getValues("equipment_type");
+      if (equipmentType === "professor" && !equipment.equipment_type?.toLowerCase().includes('notebook')) {
+        toast({
+          variant: "destructive",
+          title: "Tipo incompatível",
+          description: "Modo Notebook Professor: selecione um notebook. Para Chromebook, escolha 'Chromebook Professor'.",
+        });
+        return;
+      }
+      if (equipmentType === "professor_chromebook" && !equipment.equipment_type?.toLowerCase().includes('chromebook')) {
+        toast({
+          variant: "destructive",
+          title: "Tipo incompatível",
+          description: "Modo Chromebook Professor: selecione um Chromebook. Para notebook, escolha 'Notebook Professor'.",
+        });
+        return;
+      }
       if (equipmentType === "aluno" && !equipment.equipment_type?.toLowerCase().includes('chromebook')) {
         toast({
           variant: "destructive",
@@ -398,6 +414,24 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
       if (validation.valid && validation.equipment) {
         // Validar consistência do tipo de equipamento
         const equipmentType = form.getValues("equipment_type");
+        if (equipmentType === "professor" && !validation.equipment.equipment_type?.toLowerCase().includes('notebook')) {
+          toast({
+            variant: "destructive",
+            title: "Tipo incompatível",
+            description: "Modo Notebook Professor: selecione um notebook. Para Chromebook, escolha 'Chromebook Professor'.",
+          });
+          setIsSearching(false);
+          return;
+        }
+        if (equipmentType === "professor_chromebook" && !validation.equipment.equipment_type?.toLowerCase().includes('chromebook')) {
+          toast({
+            variant: "destructive",
+            title: "Tipo incompatível",
+            description: "Modo Chromebook Professor: selecione um Chromebook. Para notebook, escolha 'Notebook Professor'.",
+          });
+          setIsSearching(false);
+          return;
+        }
         if (equipmentType === "aluno" && !validation.equipment.equipment_type?.toLowerCase().includes('chromebook')) {
           toast({
             variant: "destructive",
@@ -861,6 +895,7 @@ export function LoanDialog({ open, onOpenChange, onSuccess }: LoanDialogProps) {
                         <SelectContent>
                           <SelectItem value="aluno">Chromebook Aluno</SelectItem>
                           <SelectItem value="colaborador">Chromebook Colaborador</SelectItem>
+                          <SelectItem value="professor_chromebook">Chromebook Professor</SelectItem>
                           <SelectItem value="professor">Notebook Professor</SelectItem>
                         </SelectContent>
                       </Select>
