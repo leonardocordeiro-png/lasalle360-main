@@ -58,12 +58,24 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ["react", "react-dom"],
           router: ["react-router-dom"],
-          ui: ["@radix-ui/react-dialog", "@radix-ui/react-toast"],
+          ui: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-select",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-dropdown-menu",
+          ],
+          query: ["@tanstack/react-query"],
+          supabase: ["@supabase/supabase-js"],
+          charts: ["recharts"],
+          "date-utils": ["date-fns"],
         },
       },
     },

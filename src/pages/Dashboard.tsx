@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, lazy, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,19 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Chrome, Calendar, Clock, Users, LogOut, School, FlaskConical, ListChecks, Eye, Package, DoorOpen, Lightbulb, Shield, ClipboardCheck, Key } from 'lucide-react';
 import estrelaLogo from '@/assets/Estrela_La_Salle.png';
 import { toast } from '@/hooks/use-toast';
-import BookingDialog from '@/components/BookingDialog';
-import { AvailabilityTable } from '@/components/AvailabilityTable';
-import ConsolidatedBookingsList from '@/components/ConsolidatedBookingsList';
-import ModernConsolidatedBookingsList from '@/components/ModernConsolidatedBookingsList';
-import { RoomBookingPage } from '@/components/room-booking/RoomBookingPage';
-import { RoomBookingsList } from '@/components/RoomBookingsList';
-import { CurrentRoomBookingsList } from '@/components/CurrentRoomBookingsList';
-import { RoomBookingsArchive } from '@/components/RoomBookingsArchive';
-import { TodayRoomBookings } from '@/components/TodayRoomBookings';
-import { PendingApprovalsTab } from '@/components/PendingApprovalsTab';
-import { TodayChromebookBookings } from '@/components/TodayChromebookBookings';
-import { LoansManagement } from '@/components/loans/LoansManagement';
-import { ChromebookBookingPage } from '@/components/chromebook-booking';
 import { NotificationBell } from '@/components/NotificationBell';
 import { UserDropdown } from '@/components/ui/user-dropdown';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
@@ -34,6 +21,27 @@ import { SessionIndicator } from '@/components/auth/SessionIndicator';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/types/database';
+
+// Lazy load heavy tab components — only loaded when user opens the tab
+const BookingDialog = lazy(() => import('@/components/BookingDialog'));
+const AvailabilityTable = lazy(() => import('@/components/AvailabilityTable').then(m => ({ default: m.AvailabilityTable })));
+const ConsolidatedBookingsList = lazy(() => import('@/components/ConsolidatedBookingsList'));
+const ModernConsolidatedBookingsList = lazy(() => import('@/components/ModernConsolidatedBookingsList'));
+const RoomBookingPage = lazy(() => import('@/components/room-booking/RoomBookingPage').then(m => ({ default: m.RoomBookingPage })));
+const RoomBookingsList = lazy(() => import('@/components/RoomBookingsList').then(m => ({ default: m.RoomBookingsList })));
+const CurrentRoomBookingsList = lazy(() => import('@/components/CurrentRoomBookingsList').then(m => ({ default: m.CurrentRoomBookingsList })));
+const RoomBookingsArchive = lazy(() => import('@/components/RoomBookingsArchive').then(m => ({ default: m.RoomBookingsArchive })));
+const TodayRoomBookings = lazy(() => import('@/components/TodayRoomBookings').then(m => ({ default: m.TodayRoomBookings })));
+const PendingApprovalsTab = lazy(() => import('@/components/PendingApprovalsTab').then(m => ({ default: m.PendingApprovalsTab })));
+const TodayChromebookBookings = lazy(() => import('@/components/TodayChromebookBookings').then(m => ({ default: m.TodayChromebookBookings })));
+const LoansManagement = lazy(() => import('@/components/loans/LoansManagement').then(m => ({ default: m.LoansManagement })));
+const ChromebookBookingPage = lazy(() => import('@/components/chromebook-booking').then(m => ({ default: m.ChromebookBookingPage })));
+
+const TabLoading = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+  </div>
+);
 
 interface Booking {
   id: string;
@@ -777,50 +785,54 @@ const DashboardComponent = () => {
           </div>
 
           <TabsContent value="chromebooks" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-              <div className="xl:col-span-3">
-                <ChromebookBookingPage
-                  onBookingCreated={handleBookingCreated}
-                  totalInventory={totalInventory}
-                  onDateChange={setSelectedChromebookDate}
-                />
-              </div>
-              <div>
-                <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm sticky top-4">
-                  {/* Gradient Header */}
-                  <div className="bg-gradient-to-br from-primary via-primary to-primary/80 p-4 sm:p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
-                        <Chrome className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                          Agendamentos {format(selectedChromebookDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') 
-                            ? 'de Hoje' 
-                            : `de ${format(selectedChromebookDate, "dd/MM", { locale: ptBR })}`}
-                        </h3>
-                        <p className="text-[11px] text-white/70 font-medium">
-                          {format(selectedChromebookDate, "EEEE", { locale: ptBR })}
-                        </p>
+            <Suspense fallback={<TabLoading />}>
+              <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                <div className="xl:col-span-3">
+                  <ChromebookBookingPage
+                    onBookingCreated={handleBookingCreated}
+                    totalInventory={totalInventory}
+                    onDateChange={setSelectedChromebookDate}
+                  />
+                </div>
+                <div>
+                  <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm sticky top-4">
+                    <div className="bg-gradient-to-br from-primary via-primary to-primary/80 p-4 sm:p-5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+                          <Chrome className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                            Agendamentos {format(selectedChromebookDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                              ? 'de Hoje'
+                              : `de ${format(selectedChromebookDate, "dd/MM", { locale: ptBR })}`}
+                          </h3>
+                          <p className="text-[11px] text-white/70 font-medium">
+                            {format(selectedChromebookDate, "EEEE", { locale: ptBR })}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <CardContent className="p-4 sm:p-5">
-                    <TodayChromebookBookings totalInventory={totalInventory} selectedDate={selectedChromebookDate} />
-                  </CardContent>
-                </Card>
+                    <CardContent className="p-4 sm:p-5">
+                      <TodayChromebookBookings totalInventory={totalInventory} selectedDate={selectedChromebookDate} />
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            </div>
+            </Suspense>
           </TabsContent>
 
           {modulePermissions.loans_management && (
             <TabsContent value="emprestimos" className="space-y-6">
-              <LoansManagement />
+              <Suspense fallback={<TabLoading />}>
+                <LoansManagement />
+              </Suspense>
             </TabsContent>
           )}
 
           {(modulePermissions.auditorio || modulePermissions.laboratorio || modulePermissions.sala_criativa) && (
             <TabsContent value="salas" className="space-y-6">
+              <Suspense fallback={<TabLoading />}>
               <RoomBookingPage
                 onBookingCreated={fetchRoomBookings}
                 initialRoomType={modulePermissions.auditorio ? 'auditorio' : modulePermissions.laboratorio ? 'laboratorio' : 'sala_criativa'}
@@ -888,62 +900,70 @@ const DashboardComponent = () => {
                 laboratorioBookings={laboratorioBookings}
                 salaCriativaBookings={salaCriativaBookings}
               />
+              </Suspense>
             </TabsContent>
           )}
 
           {modulePermissions.admin_salas_hoje && (
             <TabsContent value="today-rooms" className="space-y-6">
-              <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
-                {/* Gradient Header */}
-                <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-orange-500 dark:from-amber-700 dark:via-amber-600 dark:to-orange-600 p-5 sm:p-6">
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
-                      <Key className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                        Controle de Chaves
-                      </h3>
-                      <p className="text-[11px] sm:text-xs text-white/70 font-medium mt-0.5">
-                        Agendamentos para liberação das chaves de Auditório, Laboratório e Sala Criativa
-                      </p>
+              <Suspense fallback={<TabLoading />}>
+                <Card className="border-0 shadow-xl overflow-hidden bg-card/95 backdrop-blur-sm">
+                  <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-orange-500 dark:from-amber-700 dark:via-amber-600 dark:to-orange-600 p-5 sm:p-6">
+                    <div className="flex items-center gap-3.5">
+                      <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+                        <Key className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                          Controle de Chaves
+                        </h3>
+                        <p className="text-[11px] sm:text-xs text-white/70 font-medium mt-0.5">
+                          Agendamentos para liberação das chaves de Auditório, Laboratório e Sala Criativa
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <CardContent className="p-5 sm:p-6">
-                  <TodayRoomBookings />
-                </CardContent>
-              </Card>
+                  <CardContent className="p-5 sm:p-6">
+                    <TodayRoomBookings />
+                  </CardContent>
+                </Card>
+              </Suspense>
             </TabsContent>
           )}
 
           {(isUserAdmin || isUserApprover) && (
             <TabsContent value="approvals" className="space-y-6">
-              <PendingApprovalsTab />
+              <Suspense fallback={<TabLoading />}>
+                <PendingApprovalsTab />
+              </Suspense>
             </TabsContent>
           )}
 
           {isUserAdmin && (
             <TabsContent value="bookings" className="space-y-6">
+              <Suspense fallback={<TabLoading />}>
               <ModernConsolidatedBookingsList
                 bookings={bookings}
                 onBookingCancelled={handleBookingCancelled}
                 isAdmin={profile?.is_admin || false}
                 currentUserId={user?.id || ''}
               />
+              </Suspense>
             </TabsContent>
           )}
         </Tabs>
       </div>
 
       {/* Booking Dialog */}
-      <BookingDialog
-        open={showBookingDialog}
-        onOpenChange={setShowBookingDialog}
-        onSuccess={handleBookingCreated}
-        totalInventory={totalInventory}
-        maxBookingQuantity={maxBookingQuantity}
-      />
+      <Suspense fallback={null}>
+        <BookingDialog
+          open={showBookingDialog}
+          onOpenChange={setShowBookingDialog}
+          onSuccess={handleBookingCreated}
+          totalInventory={totalInventory}
+          maxBookingQuantity={maxBookingQuantity}
+        />
+      </Suspense>
 
       {/* Profile Dialog */}
       {user && (
