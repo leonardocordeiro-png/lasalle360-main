@@ -127,7 +127,7 @@ export function CouncilViewDialog({ open, onOpenChange, councilId }: CouncilView
       // Fetch students
       const { data: studentsData, error: studentsError } = await supabase
         .from("council_students")
-        .select("*")
+        .select("id, student_number, student_name, display_order")
         .eq("council_id", councilId)
         .order("display_order");
 
@@ -150,7 +150,7 @@ export function CouncilViewDialog({ open, onOpenChange, councilId }: CouncilView
       // Fetch subjects for this academic level
       const { data: subjectsData, error: subjectsError } = await supabase
         .from("council_subjects")
-        .select("*")
+        .select("id, subject_code, subject_name, academic_level, display_order")
         .eq("is_active", true)
         .order("display_order");
 
@@ -167,7 +167,7 @@ export function CouncilViewDialog({ open, onOpenChange, councilId }: CouncilView
       // Fetch actions
       const { data: actionsData, error: actionsError } = await supabase
         .from("council_actions")
-        .select("*")
+        .select("id, action_type, trimester, description, student_names")
         .eq("council_id", councilId);
 
       if (actionsError) throw actionsError;

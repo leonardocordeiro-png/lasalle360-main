@@ -55,7 +55,7 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
       // Load students
       const { data: students, error: studentsError } = await supabase
         .from("council_students")
-        .select("*")
+        .select("id, student_number, student_name, display_order")
         .eq("council_id", councilId)
         .order("display_order");
 
@@ -64,7 +64,7 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
       // Load grades
       const { data: grades, error: gradesError } = await supabase
         .from("council_grades")
-        .select("*")
+        .select("council_student_id, subject_id, grade_status")
         .in("council_student_id", students?.map((s) => s.id) || []);
 
       if (gradesError) throw gradesError;
@@ -78,7 +78,7 @@ export function CouncilWizard({ onComplete, councilId }: CouncilWizardProps) {
       // Load actions
       const { data: actions, error: actionsError } = await supabase
         .from("council_actions")
-        .select("*")
+        .select("action_type, description")
         .eq("council_id", councilId);
 
       if (actionsError) throw actionsError;

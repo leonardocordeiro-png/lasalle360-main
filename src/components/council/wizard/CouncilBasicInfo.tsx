@@ -63,7 +63,7 @@ export function CouncilBasicInfo({ data, onComplete }: CouncilBasicInfoProps) {
   const fetchSchoolYears = async () => {
     const { data, error } = await supabase
       .from("school_years")
-      .select("*")
+      .select("id, year")
       .order("year", { ascending: false });
 
     if (!error && data) {

@@ -38,7 +38,7 @@ export function CouncilGrades({ data, onComplete }: CouncilGradesProps) {
   const fetchSubjects = async () => {
     const { data: subjectsData } = await supabase
       .from("council_subjects")
-      .select("*")
+      .select("id, subject_code, subject_name, academic_level, display_order")
       .eq("is_active", true)
       .order("display_order");
 

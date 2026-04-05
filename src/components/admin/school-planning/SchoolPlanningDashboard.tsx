@@ -70,7 +70,7 @@ export const SchoolPlanningDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("complementary_programs")
-        .select("*");
+        .select("id, program_name, enrolled_students, school_year_id");
       if (error) throw error;
       return data;
     },

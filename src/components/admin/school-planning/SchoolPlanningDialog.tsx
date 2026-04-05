@@ -69,7 +69,7 @@ export const SchoolPlanningDialog = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("school_years")
-        .select("*")
+        .select("id, year")
         .order("year", { ascending: false });
       if (error) throw error;
       return data;
